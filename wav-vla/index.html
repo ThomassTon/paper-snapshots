@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World–Value–Action Model: Implicit Planning for Vision–Language–Action Systems</title>
+<meta name="keywords" content="World-Value-Action (WAV), implicit planning, vision-language-action, latent trajectory planning, world model, trajectory value function, flow matching, MPPI, LIBERO benchmark, 机器人操作">
+<meta name="description" content="WAV 将VLA的动作生成建模为隐空间中对高价值、动态可行轨迹的迭代推断，而非显式轨迹优化，在LIBERO与真实世界双臂操作任务上取得SOTA表现。">
+<style>
+  :root{ --bg:#F8F8F6; --panel:#FFFFFF; --panel2:#F1EFEA; --ink:#201F1C; --muted:#6B675F;
+    --acc:#5A5953; --acc2:#5A5953; --warn:#b45309; --line:#E8E4DC; --chip:#F1EFEA; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:28px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+  .small{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · VLA · Preprint 2026</span>
+    <h1>World–Value–Action Model: Implicit Planning for Vision–Language–Action Systems</h1>
+    <div class="sub">让 VLA 模型在隐空间中"隐式规划"，而不是在动作空间里显式搜索轨迹</div>
+    <div class="authors">Runze Li*, Hongyin Zhang*, Junxi Jin, Qixin Zeng, Zifeng Zhuang, Yiqi Tang, Shangke Lyu, Donglin Wang† ·
+      Westlake University; Nanjing University Suzhou Campus（*同等贡献，†通讯作者）</div>
+    <p class="lead">WAV（World–Value–Action）为 VLA 系统引入统一的隐式规划框架：一个视频生成式 world model 预测未来视觉状态，一个 trajectory value 模块评估其长期效用，动作生成被建模为在隐空间中对高价值、动态可行轨迹的概率推断，而不是显式的轨迹优化。作者证明直接在动作空间中规划存在"可行轨迹概率随规划步长指数衰减"的问题，而隐空间推断能够指数级地把概率质量重新分配到可行轨迹上。</p>
+    <div class="meta">
+      <span>LIBERO Avg 98.1（SOTA）</span>
+      <span>真实世界平均成功率 35.6% → 75.6%</span>
+      <span>2.2B 参数</span>
+      <span><a href="https://arxiv.org/abs/2604.14732">📄 arXiv:2604.14732</a></span>
+      <span><a href="https://arxiv.org/pdf/2604.14732">PDF</a></span>
+    </div>
+    <div class="kw"><span>World-Value-Action (WAV)</span><span>implicit planning</span><span>vision-language-action</span><span>latent trajectory planning</span><span>world model</span><span>trajectory value function</span><span>flow matching</span><span>MPPI</span><span>LIBERO benchmark</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">多数现有 VLA 方法依赖 direct action prediction，把每个决策步骤当作独立预测，"lacking the ability to reason over long-horizon trajectories and evaluate their consequences"，这限制了它们在复杂决策任务中的表现。与此同时，world model 一线的工作虽然能预测未来状态，但通常"do not provide a principled mechanism for evaluating trajectories or selecting actions"。作者由此提出一个根本性问题：</p>
+    <blockquote>"can planning be learned as an implicit inference process, rather than implemented as an explicit optimization module?"</blockquote>
+    <p>论文首先给出理论刻画：把规划视为在轨迹空间 <em>X = S<sup>H</sup> × A<sup>H</sup></em> 中采样，其环境维度随规划步长 H 线性增长，而真正满足物理动力学、接触约束与任务语义的可行轨迹集合 <em>M<sub>traj</sub></em> 只是其中一个低维流形。Lemma 4.1（Vanishing Feasible Mass）证明：在均匀探索下，采到近似可行轨迹的概率随 H 呈指数衰减，即 <code>μ(N_ε(M_traj)) / μ(X) ≤ exp(-cH)</code>。这意味着直接在动作空间中做长时程规划，"the vast majority of sampled trajectories are infeasible by construction, irrespective of the planner's sophistication or the fidelity of the underlying models"。</p>
+    <p>相对地，Proposition 4.2（Latent Reweighting of the Search Distribution）证明：若一个学习到的隐空间生成器 <em>W<sub>θ</sub></em> 能以概率 ≥1-δ 把隐变量映射到可行轨迹集合，则隐空间采样相对于动作空间均匀采样，可行轨迹概率的比值满足 <code>≥ exp(cH)(1-δ)</code> —— 即隐空间推断能"assigns exponentially larger probability mass to feasible trajectories relative to direct action-space sampling as the horizon grows"。但仅仅可行还不够：Corollary 4.3 进一步证明，即便隐分布已把概率质量放在可行集合上，一次性（one-shot）采样在固定、次指数级的样本预算下也无法保证以高概率找到近最优轨迹，因此需要 <b>iterative</b> 隐空间规划来逐步把概率集中到高价值轨迹上。</p>
+    <figure>
+      <img src="img/realworld-results.webp" alt="真实世界任务上 WAV 与 GE-ACT 的成功率对比">
+      <figcaption>Figure 2：真实世界双臂机器人 Piper 上，WAV（Ours）与基线 GE-ACT 在 Organize Bowls / Drawer Task / Flatten Towel 三类任务及平均成功率上的对比（每个结果基于 15 次试验的平均值）。平均成功率从 35.6% 提升到 75.6%。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>98.1</b><small>LIBERO Avg（Spatial/Object/Goal/Long 四套件综合，SOTA）</small></div>
+      <div><b>94.4</b><small>LIBERO-Long（vs. 91.8，去掉 latent trajectory planning 后）</small></div>
+      <div><b>75.6%</b><small>真实世界平均成功率（GE-ACT 基线为 35.6%）</small></div>
+      <div><b>2.2B</b><small>模型参数量（较多数 7B 级基线更紧凑）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">WAV 把规划与控制拆解为三个紧密耦合、共享 DiT（Diffusion Transformer）backbone 的模块："1) a language-conditioned video generation module for predicting future visual trajectories; 2) a trajectory value module for long-horizon evaluation; and 3) an action module for generating executable robot actions"。三者通过 flow matching 联合训练，推理阶段再通过类 MPPI 的迭代式隐空间轨迹规划（Algorithm 1），让动作生成"arises from inference over predicted futures guided by trajectory value"。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="WAV 模型架构：视频生成模块、轨迹价值模块、动作预测模块，以及推理阶段的隐空间轨迹规划">
+      <figcaption>Figure 1：WAV 整体架构。训练阶段（上）：Video Generation Module 以语言指令 T5-XXL embedding 与多视角视觉状态为条件，通过 DiT Video Block 产生 latent feature x<sub>i</sub>；Trajectory Value Module 用 cross-attention 读取视频特征，输出 latent value embedding u<sub>i</sub>；Action Prediction Module 依次与视频特征、价值特征做 cross-attention 生成动作。推理阶段（下，Latent Trajectory Planning）：反复采样并更新 video / value 的 noise 分布，经 Trajectory Evaluation 选出高价值轨迹，再解码出 optimized latent feature 供动作模块使用。</figcaption>
+    </figure>
+    <h3>三段式 flow-matching 训练</h3>
+    <p>训练遵循 "a three-stage training strategy based on flow matching"：第一阶段仅用 video flow loss <code>L_vid = E[‖v_θ(t,l,o,x⁰) − (x¹−x⁰)‖²]</code> 训练视频生成模块；第二阶段冻结视频模型，训练轨迹价值模块以预测 cumulative discounted return，用与 ReinboT 类似的 rule-based dense reward；第三阶段联合训练所有模块的动作 flow loss。三个模块共享 DiT backbone，但分别通过各自的 Self-Attn / Cross-Attn / FFN block（<em>B<sup>vid</sup></em>、<em>B<sup>val</sup></em>、<em>B<sup>act</sup></em>）承担视频预测、价值评估、动作解码。</p>
+    <h3>Latent Planning and Iterative Inference（Algorithm 1）</h3>
+    <p>推理时，WAV 借鉴 Model Predictive Path Integral (MPPI) 的思想，"instead of fixing latent priors to standard Gaussians, we adaptively update the noise distributions of the video and value modules based on trajectory evaluations"。具体地：每轮迭代 k 先采样 M 组 video latent noise，经视频生成模块解码出对应的 video feature；对每个 video feature 再采样 N 组 value latent noise 并评估其状态价值 <em>v</em>；用价值预测的 Signal-to-Noise Ratio（SNR）作为稳定的打分标准，取每个 video 分支中 N 次评估里最可靠的一个作为该分支得分 φ；根据 φ 排序选出 top-K1 的 video 分支更新视频 noise 分布，选出全部 M×N 个价值样本中 SNR 最高的 top-K2 更新价值 noise 分布，并施加 variance decay 与 exponential smoothing（平滑参数 α, β）避免分布过早坍塌。经过 K 轮迭代后，从最终分布采样并解码出 optimized latent feature，交由动作解码模块生成最终 robot action。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">仿真实验在 LIBERO benchmark（Spatial / Object / Goal / Long 四个任务套件，分别探测空间推理、物体级泛化、目标条件行为与长时程组合任务）上进行；真实世界实验在双臂机器人平台 Piper 上开展，对比基线为使用同一视频预训练模型、参数量相近的 GE-ACT。</p>
+    <table>
+      <tr><th>Model</th><th>Params</th><th>Spatial</th><th>Object</th><th>Goal</th><th>Long</th><th>Avg</th></tr>
+      <tr><td>Diffusion Policy</td><td>-</td><td>78.3</td><td>92.5</td><td>68.3</td><td>50.5</td><td>72.4</td></tr>
+      <tr><td>OpenVLA</td><td>7b</td><td>84.9</td><td>88.4</td><td>79.2</td><td>53.7</td><td>76.5</td></tr>
+      <tr><td>π₀</td><td>3b</td><td>96.8</td><td>98.8</td><td>95.8</td><td>85.2</td><td>94.2</td></tr>
+      <tr><td>π₀.₅</td><td>3b</td><td>98.8</td><td>98.4</td><td>96.4</td><td>93.4</td><td>96.8</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>7b</td><td>97.6</td><td>98.4</td><td>97.9</td><td>95.0</td><td>97.3</td></tr>
+      <tr><td>VLA-Adapter</td><td>0.5b</td><td>97.8</td><td>99.2</td><td>97.2</td><td>95.0</td><td>97.3</td></tr>
+      <tr><td>UniVLA <span class="small">(world model)</span></td><td>4.5b</td><td>95.4</td><td>98.8</td><td>93.5</td><td>94.0</td><td>95.5</td></tr>
+      <tr><td>F1 <span class="small">(world model)</span></td><td>-</td><td>98.2</td><td>97.8</td><td>95.4</td><td>91.3</td><td>95.7</td></tr>
+      <tr><td>GE-ACT <span class="small">(world model)</span></td><td>2b</td><td>98.2</td><td>97.6</td><td>95.8</td><td>94.6</td><td>96.5</td></tr>
+      <tr><td><b>WAV (Ours)</b></td><td>2.2b</td><td class="good">99.6</td><td class="good">100.0</td><td class="good">98.6</td><td>94.4</td><td class="good">98.1</td></tr>
+      <tr><td>WAV, w/o Latent Trajectory Planning</td><td>2.2b</td><td>99.0</td><td>99.6</td><td>95.0</td><td>91.8</td><td>96.4</td></tr>
+    </table>
+    <p class="small">Table 1（节选自论文原表，完整表格共 ~20 个基线）。"Our method achieves state-of-the-art (or competitive) performance across all task suites, with an overall average score of 98.1." 值得注意的是，在 Long 套件上 WAV 的 94.4 并非绝对最高——OpenVLA-OFT/VLA-Adapter 达到 95.0，这里如实展示，未做美化。</p>
+    <h3>真实世界评测</h3>
+    <p>代表性任务包括 <b>bowl organization</b>、<b>towel flattening</b>，以及一个 <b>long-horizon drawer task</b>（"opening a drawer, placing an object inside, and closing it"）。评测采用严格的二元成功指标："a trial is considered successful only if the task is fully completed, with no partial credit."</p>
+    <figure>
+      <img src="img/qualitative.webp" alt="WAV 与 GE-ACT 在真实世界任务上的执行过程对比">
+      <figcaption>Figure 3：WAV（Ours）与 GE-ACT（Baseline）在 organize bowls / flatten towel / drawer task 三个真实世界任务上的执行序列对比。"GE-ACT frequently exhibits inaccurate action execution and weak spatial grounding, such as misaligning with the drawer handle or failing to grasp objects reliably. These errors accumulate over multiple steps, leading to cascading failures in long-horizon tasks." 相比之下 WAV "produces more consistent and coherent multi-step behaviors."</figcaption>
+    </figure>
+    <h3>Ablations</h3>
+    <p>去掉 latent trajectory planning 后，平均性能下降 1.7 点，"with the largest degradation on the Long suite, decreasing from 94.4 to 91.8"，且"the performance gap widens with increasing task horizon"，说明隐式规划对缓解长时程误差累积尤其有效。</p>
+    <p>对迭代次数 K 与采样规模 M（video 数）、N（value 数）的消融显示：K 从 1 增到 5 有明显提升，继续增到 10 只有边际收益；性能对 M 高度敏感（尤其在低采样数区间），而对 N 的敏感性更温和，说明"dense value evaluation provides limited additional benefit once a reasonable estimation is achieved"。对平滑参数 α、β 的消融显示，过小的 α 会导致成功率骤降，说明"stabilizing the update of the latent distribution is crucial"；对 elite 数量 K1、K2 的消融则显示性能相对稳定，仅在极小取值时明显退化。</p>
+    <figure>
+      <img src="img/efficiency-tradeoff.webp" alt="性能与推理开销的权衡：不同迭代次数 K 下的成功率、推理时间与显存占用">
+      <figcaption>Figure 6：性能–效率权衡。随着迭代次数 K 从 0 增到 3，成功率持续提升（0.70→0.82），此后趋于饱和，而推理时间与显存占用（GE-ACT 基线 13.94GB，WAV 在 K≥1 时约 30.98–32.03GB）持续增长。作者认为 "K = 3 provides a favorable balance between effectiveness and efficiency."</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 第一条为论文 Conclusion 中明确陈述（stated）；后两条为根据实验数据 / 理论表述推断（inferred）。</div>
+    <details class="lim" open><summary>模型部署的时间与存储开销（stated）</summary><p>"The main limitation of current work is the time and storage overhead required for model deployment." 作者将扩展到更丰富的多模态指令、以及在真实机器人系统上实现实时闭环部署列为未来方向（future directions）。</p></details>
+    <details class="lim"><summary>迭代式隐空间规划带来额外推理开销（inferred）</summary><p>Fig. 6 显示，WAV 在 K≥1 时的显存占用（约 30.98–32.03GB）远高于基线 GE-ACT（13.94GB），且推理时间随迭代次数 K 增大而持续增长；作者选择 K=3 作为性能-效率的折中，但这意味着相比单步直接预测的 VLA baseline，WAV 的部署代价明显更高。</p></details>
+    <details class="lim"><summary>理论分析是渐近刻画而非严格最优性保证（inferred）</summary><p>论文附录明确说明："Our analysis is not intended as a tight optimality guarantee, but rather as a geometric and probabilistic characterization of the search difficulty inherent to high-dimensional trajectory spaces." Lemma 4.1 / Proposition 4.2 / Corollary 4.3 依赖于对可行轨迹集合内在维度、隐生成器覆盖率 δ 等假设，实际系统中这些量难以直接验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · World–Value–Action Model: Implicit Planning for Vision–Language–Action Systems · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2604.14732">https://arxiv.org/abs/2604.14732</a>
+  </div>
+</footer>
+
+</body>
+</html>
