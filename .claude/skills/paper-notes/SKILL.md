@@ -6,7 +6,7 @@ description: Use when asked to process the paper inbox, generate paper notes, in
 # Paper Notes — inbox intake (orchestration)
 
 Turn whatever is sitting in the paper inbox into 中文 illustrated posters, **one per paper**, then
-rebuild the collection landing page. You (the main agent) orchestrate; **one Sonnet subagent builds
+rebuild the collection landing page. You (the main agent) orchestrate; **one Opus subagent builds
 each poster** by following the **paper-poster** skill.
 
 - Working dir: `_src/` (git-ignored). Inbox: `_src/_inbox/`.
@@ -34,8 +34,8 @@ which paper(s) each points to. Interpreting the modality is your job, not a fixe
    `grep -rlE '"arxiv_id"[: ]+"<id>"' */meta.json _src/*/meta.json`
    (fall back to a title match when there's no id). Report the skipped ones; do not regenerate them.
 
-4. **Build one poster per NEW paper — in parallel, via Sonnet subagents.** Dispatch the Agent tool
-   once per paper **in a single message** (so they run concurrently), each with `model: "sonnet"`
+4. **Build one poster per NEW paper — in parallel, via Opus subagents.** Dispatch the Agent tool
+   once per paper **in a single message** (so they run concurrently), each with `model: "opus"`
    and a prompt like:
    > Follow the **paper-poster** skill to build EXACTLY ONE 中文 poster for `<arxiv-id|url|title>`
    > into `_src/<slug>/` (`index.html` + `img/` + `meta.json`), using date `<YYYY-MM-DD>`.
