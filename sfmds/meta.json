@@ -1,0 +1,11 @@
+{
+  "slug": "sfmds",
+  "title": "Let the Dynamics Flow: Stable Flow Matching Dynamical Systems",
+  "arxiv_id": "2606.03834",
+  "url": "https://arxiv.org/abs/2606.03834",
+  "category": "机器人 · Robotics",
+  "keywords": ["Flow Matching", "稳定动力系统", "Imitation Learning", "Lyapunov stability", "positive invariance", "LaSalle invariance principle", "Lie group SE(3)", "multimodal policy", "asymptotic stability", "机器人运动生成"],
+  "summary_zh": "SFMDS 把 flow matching 的强表达力与动力系统的形式化稳定性保证结合起来：用 flow matching 隐式建模机器人运动的向量场，同时把学到的速度约束在由正不变性 / Lyapunov 渐近稳定性推导出的可行集内。提供 soft（惩罚项弱约束）与 hard（结构性硬约束、构造上全局稳定）两种变体，并推广到 SE(3) 等 Lie 群；在多模态与 1682 维系统上均保持稳定，几乎零发散轨迹。",
+  "date": "2026-07-16",
+  "source": "arxiv-html"
+}

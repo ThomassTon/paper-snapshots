@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Let the Dynamics Flow: Stable Flow Matching Dynamical Systems</title>
+<meta name="keywords" content="Flow Matching, 稳定动力系统, Imitation Learning, Lyapunov stability, positive invariance, LaSalle invariance principle, Lie group SE(3), multimodal policy, asymptotic stability, 机器人运动生成">
+<meta name="description" content="SFMDS 把 flow matching 的表达力与动力系统的形式化稳定性保证结合，用 soft/hard 两种约束把学到的向量场限制在可行速度集内，稳定生成多模态、可推广的机器人运动。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robot Learning · 2026 · arXiv</span>
+    <h1>Let the Dynamics Flow：Stable Flow Matching Dynamical Systems</h1>
+    <div class="sub">让动力学“流”起来：稳定的 flow matching 动力系统 (SFMDS)</div>
+    <div class="authors">Rodrigo Pérez-Dattari, Francisco Leiva, Andrea Testa, Leonel Rozo, Javier Ruiz-del-Solar, Noémie Jaquier · KTH · Universidad de Chile · Bosch (CR) · IIT / AI4I</div>
+    <p class="lead">Flow matching 用于模仿学习时表达力强、可扩展、能建模多模态动作，但缺乏机器人策略所需的形式化稳定性保证。SFMDS 用 flow matching 隐式建模机器人运动的向量场，同时把学到的速度约束在由<b>正不变性 / Lyapunov 渐近稳定性</b>推导出的可行集内，做到“stable by design”。提供 soft（惩罚项）与 hard（结构性硬约束、构造上全局稳定）两种变体，并推广到 SE(3) 等 Lie 群。</p>
+    <div class="meta">
+      <span>Imitation Learning / 学习驱动动力系统</span>
+      <span>Soft &amp; Hard 两种稳定性约束</span>
+      <span>推广到 Lie groups（SE(3) / 𝕋² / SO(3)）</span>
+      <span><a href="https://arxiv.org/abs/2606.03834">📄 arXiv:2606.03834</a></span>
+      <span><a href="https://let-the-dynamics-flow.github.io/SFMDS/">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>Flow Matching</span><span>稳定动力系统</span><span>Imitation Learning</span><span>Lyapunov stability</span><span>positive invariance</span><span>LaSalle invariance principle</span><span>Lie group SE(3)</span><span>multimodal policy</span><span>asymptotic stability</span><span>机器人运动生成</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">Flow matching 策略在模仿学习中能高效学到复杂的多模态动作分布，性能优于经典 behavior cloning。但它<b>并非为运动生成与控制设计</b>，缺乏机器人策略所需的严格安全性保证。另一方面，把机器人运动建模为“学习驱动的动力系统 (dynamical systems)”能提供稳定性保证（正不变性、渐近收敛到目标），但已有方法往往<b>只能建模单模态、表达力有限</b>，或依赖 diffeomorphism（可逆神经网络 RealNVP/normalizing flow），以牺牲架构灵活性为代价换取 stable-by-design。</p>
+    <blockquote>“…incorporating formal stability guarantees into these generative models is a prerequisite to ensure safe and generalizable robot behaviors, which remains a significant challenge.” — SFMDS 正是要在“高表达力生成模型”与“形式化稳定性保证”之间架桥。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>Fig 1：把机器人行为建模为一个 stable flow matching 动力系统。当前速度 ẋ_t = h₁ 由 flow matching 模型学到：从高斯噪声 h₀∼𝒩(0,𝐈) 出发，沿辅助时间 τ 积分向量场 u_τ=∂h_τ/∂τ 得到 h₁。稳定性通过把解空间约束到从潜在 Lyapunov 函数导出的 admissible velocity set Ẋ_A⊂𝒯ₓ𝒳 来强制，蓝/红箭头体现其可生成的多模态行为。状态用 Lie group 表示以处理位姿。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>0.000%</b><small>hard SFMDS 在 LASA 上的不稳定轨迹（无约束 BC_FMDS 为 40.163%）</small></div>
+      <div><b>1682</b><small>可稳定学习的最高状态维度（reaction–diffusion 系统）</small></div>
+      <div><b>~13 Hz</b><small>hard SFMDS 在高维系统上的推理控制频率</small></div>
+      <div><b>15</b><small>真实人形机器人 SE(3) 插入任务的示教条数</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead">目标是学一个时不变自治动力系统 ẋ_t = f_θ(x_t)（式 1），并要求 f_θ 属于满足预定稳定行为的可行函数族 𝓕_A。SFMDS <b>不显式参数化动力学</b>，而是<b>用 flow matching 隐式建模</b>：对每个状态 x_t，从 h₀∼𝒩(0,𝐈) 出发、沿辅助时间 τ∈[0,1] 积分一个状态条件、时不变的 flow matching 向量场 u_θ(z_τ; x_t)，把终点 h₁ 当作速度 ẋ_t（式 19）。稳定性则通过把 u_θ 的输出约束到 admissible velocity set Ẋ_A 来实现——该集合由 <b>LaSalle's invariance principle</b> 从两类稳定性质推导：positive invariance 与 asymptotic stability。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="architecture">
+      <figcaption>Fig 3：soft / hard SFMDS 的轨迹推理示意。编码器 ψ_θ 把任务空间状态 x 映到潜在空间 y；在 φ_θ 内部，soft 变体直接在（速度）任务空间 𝒳 里用网络输出 u_θ，再用 hinge 惩罚约束；hard 变体让网络在潜在空间输出 ũ_θ，投影到潜在可行半空间后经可逆 Jacobian J_{ψ_θ}⁻¹ 映回任务空间 u_θ^Π。每步 forward-Euler 都把状态推向平衡点 x_e，从而在任务空间与潜在空间同时收敛。</figcaption>
+    </figure>
+    <h3>Soft SFMDS — 惩罚项弱约束</h3>
+    <p>把“速度落在可行半空间”这一条件写成 <b>hinge-type loss</b>（式 34：ℓ_PI = σ_r(−δ_h⊤u_θ + m_u)），作为正则项加到 imitation learning 损失上，训练时在状态/速度空间均匀采样施加。实现简单、不限制网络架构，但只提供<b>局部（local）</b>稳定性保证。渐近稳定性通过在潜在空间 𝓛 构造 Lyapunov 候选 V^𝓛=d(y_e,y_t)²，并把潜在动力学约束到 Ĺ_A 内（式 44）来强制。</p>
+    <h3>Hard SFMDS — 结构性硬约束</h3>
+    <p>把网络原始输出 ũ_θ 通过 ReLU 投影（式 29/45）<b>直接投影</b>到 admissible half-space，约束被“焊进”模型架构，因而<b>构造上全局渐近稳定 (globally asymptotically stable)</b>。代价是要求编码器 ψ_θ 为 diffeomorphism（用 NODE / Glow blocks 实现），且其 Jacobian J_{ψ_θ} 可逆——推理需额外的内层积分与 Jacobian 求逆（论文用 Taylor-series 近似加速）。</p>
+    <h3>推广到 Lie groups 与离散时间</h3>
+    <p>机器人策略常需同时控制位置与朝向，后者属于 SO(3)/𝕊³ 等非欧空间。SFMDS 借助 <b>adjoint operator Ad_x⁻¹</b> 与 <b>logarithmic map</b>（约束在 first cover 内以避免 wrapping）把方法搬到 Lie 群（式 57），支持 SE(3) 位姿、𝕋²、SO(3)。论文还专门分析了 forward-Euler 离散化下的稳定性（用 ball 投影替代半空间投影），弥合连续时间保证与实际数值积分之间的差距。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead">在 6 类任务上评估：(1) LASA、(2) 新提出的 LASA 𝕋²、(3) 新提出的 Multimodal ℝ²、(4) 仿真 SE(3) 倒水任务、(5) 真实人形机器人 SE(3) 插入、(6) 1682 维 Gray–Scott reaction–diffusion 系统。指标含 accuracy（RMSE / DTWD / Fréchet / Chamfer distance）与 stability（从 out-of-distribution 初始点出发的<b>不成功轨迹占比 % Unsuc.</b>）。基线 <b>BC_FMDS</b> 是去掉稳定性约束、其余训练完全相同的无约束 flow matching 动力系统，用于凸显“无约束时缺乏稳定性”。</p>
+
+    <h3>稳定性：不稳定轨迹占比（% Unsuc. Trajs ↓）</h3>
+    <table>
+      <tr><th>数据集 / 系统</th><th>BC_FMDS（无约束）</th><th>SFMDS Soft</th><th>SFMDS Hard</th></tr>
+      <tr><td>LASA（ℝ²，Table I）</td><td>40.163</td><td class="good">0.000</td><td class="good">0.000</td></tr>
+      <tr><td>LASA 𝕋²（Table I）</td><td>32.248</td><td class="good">0.000</td><td class="good">0.000</td></tr>
+      <tr><td>Multimodal ℝ²（Table II）</td><td>27.978</td><td class="good">0.000</td><td class="good">0.000</td></tr>
+      <tr><td>SE(3) 倒水（Table II）</td><td>21.355</td><td class="good">0.038</td><td class="good">0.000</td></tr>
+      <tr><td>GSRD 1682-d（Table III）</td><td>100.0</td><td class="good">2.344</td><td class="good">0.000</td></tr>
+    </table>
+    <p>无约束 BC_FMDS 在各任务上都有大量轨迹发散（LASA 40%、高维系统 100%），而 SFMDS 两种变体几乎总能收敛：hard 变体做到 0%，soft 变体仅个别边缘情形（如 SE(3) &lt;0.13%、1682-d 为 2.344%）不收敛。准确度方面，在单模态 LASA 上所有方法 RMSE 相近（约 2.1–2.9）；在 <b>Multimodal ℝ²</b> 上 soft SFMDS 的 CH(G,D)=1.402×10⁻³ 明显优于 BC_FMDS 的 3.271×10⁻³，说明稳定约束并未牺牲多模态拟合。</p>
+
+    <figure>
+      <img src="img/lasa-torus.webp" alt="LASA T2 vector fields">
+      <figcaption>Fig 6：在 LASA 𝕋²（二维环面 𝕊¹×𝕊¹）上学到的 soft（左）与 hard（右）SFMDS 向量场。白色为 demonstrations，红色为从相同初始条件 rollout 的轨迹，背景色表示归一化速度。两种变体都能在流形上准确复现跨越大范围的轨迹并稳定收敛。</figcaption>
+    </figure>
+
+    <div class="grid2">
+      <figure>
+        <img src="img/robot-insertion.webp" alt="real humanoid SE(3) insertion">
+        <figcaption>Fig 9：真实 RB-Y1 人形机器人 SE(3) 插入任务。末端位姿动力学从 15 条不同初始位姿的示教中用 SFMDS on SE(3) 学出，经 Cartesian impedance 控制器以 500 Hz 运行；模型对扰动鲁棒、可无缝接入标准控制器。</figcaption>
+      </figure>
+      <figure>
+        <img src="img/reaction-diffusion.webp" alt="1682-dim reaction diffusion">
+        <figcaption>Fig 10：1682 维 Gray–Scott reaction–diffusion 系统上 GT vs. Soft vs. Hard SFMDS 生成的浓度场随帧演化。RMSE：hard 0.091 / soft 0.094，远优于 BC_FMDS_clipped 0.600 与 BC_FMDS 4.905，验证方法可扩展到高维。</figcaption>
+      </figure>
+    </div>
+
+    <h3>推理速度与 soft / hard 取舍</h3>
+    <p>hard SFMDS 因需内层积分 + Jacobian 求逆而更慢：在 ℝ² 上 BC/Soft ≈341.78 Hz 而 Hard ≈17.14 Hz；即便在 1682 维系统上 hard 仍达 ≈13–14 Hz（Table IV），足以支撑多数机械臂操作任务。整体权衡是：<b>soft</b> 架构灵活、精度略高、但只保证局部稳定；<b>hard</b> 提供全局稳定性保证，代价是需可逆映射且推理更慢。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 前三条为作者在 Conclusions 中明确列出的 future work（<i>stated</i>）；后两条为从方法设计/实验现象推断（<i>inferred</i>）。</div>
+    <details class="lim" open><summary>只能收敛到单一目标位姿（stated）</summary><p>“many robotic tasks cannot be adequately described by a single goal pose”——SFMDS 目前把稳定性定义为收敛到一个平衡点 x_e；作者指出扩展到收敛于目标状态<b>集合</b>会显著提升适用性。</p></details>
+    <details class="lim"><summary>未建模机器人物理约束（stated）</summary><p>真实机器人实验中的失败“were caused by constraint violations such as imminent self-collisions”，工作空间限制与自碰撞不被 SFMDS 考虑；作者建议把物理约束直接纳入驱动末端运动的动力系统。</p></details>
+    <details class="lim"><summary>策略条件较简单（stated）</summary><p>目前仅以机器人状态 x 作为条件；作者提出用图像、point clouds 等更丰富的条件可拓宽适用范围，并需研究此设定下的稳定性。</p></details>
+    <details class="lim"><summary>hard SFMDS 的离散化边缘情形（inferred）</summary><p>连续时间的渐近稳定性不会自动传递到 forward-Euler 离散系统；App A 指出仍可能出现少量因离散化导致的“逃逸 Ẋ_A”或振荡边缘情形（soft SE(3) &lt;0.13%、hard &lt;0.03%），需专门处理。</p></details>
+    <details class="lim"><summary>hard 变体推理成本高（inferred）</summary><p>hard SFMDS 依赖可逆映射 ψ_θ（NODE/Glow），推理需内层积分与 Jacobian 求逆，速度较 soft/BC 低一个数量级（如 ℝ²：17 Hz vs 342 Hz），高维时仅约 13 Hz。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Let the Dynamics Flow: Stable Flow Matching Dynamical Systems · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.03834">https://arxiv.org/abs/2606.03834</a> · Project: <a href="https://let-the-dynamics-flow.github.io/SFMDS/">let-the-dynamics-flow.github.io/SFMDS</a>
+  </div>
+</footer>
+
+</body>
+</html>
