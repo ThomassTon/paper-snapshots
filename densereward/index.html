@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DenseReward: Dense Reward Learning via Failure Synthesis for Robotic Manipulation</title>
+<meta name="keywords" content="dense reward model, robotic manipulation, failure synthesis, reinforcement learning, vision-language reward, VLM reward, model predictive control, LIBERO, 强化学习, 稠密奖励">
+<meta name="description" content="DenseReward 通过仿真自动合成物理真实的失败轨迹，训练一个逐帧稠密奖励模型，为机器人操作的 MPC 与 RL 提供细粒度反馈。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics</span>
+    <h1>DenseReward</h1>
+    <div class="sub">Dense Reward Learning via Failure Synthesis for Robotic Manipulation</div>
+    <div class="authors">Yu Fang, Wanxi Dong, Jiaqi Liu, Yue Yang, Mingxiao Huo, Yao Mu, Huaxiu Yao, Li Erran Li, Daniel Szafir, Mingyu Ding · 2026</div>
+    <p class="lead">机器人 RL 的瓶颈在于缺乏可靠、能提供<b>稠密反馈</b>的 vision-language 奖励模型。DenseReward 用仿真<b>自动合成物理真实的失败轨迹</b>（无需人工标注），训练出一个从视觉观测 + 语言指令预测<b>逐帧（frame-level）奖励</b>的模型，在 sim 与真机操作上均优于通用 VLM 与现有机器人奖励模型，并为下游 MPC 与 RL 提供有效引导。</p>
+    <div class="meta">
+      <span>27k episodes · 7.56M frame samples</span>
+      <span>base: Qwen3-VL-4B-Instruct</span>
+      <span>Franka Research 3 真机验证</span>
+      <span><a href="https://arxiv.org/abs/2607.13033">📄 arXiv:2607.13033</a></span>
+      <span><a href="https://arxiv.org/pdf/2607.13033">PDF</a></span>
+    </div>
+    <div class="kw"><span>dense reward model</span><span>failure synthesis</span><span>robotic manipulation</span><span>reinforcement learning</span><span>vision-language reward</span><span>model predictive control</span><span>LIBERO</span><span>稠密奖励</span><span>强化学习</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Reinforcement learning 有望突破 imitation learning 的上限，但落地受制于缺乏可靠的 vision-language 奖励模型。论文点出两个关键难题：</p>
+    <blockquote>"Two key challenges remain: acquiring diverse failure data at scale and obtaining fine-grained reward signals beyond sparse trajectory-level success labels."</blockquote>
+    <ul>
+      <li><b>失败数据难获取</b>：真实采集失败轨迹需大量人力；而把成功 demo 重标注得到的 pseudo-failures 无法覆盖真机执行中出现的多样物理失败模式（collisions、missed grasps、object drops 等）。</li>
+      <li><b>奖励太稀疏</b>：现有奖励模型多输出 binary 或 trajectory-level 的稀疏奖励，对高效的 policy optimization 指导有限。</li>
+    </ul>
+    <figure>
+      <img src="img/overview.webp" alt="overview">
+      <figcaption>Figure 1 · 总览：(a) 含多样失败模式的 27k-episode 数据集；(b) DenseReward 从当前帧 + 历史帧预测逐时刻奖励；(c) 稠密奖励引导下游 RL 提升策略表现。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>0.081</b><small>整体 MAE（次优 RoboReward-8B 为 0.230）</small></div>
+      <div><b>0.229</b><small>MPC 平均末端-物体最小距离（最低）</small></div>
+      <div><b>40→80%</b><small>真机 Stack cups 成功率</small></div>
+      <div><b>30→70%</b><small>真机 Put ball in basket 成功率</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">DenseReward 同时解决两个难题：一条<b>自动失败数据生成 pipeline</b> 在仿真中合成物理真实的失败轨迹（无需人工标注），再据此微调出一个输出<b>逐帧标量奖励</b>的 vision-language 奖励模型。</p>
+    <figure>
+      <img src="img/failure-synthesis.webp" alt="failure synthesis pipeline">
+      <figcaption>Figure 2 · 自动数据生成与失败合成：(a) 将操作分解为 Reach / Grasp / Lift / Move / Place 五个阶段并赋予稠密奖励；(b) 针对性扰动合成多样失败模式。GraspNet 从 RGB-D 预测至多 50 个抓取候选，CuRobo 做碰撞感知运动规划并执行，阶段边界由仿真状态自动检测。</figcaption>
+    </figure>
+
+    <h3>失败合成 pipeline 与失败模式</h3>
+    <p>操作被结构化为五个 canonical phase；通过对特定阶段注入针对性扰动，自动合成六类轨迹（阶段边界处还有 validity filtering 剔除物理无效样本，如 miss 试验中的意外抓取）：</p>
+    <table>
+      <tr><th>模式</th><th>描述</th><th>扰动方式</th></tr>
+      <tr><td>Success</td><td>完整无扰执行，奖励单调上升</td><td>无</td></tr>
+      <tr><td>Collision</td><td>与环境/物体碰撞，奖励呈"山形"</td><td>关闭碰撞规避</td></tr>
+      <tr><td>Miss</td><td>抓取失败，奖励先升后降</td><td>偏移抓取目标位姿</td></tr>
+      <tr><td>Fall</td><td>搬运中掉落，奖励呈"山形"</td><td>Move 阶段随机旋转扰动</td></tr>
+      <tr><td>Smooth</td><td>次优运动执行，奖励被惩罚</td><td>关节注入 Gaussian 噪声</td></tr>
+      <tr><td>Recover</td><td>碰撞后成功重规划，奖励先降后恢复</td><td>先碰撞再重规划路径</td></tr>
+    </table>
+
+    <h3>稠密奖励模型</h3>
+    <p>以 <b>Qwen3-VL-4B-Instruct</b> 为底座微调。输入 task instruction、当前观测与历史帧；输出<b>每个时刻</b>一个 [0,1] 区间、保留三位小数的标量奖励。区别于只在整条轨迹末端给单一标签的做法：</p>
+    <blockquote>"Unlike current reward models that assign a single label p∈[0,1] at the end of an entire trajectory, we aim to learn reward signals at every timestep throughout execution."</blockquote>
+    <p>训练：<b>LoRA</b> 微调，rank 16，10 epochs，8× H100，batch size 32。数据集共 <b>27k episodes / 7,560,942 frame-level samples</b>，混合 DROID(2,986)、Isaac Sim(12,481)、RoboSuite(9,287)、LIBERO(1,825)。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">评测覆盖稠密奖励预测精度（MAE）、下游 MPC、仿真 RL（π₀ + PPO on LIBERO）与真机 RL（DSRL on Franka）。</p>
+
+    <h3>稠密奖励预测精度（MAE，越低越好）</h3>
+    <table>
+      <tr><th>Model</th><th>Overall</th><th>DROID</th><th>Isaac Sim</th><th>RoboSuite</th><th>LIBERO</th></tr>
+      <tr><td>Qwen3-VL-4B-Instruct</td><td>0.289</td><td>0.532</td><td>0.285</td><td>0.195</td><td>0.478</td></tr>
+      <tr><td>Molmo2-8B</td><td>0.335</td><td>0.480</td><td>0.307</td><td>0.303</td><td>0.455</td></tr>
+      <tr><td>Robometer</td><td>0.366</td><td>0.521</td><td>0.328</td><td>0.345</td><td>0.468</td></tr>
+      <tr><td>RoboReward-8B（次优）</td><td>0.230</td><td>0.484</td><td>0.185</td><td>0.172</td><td>0.431</td></tr>
+      <tr><td class="good">DenseReward (Ours)</td><td class="good">0.081</td><td class="good">0.259</td><td class="good">0.081</td><td class="good">0.051</td><td class="good">0.044</td></tr>
+    </table>
+    <p>DenseReward 在所有数据源上均取得最佳（best across all sources），整体 MAE 0.081，显著优于通用 VLM 与现有机器人奖励模型。</p>
+
+    <figure>
+      <img src="img/qualitative-reward.webp" alt="qualitative reward prediction">
+      <figcaption>Figure 3 · 在 success / failure 轨迹上，DenseReward 的逐帧奖励曲线与真实进度高度吻合，而 VLM 与现有奖励模型基线的曲线更平或误判。</figcaption>
+    </figure>
+
+    <h3>下游 MPC（每步采样 28 个候选动作，选奖励最高者；末端-物体最小距离，越低越好）</h3>
+    <table>
+      <tr><th>Model</th><th>Can</th><th>Cup</th><th>Lemon</th><th>Avg</th></tr>
+      <tr><td>RoboReward-4B</td><td>0.199</td><td>0.307</td><td>0.295</td><td>0.267</td></tr>
+      <tr><td>VLAC-8B</td><td>0.351</td><td>0.360</td><td>0.363</td><td>0.358</td></tr>
+      <tr><td class="good">DenseReward (Ours)</td><td class="good">0.219</td><td class="good">0.181</td><td class="good">0.288</td><td class="good">0.229</td></tr>
+    </table>
+    <p>DenseReward 平均距离最低（0.229）。注意在 <b>Can</b> 子任务上 RoboReward-4B（0.199）优于 DenseReward（0.219）——单项并非全胜，但整体最优。</p>
+
+    <h3>强化学习引导</h3>
+    <figure>
+      <img src="img/rl-curves.webp" alt="RL learning curves">
+      <figcaption>Figure 5 · 在 LIBERO 上用 DenseReward + 稀疏仿真奖励（r_t = α·r_t^sim + β·r_t^model，α=1.0，β=C/T_max，chunk C=5）对 π₀ 做 PPO 微调的成功率曲线。</figcaption>
+    </figure>
+    <ul>
+      <li><b>仿真 RL</b>：500 次试验（10 任务 × 50 次）成功率——在 LIBERO-Spatial 与 LIBERO-10 上最终成功率更高，LIBERO-Object 上持平。</li>
+      <li><b>真机 RL</b>：Franka Research 3 + Robotiq 2F-85，DSRL 适配冻结的 π₀ 策略。Stack cups（20k steps，约 20 rollouts）<b>40% → 80%</b>；Put ball in basket（10k steps，约 10 rollouts）<b>30% → 70%</b>。</li>
+    </ul>
+
+    <h3>Ablations</h3>
+    <ul>
+      <li><b>失败数据的作用</b>：含失败数据 MAE 0.0809；去掉失败数据升至 0.1312——失败合成是精度的关键。</li>
+      <li><b>历史帧数量</b>：0/1/2/3 帧对应 MAE 0.096 / 0.088 / <b>0.081</b> / 0.086，2 帧最佳。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文未设独立的 Limitations 章节；下列第 1 点为作者在 future work 中明确陈述（stated），其余为依据方法设计的合理推断（inferred）。</div>
+    <details class="lim" open><summary>任务复杂度与时序长度（stated）</summary><p>作者计划将工作扩展到更复杂的操作，如 tool use 与 long-horizon tasks，暗示当前主要在相对短程、单物体的抓放类任务上验证。原文："We plan to extend this work to more complex manipulation, such as tool use and long-horizon tasks."</p></details>
+    <details class="lim"><summary>缺少人类偏好对齐（stated）</summary><p>作者将"incorporating human preference feedback into the reward learning process"列为未来方向，以使稠密奖励模型"more general, scalable, and aligned with human expectations"——即当前奖励主要来自仿真合成信号，尚未纳入人类偏好。</p></details>
+    <details class="lim"><summary>依赖仿真合成的失败分布（inferred）</summary><p>失败模式由 Isaac Sim / RoboSuite 中针对性扰动合成，其多样性与真机失败分布的一致性取决于仿真与规划器（GraspNet、CuRobo）的覆盖范围；sim-to-real gap 可能影响真机泛化。</p></details>
+    <details class="lim"><summary>底座与算力（inferred）</summary><p>奖励模型基于 Qwen3-VL-4B-Instruct，训练用 8× H100；作为在线 RL / MPC 的逐帧打分器，其推理开销对高频控制回路的实时性可能构成约束。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · DenseReward: Dense Reward Learning via Failure Synthesis for Robotic Manipulation · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.13033">https://arxiv.org/abs/2607.13033</a>
+  </div>
+</footer>
+
+</body>
+</html>
