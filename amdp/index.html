@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMDP：用 Adjoint Matching 可扩展训练扩散策略的最大熵强化学习</title>
+<meta name="keywords" content="diffusion policy, maximum entropy RL, adjoint matching, stochastic optimal control, Schrödinger bridge, simulation-free training, Q-score, trust region, 在线强化学习">
+<meta name="description" content="AMDP 把最大熵 RL 转写成随机最优控制问题，用 reciprocal adjoint matching 免仿真、免链式反向传播地训练扩散策略，速度追平高效 Gaussian 方法。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:4px;font-size:13px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:20px;height:3px;border-radius:2px;display:inline-block}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">强化学习 · 扩散策略 · NeurIPS 2026 preprint</span>
+    <h1>AMDP：用 Adjoint Matching 训练扩散策略的可扩展最大熵强化学习</h1>
+    <div class="sub">Scalable Maximum Entropy Reinforcement Learning for Diffusion Policies via Adjoint Matching</div>
+    <div class="authors">Serge Thilges, Onur Celik, Denis Blessing, Emiliyan Gospodinov, Gerhard Neumann · Autonomous Learning Robots, Karlsruhe Institute of Technology (KIT)</div>
+    <p class="lead">扩散策略能表达复杂的多模态动作分布，但在线 RL 里训练它们要么靠反向传播穿过整条扩散链（显存爆炸），要么靠 importance sampling / 截断 Langevin（难扩展、缺保证）。AMDP 把最大熵 RL 改写成一个 <b>stochastic optimal control (SOC)</b> 问题，用 <b>reciprocal adjoint matching</b> 得到一个类似 score matching 的回归目标——<b>免仿真、免链式反向传播</b>，仅用 replay buffer 里的终端动作即可多次更新。在 63 个环境上，AMDP 匹配或超越强基线，训练墙钟时间追平高效的 Gaussian on-policy 方法。</p>
+    <div class="meta">
+      <span>on-policy + off-policy</span><span>63 个环境</span><span>10 seeds · IQM ± 95% CI</span>
+      <span><a href="https://arxiv.org/abs/2606.22630">📄 arXiv:2606.22630</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.22630">PDF</a></span>
+    </div>
+    <div class="kw"><span>diffusion policy</span><span>maximum entropy RL</span><span>adjoint matching</span><span>stochastic optimal control</span><span>Schrödinger bridge</span><span>simulation-free training</span><span>Q-score</span><span>trust region</span><span>在线强化学习</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">在线 RL 没有 ground-truth 数据集，因此 score matching / bridge matching 这类目标无法直接使用。论文把现有训练扩散策略的方法归纳为三类，并指出各自的硬伤：</p>
+    <ul>
+      <li><b>reverse KL + 链式反向传播</b>（如 DACER、DIME、FLAC）：需要对整条扩散过程反向传播，<i>"incur a massive memory overhead that prevents scaling to larger problems"</i>，且每步梯度都要完整仿真扩散过程。</li>
+      <li><b>importance-weighted matching</b>（用 <i>Q</i>-function 加权回归）：<i>"importance sampling is notoriously difficult to scale to high-dimensional action spaces"</i>。</li>
+      <li><b>基于 "Q-score" ∇<sub>a</sub>Q 的方法</b>：或依赖 overdamped Langevin，只在 τ→∞ 渐近收敛、有限步截断后缺乏保证；或依赖启发式技巧，<i>"fundamentally lack guarantees of generating samples from the true target action distribution"</i>。</li>
+    </ul>
+    <blockquote>能不能有一个既像 score matching 一样可扩展的回归目标、又对 RL 有理论支撑，还能免仿真、免链式反向传播地训练扩散策略的方法？</blockquote>
+    <figure>
+      <img src="img/results-humanoidbench.webp" alt="HumanoidBench 结果">
+      <div class="legend">
+        <span><i style="background:#1F77B4"></i>AMDP (Ours)</span>
+        <span><i style="background:#FF7F0E"></i>REPPO</span>
+        <span><i style="background:#C0392B"></i>DIME</span>
+        <span><i style="background:#707B7C"></i>PPO</span>
+      </div>
+      <figcaption><b>核心结果预览（HumanoidBench，on-policy）。</b>在包含 whole-body 操作任务的高维 HumanoidBench 上，AMDP（蓝）即便<b>不用 best-of-N</b> 也大幅领先所有基线（IQM Score，10 seeds，阴影为 95% bootstrap CI），论文称其 <i>"outperforms all baselines by a large margin"</i>，说明该方法能很好地扩展到更复杂的任务。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>63</b><small>on-policy 评测环境（MuJoCo Playground / ManiSkill / HumanoidBench）</small></div>
+      <div><b>7</b><small>off-policy 高维 dog & humanoid 环境（DMC）</small></div>
+      <div><b>0</b><small>链式反向传播 / 扩散过程仿真（policy 更新）</small></div>
+      <div><b>≈REPPO</b><small>墙钟训练速度追平高效 Gaussian on-policy 方法</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">扩散策略把动作生成建模为一个受控 SDE：dX<sub>τ</sub> = σ(τ)u(X<sub>τ</sub>,s,τ)dτ + σ(τ)dB<sub>τ</sub>，动作 a=X<sub>1</sub>。目标是找到漂移 u 使终端边缘 Π<sup>u</sup><sub>1</sub> 等于最优最大熵策略 π*(a|s) ∝ exp(Q<sup>π</sup>(s,a)/α)。作者用<b>确定性初值 X<sub>0</sub>=0</b> 保证参考过程 memoryless，从而把 Schrödinger bridge 问题解耦成一个 path-space 上的变分目标——这正是一个二次运行代价、终端代价为 g=logΠ<sup>0</sup><sub>1</sub>−Q<sup>π</sup>/α 的 SOC 问题。</p>
+    <figure>
+      <img src="img/pipeline.webp" alt="AMDP 训练流程">
+      <figcaption><b>AMDP 训练流程（论文 Fig. 1）。</b>（1）从确定性初值 X<sub>0</sub>=0 前向仿真 SDE，得到终端样本 X<sub>1</sub>~Π<sup>u</sup><sub>1</sub>；（2）用 <b>error function squashing</b> a=erf(X<sub>1</sub>) 映射到有界动作空间 𝒜=[−1,1]<sup>d</sup>；（3）在 squashed 动作上计算 <b>Q-score</b> ∇<sub>x</sub>(1/α)Q<sup>π</sup>；（4）借助 reciprocal 过程 Π<sup>0</sup><sub>τ|1</sub> 直接从 X<sub>1</sub> 采样中间态 X<sub>τ</sub>（免仿真）；（5）在这些中间态上最小化 AMDP 回归损失来优化向量场 u，<b>完全不需要对扩散过程反向传播</b>。</figcaption>
+    </figure>
+    <h3>Reciprocal Adjoint Matching：一个 score-matching 式的回归目标</h3>
+    <p>Adjoint Matching (AM) 把 path-space KL 目标写成一个 <b>fixed-point 回归损失</b>，其唯一不动点就是最优控制 u*（用 stop-gradient ū=sg(u)，无需穿过扩散过程求导）。Havens 等的 <b>reciprocal</b> 改进把期望取在参考过程的 reciprocal projection 上：在 X<sub>0</sub>=0 设置下，条件分布 Π<sup>0</sup><sub>τ|1</sub> 是一个可解析采样的 state-independent 高斯。于是可以把当前控制的终端样本 X<sub>1</sub> 存进 replay buffer，然后<b>免仿真</b>地（simulation-free）反复优化，并<i>"reuse them for multiple gradient updates"</i>——效率与 score/flow matching 同级，且保有与 AM 相同的理论保证。</p>
+    <h3>Error function 动作 squashing</h3>
+    <p>动作空间通常是有界的 [−1,1]<sup>d</sup>，需用可逆变换 f 把 X<sub>1</sub> squash 进合法区间，change-of-variables 会带来 Jacobian 项 |det J<sub>f</sub>|。作者不用常见的 tanh，而用<b>缩放误差函数</b> f<sub>erf</sub>(x)=erf(kx)，并把缩放因子 k 选成使 |det J<sub>f</sub>| 恰好抵消参考过程的高斯边缘密度 Π<sup>0</sup><sub>1</sub>。此时 log(Π<sup>0</sup><sub>1</sub>/|det J<sub>f</sub>|) 变成与 X<sub>1</sub> 无关的常数、梯度消失，训练目标被大幅简化为只含 Q-score 的一项；实验中 erf 也表现出<i>"superior numerical stability"</i>。</p>
+    <h3>Trust-region 更新与策略迭代保证</h3>
+    <p>on-policy 里目标分布漂移很快，更新易不稳。作者加了一个 <b>trust-region 约束</b>（把新旧漂移 u 与 u<sub>old</sub> 的偏差限制在 ε 内），用 relaxed Lagrangian + dual descent 求解。因为 AMDP loss 与 TR loss 都是 u 的二次凸函数，强对偶成立；<b>Proposition（fixed-point preservation）</b>证明：对任意 λ≥0，加入 trust region <i>"preserves the unique fixed point"</i>，不改变原目标的最优解。策略评估侧则用一个可处理的<b>熵下界</b> ℒ<sub>ENT</sub>（因扩散策略的边缘熵不可解）构造 soft Bellman backup，从而给出收敛到最优最大熵策略的策略迭代保证。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">on-policy 在 MuJoCo Playground、ManiSkill、HumanoidBench 共 63 个高度并行环境上评测，对比强 Gaussian 基线 REPPO / PPO / SPO 与扩散策略方法 DPPO / FPO / DIME；off-policy 在 DMC 的 7 个高维 dog & humanoid 环境上对比 DIME / QSM / Diff-QL / Consistency-AC。所有实验重复 10 seeds，按 Agarwal 等的建议报告 IQM 与 95% 分层 bootstrap 置信区间。</p>
+
+    <h3>墙钟运行时间（off-policy，单次训练迭代，ms）</h3>
+    <p>simulation-free 目标最直接的收益是：AMDP 的<b>网络训练时间（Upd.）几乎与扩散步数无关</b>，而对整条扩散链反向传播的 reverse-KL 随步数线性爆炸。</p>
+    <table>
+      <tr><th>方法</th><th>扩散步数</th><th>Cartpole · Env.</th><th>Cartpole · Upd.</th><th>G1 · Env.</th><th>G1 · Upd.</th></tr>
+      <tr><td>REPPO (Gaussian)</td><td>—</td><td>83</td><td>948</td><td>9,605</td><td>1,014</td></tr>
+      <tr><td class="good">AMDP</td><td>16</td><td>404</td><td class="good">994</td><td>10,031</td><td class="good">1,113</td></tr>
+      <tr><td>rev. KL</td><td>16</td><td>404</td><td>9,944</td><td>10,041</td><td>11,421</td></tr>
+      <tr><td class="good">AMDP</td><td>128</td><td>2,738</td><td class="good">991</td><td>13,097</td><td class="good">1,117</td></tr>
+      <tr><td>rev. KL</td><td>128</td><td>2,751</td><td>71,659</td><td>13,129</td><td>82,101</td></tr>
+    </table>
+    <p style="font-size:14px;color:var(--muted)">（Env. = rollout 时间，Upd. = 网络训练时间；论文 Table。128 步时 AMDP 的 Upd. 约 991 ms，而 reverse-KL 高达 71,659 / 82,101 ms，相差近两个数量级。）</p>
+
+    <h3>on-policy 主结果</h3>
+    <figure>
+      <img src="img/results-mjx-humanoid.webp" alt="MuJoCo Playground Humanoid 结果">
+      <div class="legend">
+        <span><i style="background:#1F77B4"></i>AMDP</span>
+        <span><i style="background:#0B3C8C"></i>AMDP BoN</span>
+        <span><i style="background:#C0392B"></i>DIME</span>
+        <span><i style="background:#FF7F0E"></i>REPPO</span>
+        <span><i style="background:#8E44AD"></i>DPPO</span>
+        <span><i style="background:#DAA520"></i>FPO</span>
+      </div>
+      <figcaption><b>MuJoCo Playground humanoid locomotion（aggregated IQM）。</b>AMDP 起步显著快于所有基线；REPPO 最终略微反超 AMDP，但在评估时对 Q 函数<b>提议 N=16 个样本取最优（AMDP BoN）</b>后，AMDP 表现<i>"significantly improves… above all baselines"</i>。值得注意的是 DIME 在此表现不佳，印证了复杂 on-policy 场景需要 trust-region 约束的更新机制。在 MJX DMC 上 AMDP 匹配 DIME 并略快于 REPPO；在 ManiSkill 上 AMDP、DIME、REPPO 相近而 PPO/SPO 更差。</figcaption>
+    </figure>
+
+    <h3>Ablations</h3>
+    <p>作者在 MuJoCo Playground DMC 与 Humanoid 上系统消融了每一处设计：</p>
+    <ul>
+      <li><b>SDE 设计不是关键。</b>换成 DIME 的 reverse-KL 目标（且都不加 trust region）性能相当（DIME 方差更小）；换成 Ornstein-Uhlenbeck 过程（AMDP-OU）表现也可比——说明增益并非来自特定 SDE。</li>
+      <li><b>erf squashing 在高维更有优势。</b>tanh 在低维控制任务上表现相近（近似 bang-bang 策略），但在高维 humanoid 上 error function <i>"improves performance significantly"</i>。</li>
+      <li><b>Trust region 必不可少。</b>去掉 KL 约束（ε=∞）性能显著崩塌；而过小的 ε（0.01）收敛更慢。</li>
+      <li><b>可跑更多扩散步、几乎零额外成本。</b>借 reciprocal projection 可对每个存下的动作重复采样多个中间时刻（batch repetition），不再需要额外 SDE 仿真或 Q 评估；步数少更省样本，复杂 humanoid 任务则受益于更多步。</li>
+    </ul>
+    <figure>
+      <img src="img/ablation-trust-region.webp" alt="Trust region 消融">
+      <div class="legend">
+        <span><i style="background:#332288"></i>ε=0.01</span>
+        <span><i style="background:#44AA99"></i>ε=0.1</span>
+        <span><i style="background:#DDCC77"></i>ε=0.3</span>
+        <span><i style="background:#CC6677"></i>ε=1.0</span>
+        <span><i style="background:#C0392B"></i>ε=∞ (no TR)</span>
+      </div>
+      <figcaption><b>Trust-region 大小消融（MuJoCo Playground humanoid）。</b>没有 KL 约束（ε=∞，红色平线）时 IQM Score 几乎停在 0——策略更新崩塌；各有界 ε 都能收敛到约 30，其中中等约束收敛最快，最小约束（ε=0.01）收敛偏慢。</figcaption>
+    </figure>
+    <p><b>off-policy：</b>在 DMC 高维 dog & humanoid 上，AMDP 匹配 DIME 的性能、在 dog 环境上收敛略快，说明 adjoint matching 目标在 off-policy 设置下也是与 reverse-KL 相当的有力策略优化损失。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 第一条为论文 <i>Limitations</i> 一节明确陈述（stated）；后两条为根据方法设计推断（inferred from the design），非作者原话。</div>
+    <details class="lim" open><summary>确定性初值 X<sub>0</sub>=0 难以对接 offline-to-online 流程（作者明确陈述）</summary><p>为满足 adjoint matching 所需的 memoryless 性质，AMDP 把参考过程限制为确定性初值 X<sub>0</sub>=0；而在离线行为数据上预训练的扩散策略通常用随机高斯先验 μ<sub>0</sub>=𝒩(0,I)。这一结构性差异<i>"complicates the integration of our method into offline-to-online RL pipelines"</i>。作者提出的可能出路是采用 memoryless noise schedule 以兼容标准 flow-matching / denoising diffusion 模型，并留作 future work。</p></details>
+    <details class="lim"><summary>依赖可靠的 Q 函数与 Q-score（inferred）</summary><p>训练信号核心是 ∇<sub>x</sub>Q<sup>π</sup>（Q-score）。策略改进的质量因此取决于 critic 及其梯度的准确性；trust region 正是为在 Q 估计可靠的邻域内更新而设计——这也暗示当 Q 估计较差时更新收益有限。</p></details>
+    <details class="lim"><summary>evaluation 阶段的强表现部分依赖 best-of-N 采样（inferred）</summary><p>在较复杂的 humanoid locomotion 上，AMDP 需要评估时对 Q 提议 N=16 个样本取最优（AMDP BoN）才能全面超过基线；这会在部署/评估时引入额外的 Q 评估开销（HumanoidBench 上则无需 BoN 即领先）。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · AMDP: Scalable Maximum Entropy RL for Diffusion Policies via Adjoint Matching · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.22630">https://arxiv.org/abs/2606.22630</a>
+  </div>
+</footer>
+
+</body>
+</html>
