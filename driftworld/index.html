@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DriftWorld: Fast World Modeling through Drifting</title>
+<meta name="keywords" content="world model, action-conditioned video generation, drifting generative models, one-step generation, robot manipulation, policy evaluation, model-based planning, 视频预测">
+<meta name="description" content="DriftWorld 用 drifting 生成模型把机器人世界模型做成单步前向生成，30+ fps、平均比 diffusion 基线快 17×，兼顾在线规划与离线策略评估。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人世界模型 · World Models</span>
+    <h1>DriftWorld</h1>
+    <div class="sub">Fast World Modeling through Drifting — 单步前向生成的动作条件世界模型</div>
+    <div class="authors">Susie Lu, Haonan Chen, Weirui Ye, Yilun Du · arXiv 2607.15065</div>
+    <p class="lead">世界模型能让机器人在"想象"里预演动作再挑最优的执行，但这一价值取决于能否快速生成大量 rollout。DriftWorld 把 <b>drifting 生成模型</b>引入动作条件视频预测：训练时学一条 action-conditioned drift，推理时不再迭代去噪，而是<b>一次前向</b>就从当前观测 + 候选动作序列生成未来帧，达到 <b>30+ fps</b>，平均比 diffusion 世界模型基线快 <b>17×</b>。</p>
+    <div class="meta">
+      <span>📄 cs.RO / cs.CV / cs.LG</span>
+      <span>5 个操作基准</span>
+      <span><a href="https://arxiv.org/abs/2607.15065">📄 arXiv:2607.15065</a></span>
+      <span><a href="https://github.com/Susie-Lu/driftworld">💻 Code (GitHub)</a></span>
+    </div>
+    <div class="kw">
+      <span>world model</span><span>action-conditioned video generation</span><span>drifting generative models</span>
+      <span>one-step generation</span><span>robot manipulation</span><span>policy evaluation</span>
+      <span>model-based planning</span><span>视频预测</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">世界模型对控制的实用价值，"hinges on generating many rollouts quickly"。当前 SOTA 世界模型大多是 <b>diffusion-based</b>，靠迭代式多步去噪生成未来帧——太慢，无法做实时规划所需的大规模 action search。</p>
+    <blockquote>"recent work on generative predictive control reports that diffusion world model rollouts consume 90–95% of runtime, resulting in 3 or more seconds per decision cycle." —— rollout 太慢，导致无法评估上百个候选动作。</blockquote>
+    <p>DriftWorld 的思路是换掉生成范式：不用 diffusion 的多步采样，而用 <b>drifting generative models</b>——训练时学一条把噪声先验映射到数据分布的 drifting field，推理时<b>单次前向</b>即可出高质量未来帧，从根本上去掉了迭代采样的瓶颈。这直接支撑两个应用：<b>在线策略提升</b>（在想象中 rollout 候选动作、挑最优执行）与<b>离线策略评估</b>（作为模拟器对真实机器人策略排名）。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="DriftWorld overview and inference-speed comparison">
+      <figcaption><b>Figure 1 · Overview.</b> 左：DriftWorld 在 Push-T、Robomimic、Bridge-V2、RT-1、Language Table 上单步生成的未来帧。右：推理速度对比——在全部五个环境上，DriftWorld（蓝，270.3 / 100.0 / 33.3 / 38.8 / 36.6 fps）显著快于 IRASim、WorldGym、Ctrl-World、LVDM、VDM、AVDC、GPC 等基线。可用于高质量生成、高效规划与离线策略模拟。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>17×</b><small>平均比 diffusion 世界模型基线更快</small></div>
+      <div><b>30+ fps</b><small>单步前向的 rollout 生成速度</small></div>
+      <div><b>5</b><small>视觉操作基准（仿真 + 真实）</small></div>
+      <div><b>0.99</b><small>离线策略评估的相关性（up to 0.9916）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">问题设定是 action-conditioned video generation：给定历史观测 <em>o<sub>t−F:t</sub></em> 与未来动作序列 <em>a<sub>t:t+T</sub></em>，预测执行动作后的未来观测 <em>o<sub>t+1:t+T+1</sub></em>。DriftWorld 是<b>首个基于 drifting 生成模型</b>的动作条件世界模型，用 <em>x = f<sub>θ</sub>(ε, c)</em> 把噪声先验 ε 与条件 c（历史帧 + 未来动作）一步映射为未来视频帧。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="DriftWorld drifting architecture and training">
+      <figcaption><b>Figure 2 · Architecture & Training.</b> (a) Action-conditioned U-Net：以高斯噪声 ε + 历史帧为输入，经 VAE 编码、Res Blocks，动作序列经 MLP 注入到每个 U-Net 层，保证每帧精确条件于对应动作，解码出未来帧。(b) Drifting loss：一种对比式损失，让生成的未来帧（negative samples <em>y⁻∼q</em>）朝真实未来帧（唯一 positive sample <em>y⁺∼p</em>）漂移。</figcaption>
+    </figure>
+    <h3>One-step 生成靠 drifting，而非去噪</h3>
+    <p>与 diffusion 在推理时迭代精修不同，drifting 在<b>训练时</b>就把生成分布 <em>q = f<sub>#</sub>p<sub>ε</sub></em> 逐步演化向真实分布 <em>p</em>：定义 drifting field <em>V<sub>p,q</sub>(x)</em>，令 <em>x<sub>i+1</sub> = x<sub>i</sub> + V<sub>p,q<sub>i</sub></sub>(x<sub>i</sub>)</em>。该向量把样本<b>吸引</b>向真实未来帧、<b>排斥</b>离开生成的负样本。原始 drifting 用于类条件图像生成会用多个正样本；DriftWorld 只用<b>单个正样本</b>——因为给定当前帧与动作，正确的未来序列唯一。</p>
+    <h3>三处为机器人仿真做的专门适配</h3>
+    <p>把 class-conditional 图像上的 drifting 迁到 action-conditioned 视频，作者改造了三件事：<b>(1)</b> 由初始观测与动作序列定义的 conditional drifting field，并引入一个可在推理时无需重训、缩放强度 α（log-uniform over [1,4] 采样训练）的 <em>action-accentuated</em> 机制放大动作跟随；<b>(2)</b> 在 <b>DINOv2/v3</b> 的语义稠密特征空间计算 drifting loss，以在复杂真实场景保持画面锐利（消融显示去掉后画质骤降）；<b>(3)</b> frame-wise 的动作条件 U-Net，确保每帧精确对齐其动作。</p>
+    <h3>Motion weighting + self-forcing</h3>
+    <p>在真实机器人数据上，额外用 <b>motion weighting</b>——对运动更大的空间位置加权 drifting loss，使夹爪运动被准确捕捉（FVD 显著更低）；再加<b>第二阶段 self-forcing</b> 训练——让模型以自己的生成帧（梯度 detach）为条件自回归 rollout，进一步提升长序列生成。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 5 个视觉操作基准评测——真实数据集 <b>Bridge-V2 / RT-1 / Language Table</b> 与仿真环境 <b>Push-T / Robomimic</b>；基线含 IRASim、LVDM、VDM、GPC World Model、Ctrl-World、AVDC 等 diffusion 世界模型。指标为 SSIM / PSNR / LPIPS / FID / FVD 与每帧生成用时（均在单张 H100）。</p>
+    <h3>真实数据集视频质量与速度（Table 3）</h3>
+    <table>
+      <tr><th>数据集</th><th>最佳基线 SSIM↑</th><th>DriftWorld SSIM↑</th><th>基线最快用时</th><th>DriftWorld 用时↓</th></tr>
+      <tr><td>Bridge-V2</td><td>0.741 (LVDM)</td><td class="good">0.821</td><td>0.285 s (LVDM)</td><td class="good">0.030 s</td></tr>
+      <tr><td>RT-1</td><td>0.757 (IRASim)</td><td class="good">0.836</td><td>0.284 s (LVDM)</td><td class="good">0.026 s</td></tr>
+      <tr><td>Language Table</td><td>0.877 (IRASim)</td><td class="good">0.913</td><td>0.270 s (LVDM)</td><td class="good">~0.03 s</td></tr>
+    </table>
+    <p>DriftWorld 在 SSIM / LPIPS 上全面领先，且每帧用时约为最快 diffusion 基线的 <b>1/10</b>、比最慢的 IRASim/VDM 快 <b>30–100×</b>。诚实起见：在 Language Table 上 DriftWorld 的 <b>PSNR 为 25.974，略低于 IRASim 的 26.846、LVDM 的 26.213</b>——这是全文中它未拿第一的少数指标之一，但 SSIM 与 LPIPS 仍最优。</p>
+    <figure>
+      <img src="img/bridge-rollout.webp" alt="Bridge-V2 rollout comparison">
+      <figcaption><b>Figure 4 · Bridge-V2 rollouts.</b> 第一行为 ground truth。DriftWorld 准确模拟了机器人夹爪与黄瓜、盘子、蘑菇（左）和方块（右）的接触交互；相比之下 IRASim 的夹爪运动不准，WorldGym 出现伪影。</figcaption>
+    </figure>
+    <h3>作为离线模拟器做策略评估（Figure 6）</h3>
+    <p>DriftWorld 能作为准确的离线模拟器，同时预测策略的绝对表现与相对排名。评估多个 diffusion policy 检查点，其在 DriftWorld 中的模拟得分与 ground-truth 模拟器高度相关：</p>
+    <ul>
+      <li><b>Push-T</b>（7 个策略，IoU）：Pearson 相关 <b>0.9515</b>，仅一次相邻反转；而基线 GPC world model 仅 <b>0.7345</b> 且多处排名错误。</li>
+      <li><b>Robomimic</b>（9 个策略，成功率）：Lift/Can 相关 <b>0.9916 / 0.9250</b>，优于 Ctrl-World 基线（需在含失败示范的数据上 post-train 才能准确模拟失败）。</li>
+    </ul>
+    <figure>
+      <img src="img/policy-eval.webp" alt="Policy evaluation correlation plots">
+      <figcaption><b>Figure 6 · Policy Evaluation.</b> 在 Lift / Can / Push-T 上，DriftWorld 预测值与真值的相关系数（0.9916 / 0.9250 / 0.9515）均高于基线 Ctrl-World / GPC（0.9053 / 0.8562 / 0.7345）。右侧为 DriftWorld rollout 与 ground truth 的逐帧对照。</figcaption>
+    </figure>
+    <h3>推理期策略提升（GPC-RANK）与消融</h3>
+    <p>把策略的候选动作在 DriftWorld 里 rollout、执行最高回报的（<b>GPC-RANK, K=50</b>），Push-T 的 <b>IoU 从 0.635 提升到 0.781</b>，且在远少于 diffusion 的推理时间内完成所有候选 rollout。消融（Table 5）表明：用 DINOv2/v3 特征空间对 Bridge-V2 画质至关重要（去掉后性能骤降）；motion weighting 与 self-forcing 对真实数据上的自回归生成不可或缺（前者显著降低 FVD）。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为作者在 "Limitations" 段落中<b>明确陈述</b>（stated），非本文推断。</div>
+    <details class="lim" open><summary>依赖强大的预训练特征提取器</summary><p>"our model relies on a robust pretrained feature extractor (DINOv2/v3) to maintain visual sharpness in complex scenes." —— 复杂场景的锐利度依赖外部 DINOv2/v3。</p></details>
+    <details class="lim"><summary>训练显存开销高于标准 diffusion</summary><p>"the drifting framework requires higher memory usage than standard diffusion at training time, since the model needs to generate multiple negative samples (e.g., 64) per forward pass to compute the drifting loss." —— 每次前向要生成多份负样本（如 64），导致每份负样本可承载的 context / 生成帧数受 GPU VRAM 限制。</p></details>
+    <details class="lim"><summary>上下文/生成窗口偏短，限制长程一致性</summary><p>作者指出未来方向是增大 context 与 generation 窗口以改善 long-range temporal consistency，可能借助 sparse history 或带时间维的 video VAE。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · DriftWorld: Fast World Modeling through Drifting · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.15065">https://arxiv.org/abs/2607.15065</a>
+  </div>
+</footer>
+
+</body>
+</html>

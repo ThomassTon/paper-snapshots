@@ -1,0 +1,11 @@
+{
+  "slug": "driftworld",
+  "title": "DriftWorld: Fast World Modeling through Drifting",
+  "arxiv_id": "2607.15065",
+  "url": "https://arxiv.org/abs/2607.15065",
+  "category": "机器人 · Robotics",
+  "keywords": ["world model", "action-conditioned video generation", "drifting generative models", "one-step generation", "robot manipulation", "policy evaluation", "model-based planning", "视频预测"],
+  "summary_zh": "DriftWorld 用 drifting 生成模型把机器人世界模型做成单步前向生成：训练时学一条动作条件 drift，推理时一次前向即从当前观测与候选动作生成未来帧，达 30+ fps、平均比 diffusion 世界模型基线快 17×，同时支撑在线规划与离线策略评估（相关性最高 0.9916）。",
+  "date": "2026-07-19",
+  "source": "arxiv-html"
+}
