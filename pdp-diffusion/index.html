@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDP：参数化扩散策略 — 用几何对齐的隐空间实现行为可控</title>
+<meta name="keywords" content="diffusion policy, behavior steering, imitation learning, multimodal demonstrations, latent space, VAE, soft-DTW, global modulation, test-time adaptation, robot manipulation">
+<meta name="description" content="PDP 用一个几何对齐的低维 behavior latent 取代噪声采样来精确操控扩散策略，在约束变化下实现模式选择、平滑插值与快速适应。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Diffusion Policy · Imitation Learning</span>
+    <h1>From Noise to Control：参数化扩散策略 (PDP)</h1>
+    <div class="sub">用一个几何对齐的低维 behavior latent，把扩散策略从"随机多样性"变成"可精确操控的行为"</div>
+    <div class="authors">Renhao Zhang, Haotian Fu, Mingxi Jia, George Konidaris, Yilun Du, Bruno Castro da Silva（Brown University 等）</div>
+    <p class="lead">标准 diffusion policy 靠随机噪声产生多样轨迹，但"多样 ≠ 可控"：想在噪声空间里挑出某个模式是 ill-conditioned 的。PDP 引入一个低维连续 behavior latent <em>z</em>，并把它组织成一个"距离 ≈ 轨迹相似度"的几何对齐流形，让 <em>z</em> 成为可插值、可优化的控制旋钮。当环境约束变化使原有模式失效时，只需在冻结策略权重的前提下优化 <em>z</em>，即可完成模式选择、平滑插值与快速适应。</p>
+    <div class="meta">
+      <span>ICML 风格投稿</span><span>9 个操作域（仿真 + 真机）</span><span>latent 维度 d_z = 2</span>
+      <span><a href="https://arxiv.org/abs/2606.00336">📄 arXiv:2606.00336</a></span>
+      <span><a href="https://github.com/Valarzz/pdp">💻 Code (github.com/Valarzz/pdp)</a></span>
+    </div>
+    <div class="kw"><span>diffusion policy</span><span>behavior steering</span><span>imitation learning</span><span>multimodal demonstrations</span><span>latent space</span><span>VAE</span><span>soft-DTW</span><span>global modulation</span><span>test-time adaptation</span><span>robot manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">真实机器人任务往往是 <em>underspecified</em> 的：同一个目标在同一环境下可以由多条不同的动作序列完成（一对多结构），所以专家数据天然是 <em>multimodal</em> 的。理想策略既要 (i) 建模这些多模态行为，又要 (ii) 在约束变化时挑出正确的那一个去执行。Diffusion policy 因能表达多模态、高维动作序列而成为 behavior cloning 的强基线，但作者指出："diversity alone is not the same as controllability"。</p>
+    <blockquote>论文研究的是 <em>constraint-induced behavior shift</em>：环境变化使训练集中的许多轨迹模式失效，成功要求"selecting or discovering a different trajectory mode"。而标准 DP 靠采样噪声来 steering 是 ill-conditioned 的——微小扰动会引起大而不可预测的轨迹变化。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="observation shift vs constraint-induced behavior shift">
+      <figcaption><b>Figure 1.</b> 上：标准评测改变的是 observation，目标行为不变。中：本文研究 constraint-induced behavior shift——环境变化使训练集中的多个轨迹模式失效，需要选择/发现另一个模式。下：标准 DP 在噪声空间里 steering 病态；PDP 则暴露一个几何与轨迹相似度对齐的 behavior latent <em>z</em>，<em>z</em> 的微小变化诱导行为的平滑变化，从而支持插值与适应。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>92.0</b><small>约束偏移场景总体成功率 %（PDP）</small></div>
+      <div><b>64.6</b><small>最强基线 VQ-BeT 同指标 %</small></div>
+      <div><b>21.5</b><small>标准 DP 同指标 %</small></div>
+      <div><b>d_z=2</b><small>behavior latent 维度</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">PDP 在 diffusion policy 之上加入一个连续 behavior latent <em>z</em>∈ℝ<sup>d_z</sup>，把控制分解为两部分：(i) 一个 <b>geometry-aligned behavior manifold</b>，把高维 demonstration 映射到"欧氏距离反映轨迹相似度"的隐空间；(ii) 一个 <b>parameterized diffusion denoiser</b>，在环境 context 与目标 <em>z</em> 双重条件下生成动作序列。测试时只优化 <em>z</em>、冻结策略权重，即可做 mode selection、行为插值与约束适应。</p>
+    <figure>
+      <img src="img/framework.webp" alt="PDP framework: training and inference">
+      <figcaption><b>Figure 2.</b> PDP 框架。训练（左）：trajectory encoder E<sub>φ</sub> 把每条 demonstration τ 嵌入到 Gaussian 后验采样的 behavior latent z；隐空间由联合目标优化——标准 VAE loss（重建 ℒ<sub>rec</sub> + KL 散度 D<sub>KL</sub>）保信息、正则化分布，几何 loss 则让隐空间距离对齐轨迹的物理相似度。推理时 denoiser ε<sub>θ</sub> 以 context 与 z 为条件生成动作 chunk。</figcaption>
+    </figure>
+
+    <h3>① Geometry-Aligned Behavior Latent（几何对齐隐空间）</h3>
+    <p>核心是学一个隐流形，使 <em>z<sub>i</sub></em> 与 <em>z<sub>j</sub></em> 的距离反映两条行为的语义相似度。作者不直接在原始观测上建结构，而是从每条 demonstration 抽取一段 <b>behavior trace</b>（基于状态的特征序列，如位置状态）。trajectory encoder E<sub>φ</sub> 把整条 τ 映射为 Gaussian 后验 q<sub>φ</sub>(z|τ)=𝒩(μ<sub>φ</sub>(τ), diag(σ²<sub>φ</sub>(τ)))，下游条件用确定性均值 z̄(τ)=μ<sub>φ</sub>(τ)；训练时配一个对称 decoder D<sub>ψ</sub> 重建 τ 以保证信息完整。几何对齐用 <b>soft-DTW</b> 计算两条轨迹的物理距离 δ<sup>X</sup><sub>ij</sub> 作为监督，使隐空间距离与之匹配——这正是"isometric"隐空间的来源（见消融）。</p>
+
+    <h3>② Global Modulation（把 z 注入 denoiser）</h3>
+    <p>behavior latent 通过 MLP 变换成每层的 γ<sup>(l)</sup> 与 β<sup>(l)</sup>，以 affine 变换作用在 denoiser 的 feature map 上：<em>h<sup>(l)</sup> ← γ<sup>(l)</sup>(z) ⊙ h<sup>(l)</sup> + β<sup>(l)</sup>(z)</em>（FiLM 式全局调制）。作者的消融显示，这种注入方式比简单 concatenation 或不加条件 (unconditioned) 收敛到明显更低的 diffusion training loss，说明它有效降低了训练中的 inter-mode ambiguity。</p>
+    <figure>
+      <img src="img/global-modulation.webp" alt="global modulation of denoiser">
+      <figcaption><b>Figure 3.</b> Global Modulation：behavior latent z 经 MLP 变成 layer-specific 的 γ<sup>(l)</sup>、β<sup>(l)</sup>，通过 affine 变换调制 denoiser 各层特征。</figcaption>
+    </figure>
+
+    <h3>③ Test-Time Latent Adaptation（测试时只优化 z）</h3>
+    <p>约束变化时，PDP 冻结 {E<sub>φ</sub>, ε<sub>θ</sub>}，只调 <em>z</em>：先用 <b>semantic warm-start</b> z<sub>0</sub>=μ<sub>φ</sub>(X(τ̃)) 从一条目标 demonstration 初始化，再沿 fitting loss ℒ<sub>fit</sub> 迭代若干步。因为隐空间几何对齐，warm-start 已接近可行区，通常只需很少步数即可适应；随机初始化则几乎无法收敛（见 Table 6）。</p>
+    <figure>
+      <img src="img/latent-nav.webp" alt="latent-space navigation for generalization">
+      <figcaption><b>Figure 5.</b> 通过隐空间导航实现泛化：学到的 behavior latent 把 demonstration 组织成紧凑 cluster，欧氏距离反映轨迹相似度。在流形上平滑插值可让 denoiser 生成介于已示范模式之间的<b>全新行为</b>。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <b>9 个高多模态操作域</b>（仿真 + 真机）上评测四点：behavior steering、原任务保真、几何驱动泛化、各组件必要性。基线共 9 种：DP、BC-GMM、BC、IBC、ADPro、Diff-ES、VQ-BeT、BESO。指标为 3 个随机种子下的成功率均值 ± 标准差。</p>
+
+    <figure>
+      <img src="img/benchmarks.webp" alt="benchmark domains">
+      <figcaption><b>Figure 4.</b> 评测域。上排为训练环境（多样专家示范，如 OpenDrawer/CloseDrawer 的不同接近路径、PickUpCup 的四个离散抓取点）；下排为带 constraint-induced shift 的测试环境——红色障碍阻断某些训练模式使其失效，或移除把手只留下唯一可行策略。</figcaption>
+    </figure>
+
+    <h3>约束偏移场景成功率（Table 2 摘选，总体均值见末行）</h3>
+    <table>
+      <tr><th>Task · Scene</th><th>PDP</th><th>DP</th><th>VQ-BeT</th><th>BC-GMM</th><th>BESO</th></tr>
+      <tr><td>CloseDrawer · S3</td><td class="good">100.0 ± 0.0</td><td>40.0 ± 13.0</td><td>100.0 ± 0.0</td><td>0.0 ± 0.0</td><td>100.0 ± 0.0</td></tr>
+      <tr><td>PlaceBlock · S3</td><td class="good">86.7 ± 10.1</td><td>2.5 ± 2.5</td><td>76.0 ± 3.1</td><td>0.0 ± 0.0</td><td>16.2 ± 11.5</td></tr>
+      <tr><td>MeatOffGrill · S3</td><td class="good">91.7 ± 2.9</td><td>2.5 ± 2.5</td><td>0.0 ± 0.0</td><td>0.0 ± 0.0</td><td>0.0 ± 0.0</td></tr>
+      <tr><td>PickUpCup · S2</td><td class="good">85.0 ± 2.5</td><td>0.8 ± 1.4</td><td>55.0 ± 5.0</td><td>72.5 ± 4.3</td><td>22.5 ± 15.9</td></tr>
+      <tr><td><b>Overall Avg.</b></td><td class="good">92.0</td><td>21.5</td><td>64.6</td><td>13.8</td><td>30.6</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">Scene 1–2 使除单一模式外的所有训练模式失效；Scene 3 是 <em>zero-mode-feasible</em> 设定——所有训练模式都失效，仅提供一条新 demonstration 用于适应。可见在 zero-mode-feasible（S3）的 MeatOffGrill 上，PDP 达 91.7% 而所有基线接近 0；总体上 PDP 92.0% 远超次优 VQ-BeT 的 64.6%。</p>
+
+    <h3>原始（未偏移）场景成功率（Table 1）</h3>
+    <table>
+      <tr><th>Task</th><th>PDP</th><th>DP</th><th>Diff-ES</th><th>VQ-BeT</th></tr>
+      <tr><td>CloseDrawer</td><td class="good">100.0 ± 0.0</td><td>88.3 ± 3.8</td><td>99.2 ± 0.8</td><td>100.0 ± 0.0</td></tr>
+      <tr><td>PlaceBlock</td><td class="good">97.5 ± 2.5</td><td>60.0 ± 6.6</td><td>80.0 ± 0.0</td><td>77.5 ± 0.0</td></tr>
+      <tr><td>MeatOffGrill</td><td class="good">73.3 ± 2.9</td><td>52.5 ± 8.7</td><td>60.0 ± 0.0</td><td>0.0 ± 0.0</td></tr>
+      <tr><td>PickUpCup</td><td class="good">90.0 ± 5.0</td><td>15.8 ± 3.8</td><td>40.0 ± 0.0</td><td>79.2 ± 1.7</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">即使在无约束偏移的原任务上，PDP 也在这四个域全部取得最佳/并列最佳——说明 behavior latent 足够表达训练数据的多模态分布，并非以牺牲原任务保真换取适应性。</p>
+
+    <h3>真机 OpenDrawer（Table 3，successes / 5 trials）</h3>
+    <table>
+      <tr><th>Method</th><th>Original</th><th>Scene 1</th><th>Scene 2</th><th>Scene 3</th></tr>
+      <tr><td>PDP</td><td class="good">5/5</td><td class="good">5/5</td><td class="good">5/5</td><td class="good">5/5</td></tr>
+      <tr><td>DP</td><td>5/5</td><td>3/5</td><td>1/5</td><td>2/5</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/sim-trajectories.webp" alt="simulation trajectory visualizations under constraint shift">
+      <figcaption><b>Figure 11.</b> 约束偏移下的仿真轨迹（CloseDrawer / PickUpCup），逐列对比 PDP 与 DP、BC-GMM、BC、IBC。PDP 保持 mode-consistent、集中在可行的绕障走廊内；无条件基线出现 mode interference 并塌缩到不可行区域。</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/latent-interp.webp" alt="latent space interpolation on CloseDrawer">
+      <figcaption><b>Figure 13.</b> CloseDrawer 隐空间插值。上：学到的隐分布，cluster 对应不同接近策略；中：多条插值路径（线性 / 椭圆）在 cluster 间穿行；下：以插值 latent 为条件生成的末端执行器轨迹——尽管插值方式不同，行为随 latent 平滑变化，验证了几何对齐隐空间的可插值性。</figcaption>
+    </figure>
+
+    <h3>Ablations（消融）</h3>
+    <ul>
+      <li><b>隐空间几何（Table 4）</b>：Isometric（对齐）在 CloseDrawer 达 100.0，而 Unaligned 仅 11.7±20.2、Discrete 为 0.0——几何对齐是可控性的关键。</li>
+      <li><b>latent 注入方式（Table 5）</b>：Global Modulation（CloseDrawer 100.0 / PickUpCup 82.5）优于 Concatenation（82.5 / 25.0）与 Unconditioned（40.0 / 15.8）。</li>
+      <li><b>初始化 & 优化步数（Table 6）</b>：Warm-start 即使 0 步就有 98.3%（CloseDrawer）/61.7%（PickUpCup），10 步升至 100.0/81.7；随机初始化即使 100 步也几乎为 0，凸显 semantic warm-start 的必要性。</li>
+      <li><b>训练 loss（Figure 10）</b>：Global Modulation 的 diffusion training loss 明显低于 Concatenation 与 Unconditioned，说明减少了 inter-mode ambiguity。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文<b>没有独立的 Limitations 章节</b>。以下第 1 条为作者在 Impact Statement 中明确陈述 (stated)；其余为从方法设计推断 (inferred)。</div>
+    <details class="lim" open><summary>适应依赖一条成功 demonstration，且行为局限于已学隐空间附近（stated）</summary><p>作者原文："adaptation relies on a successful demonstration, and the adapted behavior is expected to lie within or near the learned behavior space induced by existing demonstrations." 即测试时适应需要一条目标 demonstration 做 warm-start，且生成行为预期位于/接近已有示范诱导出的 behavior space——离该流形太远的全新策略未必可达。</p></details>
+    <details class="lim"><summary>behavior latent 维度极低（d_z = 2）（inferred）</summary><p>正文超参数表把 latent 维度设为 2。这利于可视化与插值，但对模式数量更多、跨阶段组合更复杂的任务，2 维隐空间的表达力是否足够，论文未在更高维度上系统验证。</p></details>
+    <details class="lim"><summary>behavior trace 依赖状态特征（如位置状态）（inferred）</summary><p>几何对齐建立在从 demonstration 抽取的 state-based behavior trace 与 soft-DTW 物理距离之上。对于难以用低维状态轨迹刻画相似度的任务（如以视觉/接触为主的行为），该"距离 ≈ 相似度"假设是否仍成立，未展开讨论。</p></details>
+    <details class="lim"><summary>评测集中于操作类任务（inferred）</summary><p>实验覆盖 9 个操作域（drawer/cup/block 等），虽含真机，但未涉及导航、动态/高频控制等场景，泛化范围有待进一步验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · From Noise to Control: Parameterized Diffusion Policies · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.00336">https://arxiv.org/abs/2606.00336</a> · Code: <a href="https://github.com/Valarzz/pdp">github.com/Valarzz/pdp</a>
+  </div>
+</footer>
+
+</body>
+</html>

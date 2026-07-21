@@ -1,0 +1,11 @@
+{
+  "slug": "pdp-diffusion",
+  "title": "From Noise to Control: Parameterized Diffusion Policies (PDP)",
+  "arxiv_id": "2606.00336",
+  "url": "https://arxiv.org/abs/2606.00336",
+  "category": "机器人 · Robotics",
+  "keywords": ["diffusion policy", "behavior steering", "imitation learning", "multimodal demonstrations", "latent space", "VAE", "soft-DTW", "global modulation", "test-time adaptation", "robot manipulation"],
+  "summary_zh": "PDP 用一个几何对齐的低维 behavior latent 取代随机噪声来操控扩散策略，让隐空间距离反映轨迹相似度；测试时冻结策略权重、只优化 latent 即可完成模式选择、平滑插值与约束适应，在 9 个操作域（仿真+真机）上约束偏移场景总体成功率达 92.0%，远超次优基线 VQ-BeT 的 64.6%。",
+  "date": "2026-07-21",
+  "source": "arxiv-html"
+}
