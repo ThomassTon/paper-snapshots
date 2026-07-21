@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用场景图为机器人模仿学习扩展空间与时间上下文</title>
+<meta name="keywords" content="imitation learning, scene graph, diffusion policy, 长时序操作, partial observability, mobile manipulation, DINO-v2, LLM object grounding, 结构化记忆">
+<meta name="description" content="用场景图作为显式结构化记忆，让扩散策略在部分可观测下保持长时空上下文，提升长时序移动操作与桌面操作成功率。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Imitation Learning</span>
+    <h1>用场景图为机器人模仿学习扩展空间与时间上下文</h1>
+    <div class="sub">Expanding Spatial and Temporal Context for Robotic Imitation Learning With Scene Graphs</div>
+    <div class="authors">Jianing Qian, Qinhe Peng, Emmanuel Panov, Leonor Fermoselle, Dinesh Jayaraman, Bernadette Bucher, Tarik Kelestemur</div>
+    <p class="lead">在部分可观测的真实空间里，机器人常因看不到"视野之外"的物体而在长时序任务中失手。本文把<b>场景图（scene graph）</b>作为一种"显式且结构化的记忆机制"，持续记录任务相关物体及其位置关系，喂给扩散策略（diffusion policy），从而在移动操作与桌面操作中都获得更稳的长时序推理与更强的鲁棒泛化。</p>
+    <div class="meta">
+      <span>cs.RO · Robotics</span>
+      <span>Boston Dynamics Spot（仿真）+ Franka Panda（实机）</span>
+      <span>单一手腕相机 · 部分可观测</span>
+      <span><a href="https://arxiv.org/abs/2606.01072">📄 arXiv:2606.01072</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.01072">PDF</a></span>
+    </div>
+    <div class="kw"><span>imitation learning</span><span>scene graph</span><span>diffusion policy</span><span>长时序操作</span><span>partial observability</span><span>mobile manipulation</span><span>DINO-v2</span><span>LLM object grounding</span><span>结构化记忆</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">模仿学习的策略在"小空间、短时序"的技能上已很有前景，但作者指出：<i>"at larger spatial and temporal contexts, their performance frequently deteriorates."</i> 根源在于——真实空间往往<b>部分可观测（partially observed）</b>：一旦目标物体离开视野，只吃当前 RGB 图像（或把历史帧拉平成序列）的策略便丢失了对场外物体的记忆，无法完成需要跨越较长时间与空间的推理。</p>
+    <blockquote>核心问题：机器人如何在部分可观测的大空间里，维持对"当前看不到、但任务需要"的物体的持久记忆，从而完成长时序任务？作者的答案是把场景图当作显式、结构化的记忆。</blockquote>
+    <figure>
+      <img src="img/pipeline.webp" alt="场景图节点结构与策略流水线">
+      <figcaption>方法总览（Fig. 1）。左：任务描述"Heat up tea"经 LLM 解析出任务相关物体 {microwave, cup}；当前视野里 microwave 可见、cup 已离开视野（灰显），但其信息仍保留在图中。右：每个物体节点由 <b>e</b>(DINO-v2 视觉嵌入)、<b>b</b>(2D 包围框，出视野时为空) 与 <b>c</b>(世界坐标系 3D 质心) 构成，连同一个 scene 根节点，加位置编码后经 self-attention 送入 diffusion policy。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>~1000</b><small>最长任务时序（Heat-up Tea Long，步）</small></div>
+      <div><b>3 + 4</b><small>仿真任务 + 实机桌面任务</small></div>
+      <div><b>400 / 300</b><small>每任务演示：脚本(仿真) / 遥操(实机)</small></div>
+      <div><b>1 相机</b><small>手腕 ZED Mini 为唯一视觉输入</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">方法分三步：<b>①</b> 用 LLM 从任务语言里枚举"任务相关物体"；<b>②</b> 在每个时间步增量地构建并维护一张场景图，节点携带外观 + 2D/3D 位置；<b>③</b> 把整张图编码为 transformer 表征，条件化一个扩散策略输出动作。</p>
+
+    <h3>任务驱动的节点定义</h3>
+    <p>每个节点是三元组 <b>n<sub>i</sub> = [e<sub>i</sub>, b<sub>i</sub>, c<sub>i</sub>]</b>：<b>e<sub>i</sub></b> 为物体掩码内平均池化的 DINO-v2 视觉嵌入；<b>b<sub>i</sub></b> 为图像坐标 2D 包围框（物体离开视野时置空）；<b>c<sub>i</sub></b> 为经深度反投影与里程计得到的世界坐标系 3D 质心。任务相关物体由 LLM（GPT-4）从任务描述里抽取名词实体，例如"Heat up a cup of tea"→ {microwave, cup, door}。</p>
+
+    <h3>场景图的时序维护</h3>
+    <p>场景图逐步更新：已有节点由视觉跟踪器 <b>XMem</b> 跟踪，物体离开视野时其 b<sub>i</sub> 归零、但 c<sub>i</sub> 仍被保留（这正是"记住场外物体"的关键）；新检测由 <b>Grounding DINO</b> 给出，与已有节点按掩码重叠度比较，超过阈值 τ<sub>m</sub> 才作为新节点加入。</p>
+
+    <h3>场景图条件的扩散策略</h3>
+    <p>每个节点编码为 E<sub>i</sub> = [e<sub>i</sub>, MLP(b<sub>i</sub>), MLP(c<sub>i</sub>)]，并在最前面拼上一个场景级根节点 E<sub>scene</sub>；序列 R<sub>sg</sub> = [E<sub>scene</sub>, E<sub>1</sub>, …] 加位置编码（区分根节点与物体节点）后送入 transformer 编码器。去噪网络 ϵ<sub>θ</sub>(a<sub>k</sub>, R<sub>sg</sub>, k) 在专家动作上以 DDPM 目标训练：<b>ℒ(θ) = 𝔼‖ϵ − ϵ<sub>θ</sub>(a<sub>k</sub>, R<sub>sg</sub>, k)‖²</b>；测试时以当前场景图为条件，通过逆向扩散迭代采样动作。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在两个平台上评测：仿真移动操作（Boston Dynamics Spot）与真实桌面操作（Franka Emika Panda，仅一颗手腕 ZED Mini RGB-D 相机，模拟部分可观测）。对比基线：<b>RGB</b>（多相机 RGB+本体感受的原始扩散策略）、<b>Visible-Objects</b>（仅当前视野的物体中心表征）、<b>PTP</b>（Past-Token-Prediction，10 帧历史 + 过去/未来动作预测的扩散策略）。成功率按任务子阶段分层统计。</p>
+
+    <table>
+      <tr><th>任务</th><th>平台</th><th>时序（步）</th><th>难点</th></tr>
+      <tr><td>Throw Trash</td><td>Spot 仿真</td><td>~100</td><td>走近、拾取、投入垃圾桶</td></tr>
+      <tr><td>Heat-up Tea</td><td>Spot 仿真</td><td>~300</td><td>开微波炉门、取杯、放入</td></tr>
+      <tr><td>Heat-up Tea Long</td><td>Spot 仿真</td><td>~1000</td><td>同上但导航距离更长</td></tr>
+      <tr><td>Feed-Giraffe</td><td>Franka 实机</td><td>—</td><td>扫描书架定位目标后按层放置</td></tr>
+      <tr><td>Clean-Table</td><td>Franka 实机</td><td>—</td><td>收 1–3 个玩具入抽屉，全清后才关抽屉</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/throw-trash-results.webp" alt="Throw Trash 分层成功率柱状图">
+      <figcaption>Throw Trash 分层成功率（Fig. 2 之一）。绿色 = 完成整任务（Throw Trash），蓝色 = 达到拾取阶段（Pick Up Trash）。本文方法（Ours）在"完成整任务"这一最难层级明显领先 RGB / Visible-Objects / PTP；PTP 仅靠增加时序历史，对整任务完成率提升有限——说明<b>单纯堆历史不足以替代结构化记忆</b>。具体百分比请以图中柱高为准。</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/feed-giraffe.webp" alt="Feed-Giraffe 真实机滚动展示">
+      <figcaption>Feed-Giraffe 实机滚动（Fig. 之一）：机器人先扫描书架各层定位长颈鹿（红框，帧 1–4），再回到桌面拾起菠萝（帧 5–6），最后把菠萝送到正确高度（帧 7–8）。目标在放置阶段早已离开视野，基线常"忘记"其位置，而场景图保留 3D 质心使放置更稳。</figcaption>
+    </figure>
+
+    <h3>Ablations</h3>
+    <p>两组消融衡量空间信息的贡献：<b>Ours w/o 3D</b>（去掉 3D 质心 c<sub>i</sub>，可见物体仅用 e<sub>i</sub>+b<sub>i</sub>，出视野物体仅用 e<sub>i</sub>）与 <b>Ours w/o object locations</b>（去掉全部位置信息，物体仅用外观嵌入 e<sub>i</sub>）。结果（Fig. 2d–f）显示：去掉 3D 或全部位置信息对<b>首个子任务几乎无影响</b>，却在后续子任务与整任务完成率上造成骤降。作者结论：<i>"providing explicit spatial information (3D centroids and 2D bounding boxes) is crucial"</i>，尤其对长时序任务。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 第 1 条为作者明确陈述（stated）；后两条结合论文的失败分析与运行时数据整理（部分为 inferred from the design）。</div>
+    <details class="lim" open><summary>依赖准确的物体识别，杂乱/动态场景下易退化（stated）</summary><p>作者原话：<i>"While effective for long-horizon tasks, it depends on accurate object identification and may struggle in highly cluttered or dynamic environments."</i> 场景图的构建以检测/分割为前提，识别一旦出错，记忆便被污染。</p></details>
+    <details class="lim"><summary>感知失败与长时序策略是主要失败来源</summary><p>论文失败分析：真实实验 64 个 episode 中，有 4 例因遮挡或边界模糊导致分割失败；但绝大多数失败仍来自长时序设定下的模仿策略本身，而非仅仅感知。</p></details>
+    <details class="lim"><summary>运行时受限于感知模块开销（inferred）</summary><p>扩散策略以 3.5–3.8 Hz 在 NVIDIA 3090 上运行；Grounding DINO 每个 episode 仅跑一次（0.53 s），掩码传播约 0.19 s/帧——整体依赖这些感知组件，扩展到更高频控制或更多物体时开销会上升。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Expanding Spatial and Temporal Context for Robotic Imitation Learning With Scene Graphs · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.01072">https://arxiv.org/abs/2606.01072</a>
+  </div>
+</footer>
+
+</body>
+</html>
