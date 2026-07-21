@@ -1,0 +1,11 @@
+{
+  "slug": "otql",
+  "title": "Optimal Transport Q-Learning for Flow Policy Steering and Acceleration",
+  "arxiv_id": "2607.06262",
+  "url": "https://arxiv.org/abs/2607.06262",
+  "category": "机器人 · Robotics",
+  "keywords": ["flow policy", "optimal transport", "Q-learning", "RL post-training", "flow matching", "VLA", "advantage weighting", "few-step inference", "机器人操作", "离线在线强化学习"],
+  "summary_zh": "OTQL 用 advantage-weighted conditional optimal transport flow matching 对次优 flow policy 做 RL 后训练：解 entropic OT 得到 noise-action 最优耦合，既把策略推向高价值动作又拉直积分路径。仅 50–60 个 episode 就把单任务成功率从 36% 提到 86%、预训练 VLA 从 38% 提到 76%，并把推理步数削减 70%。",
+  "date": "2026-07-21",
+  "source": "arxiv-html"
+}

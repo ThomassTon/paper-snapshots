@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTQL：用最优传输 Q-Learning 微调并加速流策略</title>
+<meta name="keywords" content="flow policy, optimal transport, Q-learning, RL post-training, flow matching, VLA, advantage weighting, few-step inference, 机器人操作, 离线在线强化学习">
+<meta name="description" content="OTQL 用 advantage-weighted conditional optimal transport flow matching 对次优流策略做 RL 后训练，仅 50–60 个 episode 就把成功率从 36% 提到 86%，并把推理步数削减 70%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · RL Post-Training · Flow Policy</span>
+    <h1>Optimal Transport Q-Learning for Flow Policy Steering and Acceleration</h1>
+    <div class="sub">OTQL：用「优势加权的条件最优传输 flow matching」微调并加速次优流策略</div>
+    <div class="authors">Andreas Sochopoulos, Esmeralda S. Whitammer, Nikolaos Tsagkas, João Moura, Michael Gienger, Sethu Vijayakumar · cs.RO</div>
+    <p class="lead">Diffusion / flow policy 能刻画多模态机器人动作分布，但依赖大量高质量示范、推理步数多，遇到分布漂移就退化。OTQL 让机器人用<strong>自身交互经验</strong>做 RL 后训练：把 advantage 转成权重、解一个 entropic OT 问题得到 noise-action 最优耦合，在<strong>拉直积分路径</strong>的同时把策略推向高价值动作。仅 <strong>50–60 个 episode</strong> 就能微调并加速，无需昂贵蒸馏。</p>
+    <div class="meta">
+      <span>单任务成功率 36% → 86%</span><span>预训练 VLA 38% → 76%</span><span>推理步数减少 70%</span>
+      <span><a href="https://arxiv.org/abs/2607.06262">📄 arXiv:2607.06262</a></span>
+      <span><a href="https://arxiv.org/pdf/2607.06262">PDF</a></span>
+    </div>
+    <div class="kw"><span>flow policy</span><span>optimal transport</span><span>Q-learning</span><span>RL post-training</span><span>flow matching</span><span>VLA</span><span>advantage weighting</span><span>few-step inference</span><span>机器人操作</span><span>离线在线强化学习</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Flow / diffusion policy（尤其在 VLA 模型里）能准确捕捉多模态轨迹分布，但要发挥好性能有两个硬约束：<strong>快速推理</strong>与<strong>高质量示范</strong>——二者往往难以同时满足。示范不足或次优会让策略行为退化，并在分布漂移下失败。本文要解决的正是：如何<strong>用机器人自身经验、通过 RL 后训练</strong>来微调并加速一个次优的 flow policy，同时做到 few-step 推理、避免昂贵的 distillation。</p>
+    <blockquote>"We address the problem of fine-tuning and accelerating suboptimal flow-based policies using the robot's experience through RL post-training."</blockquote>
+    <figure>
+      <img src="img/concept.webp" alt="EWFM vs wCOT flow on tilted two moons">
+      <figcaption>Figure 1（原文）：EWFM（Energy-weighted Flow Matching）与 wCOT（weighted-marginal COT flow matching）从 8-Gaussians 分布生成「tilted conditional two moons」目标分布。上排用 100 步 Euler 积分、下排仅 2 步。wCOT 因为在训练时就求解最优传输耦合、拉直了积分路径，在 2 步下仍能保持目标分布形状——这正是 OTQL「既 steer 又 accelerate」的核心直觉。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>36%→86%</b><small>单任务策略平均成功率</small></div>
+      <div><b>38%→76%</b><small>预训练 VLA 成功率</small></div>
+      <div><b>−70%</b><small>每次动作生成的推理步数</small></div>
+      <div><b>50–60</b><small>所需交互 episode 预算</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">OTQL 用 <strong>advantage-weighted conditional optimal transport (COT) flow matching</strong> 训练 flow policy：不再像标准 conditional flow matching 那样独立采样 noise-action 对，而是解一个<strong>熵正则最优传输</strong>问题重塑耦合分布，把概率质量集中到「low-energy（高回报）」样本上，从而在把策略推向高价值动作的同时把积分路径拉直，实现少步推理。</p>
+    <h3>Weighted COT-CFM（wCOT-CFM）</h3>
+    <p>核心是修改 flow matching 的耦合分布。先由 critic 给出的 advantage 定义能量函数 ℰ（负 advantage），再计算未归一化权重 <em>w<sub>j</sub> = e<sup>−λℰ(a<sub>j</sub>,c<sub>j</sub>)</sup></em>，用它对目标测度重新加权，"place mass on low-energy (high-reward) samples"。条件信息通过 <strong>cost augmentation</strong> 注入：把 action / noise 与「缩放后的条件」拼接成增广向量，对错配条件的配对施加惩罚，保证 source 与 target 共享同一 condition marginal。</p>
+    <h3>Critic、Advantage 与训练流程（Algorithm 1）</h3>
+    <p>训练分几步：① 用 temporal difference loss 和 Bellman target 训练 critic Q<sub>φ</sub>；② 计算优势 A(s,a)=Q(s,a)−V̂(s)；③ 把 advantage 转成权重并求解 entropic OT，得到最优耦合 Γ*；④ 用 Γ* 里的 noise-action 对做 CFM loss，把学到的向量场推向<strong>直线路径</strong>；⑤ 若有环境可交互则在线收集新数据（semi-offline，每 10 条示范训练一次）。为避免尖锐 Q 函数导致有效 batch 塌缩，还做了 <strong>weight clamping</strong>；推理时用 <strong>rejection sampling（N=5 候选取最高 Q）</strong>作为 "a lightweight refinement that further concentrates samples near the mode"。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="real-world tasks">
+      <figcaption>Figure 4（原文）：用于评测 OTQL 的真实机器人任务（stacking、pen-in-penholder、door opening、tape-in-penholder、move-knight 等操作任务）。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">评测覆盖 offline RL（OGBench 40 个任务）、offline-to-online RL、MuJoCo 在线微调，以及真实机器人上的单任务策略与 VLA（SmolVLA）适配。基线包括 FQL、QAM-F、DSRL、QC 等。关键卖点：在<strong>仅 2 NFE</strong>（offline）或 <strong>NFE=3</strong>（真实任务）下逼近甚至超过高步数方法。</p>
+    <table>
+      <tr><th>Benchmark / 任务</th><th>基线</th><th>OTQL</th><th>说明</th></tr>
+      <tr><td>OGBench（40 tasks 平均）</td><td>QAM-F 54% / DSRL 48%</td><td class="good">59%</td><td>仅需 2 NFE，比 FQL、QAM-F 高 "at least 5%"</td></tr>
+      <tr><td>antmaze-large</td><td>QAM-F 83%</td><td class="good">88%</td><td>—</td></tr>
+      <tr><td>cube-double</td><td>QAM-F 65%</td><td class="good">68%</td><td>offline-online 后接近 90%</td></tr>
+      <tr><td>humanoidmaze-medium（offline→online）</td><td>FQL / QAM-F ≈50%</td><td class="good">≈90%</td><td>—</td></tr>
+      <tr><td>真实单任务策略（~50 rollouts）</td><td>36%</td><td class="good">86%</td><td>推理步数 10 → 3（−70% NFE）</td></tr>
+      <tr><td>SmolVLA · tape in penholder</td><td>SFT 14/30</td><td class="good">24/30</td><td>NFE 降到 3</td></tr>
+      <tr><td>SmolVLA · move knight</td><td>SFT 9/30</td><td class="good">22/30</td><td>平均成功率提升 "37%"</td></tr>
+    </table>
+    <figure><img src="img/offline-online.webp" alt="offline-online results"><figcaption>Figure 2（原文）："OTQL is effective in offline-online RL settings" —— 在 cube-double、humanoidmaze 等任务上，OTQL 从离线数据起步、在线交互后成功率显著超过 FQL / QAM-F。</figcaption></figure>
+    <figure><img src="img/realworld-adapt.webp" alt="real-world adaptation"><figcaption>Figure 5（原文）："OTQL adaptation of base flow policies on 3 tasks." —— 真实机器人上，以约 50 个 episode 的预算做 semi-offline 后训练（每 10 条示范训练一次、每阶段 20k 步），把基础 flow policy 从 36% 提升到 86%，同时把推理步数从 10 降到 3。</figcaption></figure>
+    <h3>Ablations</h3>
+    <p>作者消融了权重温度 λ、rejection sampling 候选数 N 与推理步数 NFE 的影响：加大 N、适当选择 λ 能进一步集中到高价值 mode，而 NFE 可在保持成功率的前提下大幅压缩。在 MuJoCo 在线任务上，OTQL(NFE=3, N=5) 比 FQL 高约 15% 的最高成功率，并 "performs as well as QC (NFE=10, N=32) while requiring only a fraction of the inference time"。</p>
+    <figure><img src="img/ablation.webp" alt="ablation on lambda, N, NFE"><figcaption>Figure 6（原文）："Ablation of OTQL for λ, N and inference steps NFE."</figcaption></figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为原文明确陈述（stated by the authors）。</div>
+    <details class="lim" open><summary>要求策略是 neural ODE / 生成式模型（black-box 不兼容）</summary><p>OTQL 需要能对 flow 的向量场做 flow matching 训练，因此策略必须是基于 neural ODE 的生成模型；并非所有 VLA / world action model 都兼容这种后训练方式。</p></details>
+    <details class="lim"><summary>高维下 minibatch OT 效果减弱</summary><p>方法依赖 minibatch 最优传输，随维度升高其有效性下降——原文指出 "inference speed-up and adaptation become more modest as dimensionality increases"。</p></details>
+    <details class="lim"><summary>真实世界仍有标准 RL 的开销</summary><p>继承了常规 RL 的挑战：需要人工标注 episode、以及环境 reset 等真实世界成本。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Optimal Transport Q-Learning for Flow Policy Steering and Acceleration · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.06262">https://arxiv.org/abs/2607.06262</a>
+  </div>
+</footer>
+
+</body>
+</html>
