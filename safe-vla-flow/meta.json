@@ -1,0 +1,11 @@
+{
+  "slug": "safe-vla-flow",
+  "title": "Neuro-Symbolic Safety Guidance for Vision-Language-Action Models via Constrained Flow Matching",
+  "arxiv_id": "2607.01378",
+  "url": "https://arxiv.org/abs/2607.01378",
+  "category": "机器人 · Robotics",
+  "keywords": ["Vision-Language-Action", "flow matching", "control barrier function", "neuro-symbolic", "碰撞避免", "minimum-norm 约束优化", "SafeLIBERO", "predictive safety", "去噪引导 guidance", "机器人操作"],
+  "summary_zh": "把符号化 CBF 约束求解交织进 flow matching VLA 的去噪循环：每一步都对整条预测轨迹检查碰撞并解最小范数修正，实现轨迹级、预测式的碰撞避免；在 SafeLIBERO 上达到 82.8% 碰撞避免率与 81.6% 任务成功率，长程任务提升最大。",
+  "date": "2026-07-21",
+  "source": "arxiv-html"
+}

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neuro-Symbolic Safety Guidance for VLA via Constrained Flow Matching</title>
+<meta name="keywords" content="Vision-Language-Action, flow matching, control barrier function, neuro-symbolic, 碰撞避免, 约束优化, SafeLIBERO, 机器人操作, predictive safety, denoising guidance">
+<meta name="description" content="在 flow matching VLA 的去噪过程中交织符号化 CBF 约束求解，实现轨迹级预测式碰撞避免。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · VLA 安全</span>
+    <h1>面向 VLA 的神经符号安全引导：约束式 Flow Matching</h1>
+    <div class="sub">Neuro-Symbolic Safety Guidance for Vision-Language-Action Models via Constrained Flow Matching</div>
+    <div class="authors">William English, Hao Zheng, Rickard Ewetz</div>
+    <p class="lead">把符号化的 control barrier function (CBF) 约束求解<strong>交织进</strong> flow matching VLA 的去噪循环：每一步都把中间轨迹当作预测轨迹检查碰撞，并解一个 minimum-norm 修正问题。由此实现<strong>轨迹级、预测式</strong>的碰撞避免——在障碍还很远时就开始小幅绕行，而非等到临界时刻做剧烈的事后修正。</p>
+    <div class="meta">
+      <span>cs.RO / eess.SY</span><span>SafeLIBERO 基准</span><span>基座策略 π₀.₅</span>
+      <span><a href="https://arxiv.org/abs/2607.01378">📄 arXiv:2607.01378</a></span>
+      <span><a href="https://arxiv.org/pdf/2607.01378">PDF</a></span>
+    </div>
+    <div class="kw"><span>Vision-Language-Action</span><span>flow matching</span><span>control barrier function</span><span>neuro-symbolic</span><span>碰撞避免</span><span>minimum-norm 约束优化</span><span>SafeLIBERO</span><span>predictive safety</span><span>去噪引导 guidance</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">VLA 模型把感知、语言与动作生成统一进端到端框架，π₀ / π₀.₅ 等新模型用 flow matching 生成动作，泛化能力强。但真实部署的核心障碍是<strong>物理安全</strong>——尤其是碰撞避免。碰撞既会中断任务，也会损坏硬件。</p>
+    <blockquote>"their real-world deployment remains limited by the lack of effective safety measures." —— 现有 VLA 安全手段仍不足以支撑真实部署。</blockquote>
+    <p>现有方案分两类，都各有短板：</p>
+    <ul>
+      <li><strong>Training-time（如 SafeVLA）</strong>：用受约束的强化学习把安全训进模型，但需<em>昂贵重训</em>，且把安全当作可与奖励权衡的<em>软目标</em>，而非硬约束。</li>
+      <li><strong>Inference-time（如 AEGIS / SafeDec）</strong>：用 CBF 二次规划在推理时过滤动作，无需重训。但符号求解器被放在<em>生成之外</em>，只对已经生成好的<em>单个动作</em>做事后投影（post-hoc）。因为看不到未来动作，它继承了标准 CBF 的"近视"（myopia），只能在碰撞迫在眉睫时才干预，导致过度绕行甚至 <strong>deadlock</strong>。</li>
+    </ul>
+    <p>本文主张：flow matching 的迭代去噪本身就可以看作<strong>逐步的轨迹预测</strong>。既然每一步都有一整条候选轨迹，就应该在<em>生成过程内部</em>（decode-time）沿整条轨迹执行 CBF 约束，把修正分摊到更早的动作上，从而做到<strong>anticipatory avoidance</strong>。</p>
+    <div class="kpi">
+      <div><b>82.8%</b><small>碰撞避免率 CAR（本文，总平均）</small></div>
+      <div><b>81.6%</b><small>任务成功率 TSR（本文，总平均）</small></div>
+      <div><b>+19.8%</b><small>TSR 相对单步 CBF 方法提升</small></div>
+      <div><b>18.7%</b><small>无安全机制基座的 CAR（对照）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">给定一个通过 flow matching 生成 action chunk 的预训练 VLA 策略 π₀.₅，方法在其去噪循环中插入两个组件：<strong>(1) collision prediction</strong> 用当前 action chunk 估计未来的安全违规；<strong>(2) safety guidance</strong> 解一个 minimum-norm 修正，使整条预测轨迹恢复安全。修正后的 chunk 送入下一步去噪，velocity field 会据此自适应调整——这就是"神经细化 ↔ 符号约束"的反馈闭环。</p>
+    <figure>
+      <img src="img/overview.webp" alt="safety-guided flow matching overview">
+      <figcaption>Figure 4：safety-guided flow matching 总览。左侧 <strong>Neural</strong>（预训练 VLA + Action Expert）在每一步去噪时输出 action chunk Aᵀ；右侧 <strong>Symbolic</strong> 用 forward kinematics 预测末端执行器位置、构造 CBF barrier Bⱼ、并在检测到碰撞时求解 min‖δ‖² 的最小修正 δ*；修正后的轨迹回灌到下一步去噪，最终输出 minimally offset 的 <strong>Safe Action Chunk</strong>。</figcaption>
+    </figure>
+    <h3>① Collision prediction（碰撞预测）</h3>
+    <p>把当前 action chunk 视作对未来 H 步运动的预测。用 <strong>forward kinematics</strong> 在 single-integrator 动力学下推算每个动作对应的末端执行器位置，再针对已知障碍几何评估 <strong>discrete-time CBF</strong> 条件 Bⱼ ≥ (1−γ)Bⱼ₋₁，从而在动作真正执行前就识别"未来某一步会碰撞"。</p>
+    <h3>② Safety guidance（最小范数修正）</h3>
+    <p>一旦检测到违规，就把标准单步 CBF 扩展为<strong>轨迹级</strong>约束优化：在整条预测轨迹上求 <em>min ‖δ‖²  s.t. Bⱼ(a+δ) ≥ (1−γ)Bⱼ₋₁(a+δ)</em> 的最小动作修正 δ*，并把修正<em>分摊到违规点之前的多个动作</em>，实现平滑的提前绕行。</p>
+    <h3>③ In-generation feedback（生成中反馈，关键区别）</h3>
+    <p>与 post-hoc 方法最本质的不同：修正不是在生成结束后施加，而是在<strong>去噪过程中</strong>施加。因为 flow matching 模型在下一步会收到修正后的轨迹，它的 velocity field 会<em>吸收</em>这一扰动，后续细化步骤把动作重新拉回学习到的动作分布内——既满足 barrier 约束，又保持与策略意图一致。Post-hoc 方法缺乏这一反馈，只能事后过滤，无机会自适应。</p>
+    <figure>
+      <img src="img/denoising-steps.webp" alt="denoising steps with correction">
+      <figcaption>Figure 5：10 步去噪中的第 3–5 步。红色 = Neural 预测出会碰撞的轨迹；蓝色 = Symbolic 修正（标注了修正量 ‖δ‖，如 0.304、0.206）；绿色 = 修正后继续去噪的结果。修正后的轨迹作为每一步的输入被反复送回，逐步收敛到既避障又能到达 goal 的安全轨迹。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <strong>SafeLIBERO</strong>（源自 LIBERO 的安全关键基准）上评测，含 Spatial / Object / Goal / Long 四个任务套件，以及两级难度：Level I 把障碍放在目标物附近，Level II 把障碍放在机器人运动路径上。指标：<strong>CAR</strong>（碰撞避免率，越高越好）、<strong>TSR</strong>（任务成功率，越高越好）、<strong>ETS</strong>（平均执行步数，越低越省时）。对比对象：无安全机制的 π₀.₅ 基座、单步事后 CBF 方法 <strong>AEGIS</strong>。</p>
+    <table>
+      <tr><th>方法</th><th>CAR ↑</th><th>TSR ↑</th><th>ETS ↓</th></tr>
+      <tr><td>Base π₀.₅（无安全）</td><td>18.69%</td><td>50.88%</td><td>278.24</td></tr>
+      <tr><td>AEGIS（post-hoc CBF）</td><td>77.85%</td><td>68.13%</td><td class="good">262.30</td></tr>
+      <tr><td>Ours（in-generation）</td><td class="good">82.81%</td><td class="good">81.62%</td><td>299.97</td></tr>
+    </table>
+    <p>总平均上，本文 CAR 82.81% / TSR 81.62%，相对 AEGIS（77.85% / 68.13%）在两项上均更优；相对单步方法分别提升约 <strong>+6.3% CAR、+19.8% TSR</strong>。TSR 的提升尤为显著——说明把修正嵌入生成过程能保住策略完成多步任务的能力。</p>
+    <h3>长程任务是最大受益点</h3>
+    <p>AEGIS 虽大幅提升 CAR，但在 <strong>Long</strong> 套件上 TSR 仅 43.75%，说明事后修正会破坏多步任务的连贯性。本文在 Long 上做到 <strong>76.75% TSR</strong>（几乎翻倍），同时 CAR 也更高（82.50% vs 79.63%）。分套件 CAR：Goal 88.25%（vs 81.50%）、Object 84.00%（vs 74.75%）、Long 82.50%（vs 79.63%），Spatial 76.50% 与 AEGIS 75.50% 相当；四个套件 TSR 全面领先。</p>
+    <p>代价是<strong>执行时间</strong>：平均 ETS 299.97 高于 AEGIS 的 262.30，在 Object 上差距最明显（305.62 vs 201.26），因为轨迹级引导会绕出更保守的路径。但在 Spatial 上 ETS 186.35 与 AEGIS 188.20 相当——当所需修正很小时，方法几乎不带来额外开销。</p>
+    <figure>
+      <img src="img/qualitative.webp" alt="predictive collision avoidance example">
+      <figcaption>Figure 6：SafeLIBERO-Object 任务上的预测式避障示例。红点表示对末端执行器<strong>未来 10 步</strong>位置的预测；绿色轨迹为经安全引导后规避酒瓶等障碍的实际路径。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下均为论文 "Challenging cases and limitations" 小节<strong>明确陈述</strong>的局限（stated by authors），非推断。</div>
+    <details class="lim" open><summary>只约束末端执行器，未建模机械臂本体碰撞</summary><p>barrier 仅作用于 end-effector 位置、采用 single-integrator 动力学，机械臂其余部分与障碍的碰撞未被建模。在 Spatial Task 1（在 ramekin 与 plate 之间取碗）上表现最弱，Level II 的 TSR 仅 70%、落后于 AEGIS，因为障碍迫使关节远超典型构型弯曲。推广到高阶 / full-body 动力学留作 future work。</p></details>
+    <details class="lim"><summary>约束依赖已知障碍几何与位姿（取自模拟器）</summary><p>实例化 barrier 需要已知障碍的几何与位置，本文直接从 simulator 读取。这虽隔离了控制贡献与感知，却<em>偏离了 VLA 的核心动机</em>——从原始观测直接行动、不依赖显式状态。从感知中导出约束是重要的下一步。</p></details>
+    <details class="lim"><summary>椭球近似可能低估某些几何所需的间隙</summary><p>Object Task 3 在 Level I 上 CAR 偏低（46% vs AEGIS 的 78%），说明对障碍的 ellipsoidal approximation 在部分几何形状上会低估所需 clearance。</p></details>
+    <details class="lim"><summary>执行时间偏高（ETS）</summary><p>本文 ETS 在四套件中的三个高于其他方法，Object 尤甚。作者指出这些延迟<em>主要源于策略在无信息量的感知输入下发出中性动作</em>，而非引导过程本身。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    据论文原文与图表整理 · Neuro-Symbolic Safety Guidance for VLA via Constrained Flow Matching · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.01378">https://arxiv.org/abs/2607.01378</a>
+  </div>
+</footer>
+
+</body>
+</html>
