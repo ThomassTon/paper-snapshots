@@ -1,0 +1,11 @@
+{
+  "slug": "safe-vla",
+  "title": "SafeVLA：以约束学习实现视觉-语言-动作模型的安全对齐",
+  "arxiv_id": "2503.03480",
+  "url": "https://arxiv.org/abs/2503.03480",
+  "category": "机器人 · Robotics",
+  "keywords": ["Vision-Language-Action", "VLA 安全对齐", "Constrained MDP", "Safe RL", "Lagrangian relaxation", "mobile manipulation", "cumulative cost", "sim-to-real", "OOD 泛化"],
+  "summary_zh": "SafeVLA 把 VLA 的安全性显式建模为约束马尔可夫决策过程（CMDP），通过主动引发五类安全关键风险并用拉格朗日松弛的 Safe RL 施加硬约束，在提升任务成功率（+3.85%）的同时把累计安全违规平均降低 83.58%，并对 OOD 扰动与极端失败场景保持稳健。",
+  "date": "2026-07-21",
+  "source": "arxiv-html"
+}

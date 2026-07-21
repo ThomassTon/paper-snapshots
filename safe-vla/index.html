@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeVLA：以约束学习实现视觉-语言-动作模型的安全对齐</title>
+<meta name="keywords" content="Vision-Language-Action, VLA 安全对齐, Constrained MDP, Safe RL, Lagrangian relaxation, mobile manipulation, cumulative cost, 具身智能, sim-to-real, OOD 泛化">
+<meta name="description" content="SafeVLA 把 VLA 安全性建模为约束马尔可夫决策过程（CMDP），用拉格朗日松弛的 Safe RL 在提升成功率的同时把累计安全违规降低 83.58%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · VLA 安全对齐</span>
+    <h1>SafeVLA：以约束学习实现 VLA 模型的安全对齐</h1>
+    <div class="sub">Towards Safety Alignment of Vision-Language-Action Model via Constrained Learning</div>
+    <div class="authors">Borong Zhang, Yuhao Zhang, Jiaming Ji, Yingshan Lei, Yishuai Cai, Josef Dai, Yuanpei Chen, Yaodong Yang（Peking University 等）</div>
+    <p class="lead">VLA 作为通用机器人策略在真实部署时会给环境、机器人自身乃至人类带来严重安全隐患。SafeVLA 把安全性显式建模为<b>约束马尔可夫决策过程（CMDP）</b>，用<b>拉格朗日松弛</b>的 Safe RL 训练 —— 在提升任务成功率（SR）的同时，把累计安全违规（cumulative cost, CC）平均降低 <b>83.58%</b>，并对 OOD 扰动与极端失败场景保持稳健。</p>
+    <div class="meta">
+      <span>cs.RO / cs.AI</span><span>Safety-CHORES 基准</span><span>长时程移动操作</span>
+      <span><a href="https://arxiv.org/abs/2503.03480">📄 arXiv:2503.03480</a></span>
+      <span><a href="https://arxiv.org/pdf/2503.03480">PDF</a></span>
+    </div>
+    <div class="kw"><span>Vision-Language-Action</span><span>VLA 安全对齐</span><span>Constrained MDP</span><span>Safe RL</span><span>Lagrangian relaxation</span><span>mobile manipulation</span><span>cumulative cost</span><span>sim-to-real</span><span>OOD 泛化</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">VLA 有望成为通用机器人策略，但它直接输出物理动作，一旦失误就是真实世界的碰撞、损坏与伤人 —— 这类物理风险无法靠 VLM/LLM 那套 RLHF、内容审核来解决。论文指出：现有 VLA <b>尚未把安全性作为设计中不可或缺的一环显式定义并集成</b>。</p>
+    <blockquote>"Vision-language-action models (VLAs) show potential as generalist robot policies. However, these models pose extreme safety challenges during real-world deployment, including the risk of harm to the environment, the robot itself, and humans."</blockquote>
+    <p>本文的做法不是给奖励里加惩罚项（reward shaping），而是把安全当作<b>硬约束</b>：先系统性地"引诱"出多样的不安全行为，再用带约束的强化学习把违规压到给定阈值以下，从而得到 SR 与安全性都更优的策略。</p>
+    <figure>
+      <img src="img/pipeline.webp" alt="ISA pipeline">
+      <figcaption>Figure 1：Integrated Safety Approach (ISA) 流水线 —— 面向 VLA 的系统化安全对齐框架，串联「安全建模 → 风险引发 → 策略约束 → 安全保证」四个环节。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>-83.58%</b><small>累计安全违规 CC 平均降幅（vs FLaRe）</small></div>
+      <div><b>+3.85%</b><small>任务成功率 SR 平均提升</small></div>
+      <div><b>~35×</b><small>极端场景下 CC 上界严重程度降低</small></div>
+      <div><b>3 类</b><small>Safety-CHORES 任务：ObjNav / PickUp / Fetch</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">整体框架称为 <b>Integrated Safety Approach (ISA)</b>，把 VLA 对齐纳入 CMDP：在满足累计成本约束的可行策略集合内最大化任务回报，即 <b>π* = arg max<sub>π∈Π<sub>C</sub></sub> J(π)</b>，约束为 <b>E[Σ γ<sup>t</sup> c<sub>i</sub>(s<sub>t</sub>,a<sub>t</sub>)] ≤ b<sub>i</sub></b>。ISA 依次覆盖四个相互衔接的环节。</p>
+
+    <h3>① Safety Modeling（安全建模）</h3>
+    <p>用组合逻辑把安全性写成<b>状态-动作谓词 φ</b>（瞬时违规，如碰撞）与<b>轨迹级谓词 ψ</b>（整条轨迹上的行为约束）。任务把自然语言指令与安全规约一并给出。计成本规则：状态-动作谓词每次违规计 cost = 1；轨迹级谓词则在违规轨迹的最后一步计 cost = 1。</p>
+
+    <h3>② Risk Elicitation（风险引发）</h3>
+    <p>在 AI2-THOR 中借助 150K 程序化生成场景（ProcTHOR）与 800K 3D 物体（Objaverse），专门制造五类<b>安全关键情形（safety critical components）</b>去暴露危险行为：</p>
+    <ul>
+      <li><b>Corners</b> —— 狭窄空间被困；</li>
+      <li><b>Blind spots</b> —— 与视野外障碍物碰撞；</li>
+      <li><b>Fragile collections</b> —— 对易碎物的连带损害；</li>
+      <li><b>Critical points</b> —— 碰倒处于不稳定状态的物体；</li>
+      <li><b>Dangerous equipment</b> —— 与禁止交互的危险设备发生接触。</li>
+    </ul>
+    <figure>
+      <img src="img/safety-components.webp" alt="safety critical components">
+      <figcaption>Figure 2：[上] 五类安全关键情形的概念示意；[下] 仿真环境中对应的逼真渲染样例。</figcaption>
+    </figure>
+
+    <h3>③ Policy Constraining（策略约束）</h3>
+    <p>核心在于用<b>拉格朗日松弛</b>把带约束问题转成 min-max 优化：<b>min<sub>θ</sub> max<sub>λ≥0</sub> [ −J<sub>r</sub>(θ) + Σ<sub>i</sub> λ<sub>i</sub> J<sub>c<sub>i</sub></sub>(θ) ]</b>。动态的拉格朗日乘子 λ 会自适应地在"安全"与"任务表现"之间权衡 —— 违规越多，λ 越大，对策略的约束越强，避免了固定惩罚系数的僵化。</p>
+
+    <h3>④ Safety Assurance（安全保证）</h3>
+    <p>从三个维度评估安全性：<b>test-time safety</b>（留出/OOD 场景）、<b>long-tail safety</b>（低频罕见事件）、<b>extreme failure safety</b>（任务根本不可能完成时能否安全地失败）。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在自建基准 <b>Safety-CHORES</b>（含 Safety-ObjNav 多房间导航找物、Safety-PickUp 从表面抓取、Safety-Fetch 先导航再抓取三类任务）上评测。主要指标：<b>SR</b>（成功率 ↑）与 <b>CC</b>（累计成本 / 安全违规 ↓，CC(τ)=Σ<sub>k</sub>Σ<sub>t</sub> c<sub>k</sub>(s<sub>t</sub>,a<sub>t</sub>)）。baseline 覆盖 IL-only（SPOC）、IL+RL 标准（<b>FLaRe</b>）、IL+RL 奖励塑形（FLaRe-RS）与 RL-only（Poliformer）。</p>
+    <p>下表对比 IL+RL 标准基线 FLaRe 与本文 ISA（数值摘自 Table 1）——ISA 在三类任务上 SR 均更高，而 CC 大幅下降，尤其 Safety-PickUp 的 CC 从 7.076 降到 0.372：</p>
+    <table>
+      <tr><th>Safety-CHORES 任务</th><th>FLaRe · SR</th><th>ISA · SR</th><th>FLaRe · CC</th><th>ISA · CC</th></tr>
+      <tr><td>Safety-ObjNav</td><td>0.822</td><td class="good">0.865</td><td>12.356</td><td class="good">1.854</td></tr>
+      <tr><td>Safety-PickUp</td><td>0.912</td><td class="good">0.928</td><td>7.076</td><td class="good">0.372</td></tr>
+      <tr><td>Safety-Fetch</td><td>0.605</td><td class="good">0.637</td><td>43.364</td><td class="good">8.084</td></tr>
+      <tr><td>平均相对变化</td><td colspan="2" style="text-align:center">SR <b class="good">+3.85%</b></td><td colspan="2" style="text-align:center">CC <b class="good">−83.58%</b></td></tr>
+    </table>
+    <figure>
+      <img src="img/cost-distribution.webp" alt="cumulative cost distribution">
+      <figcaption>Figure 3：累计成本分布分析。左：测试集上 ISA 与 FLaRe 微调后各条轨迹的 CC 分布；中：任务成功时的 CC 分布；右：任务失败时的 CC 分布。ISA 的成本分布无论成功与否都保持一致、集中在低位，而 FLaRe 呈现"成本与成功负相关"的危险模式。</figcaption>
+    </figure>
+    <figure>
+      <img src="img/sr-cc-comparison.webp" alt="SR and CC per benchmark">
+      <figcaption>Figure 5：多个基准上各 VLA 模型的对比。左：每个模型在各基准上的 SR；右：对应产生的 CC。ISA 在保持/提升 SR 的同时显著压低 CC。</figcaption>
+    </figure>
+    <h3>Ablations & 泛化</h3>
+    <ul>
+      <li><b>Risk Elicitation 的必要性：</b>去掉安全关键情形后 CC 恶化到 5.01（对照完整 ISA 的 1.854），甚至差于 FLaRe-RS —— 说明"主动引发风险"是安全提升的关键来源。</li>
+      <li><b>动态乘子 vs 固定惩罚（Figure 6）：</b>拉格朗日动态乘子相比固定惩罚系数取得更优的"安全-性能"权衡。</li>
+      <li><b>成本阈值敏感性（Figure 7）：</b>选取 20% 阈值在约束强度与 SR 之间达到最佳平衡。</li>
+      <li><b>OOD 稳健性（Table 2）：</b>在颜色/光照/材质扰动下，平均 SR 下降 ≤ 0.042，安全成本保持稳定甚至更优。</li>
+      <li><b>极端失败场景：</b>当任务普遍不可能完成时，ISA 的 CC 仅 2.20，而 FLaRe 高达 71.68（约 32× 降低）—— 即"失败也失败得安全"。</li>
+      <li><b>通用性：</b>ISA 能提升多种 VLA 基座模型（EmbCLIP、Embodied-Codebook 变体等）的安全性。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下第一条为论文附录明确陈述（stated），其余两条为依据方法设计推断（inferred from the design）。</div>
+    <details class="lim" open><summary>轨迹级谓词的信用分配尚待探索（stated）</summary><p>论文指出，针对轨迹级谓词 ψ<sub>j</sub> 的 credit assignment "remains an area for exploration in future work" —— 当前把成本只记在违规轨迹的最后一步，如何更精细地把责任分配到轨迹中的具体动作仍是开放问题。</p></details>
+    <details class="lim"><summary>Sim-to-real 依赖精心设计的感知与对齐（stated / inferred）</summary><p>论文的真机验证平台为双 Realman RM75-6F 机械臂 + PsiBot G0-R 灵巧手 + egocentric RealSense D455 相机（Figure 8）。作者说明 sim-to-real 需要结构化位姿估计、动力学解耦与数字孪生对齐；对多样机器人形态的泛化仍未解决。</p></details>
+    <details class="lim"><summary>安全性建立在仿真定义的谓词与阈值之上（inferred）</summary><p>成本函数、五类安全关键情形与阈值 b<sub>i</sub> 均在 AI2-THOR 仿真中定义。现实世界的危险语义更丰富且难以枚举，谓词覆盖不全时可能出现"未被建模的风险"，这是约束式方法的固有边界。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · SafeVLA: Towards Safety Alignment of Vision-Language-Action Model via Constrained Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2503.03480">https://arxiv.org/abs/2503.03480</a>
+  </div>
+</footer>
+
+</body>
+</html>
