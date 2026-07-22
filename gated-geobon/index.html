@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test-Time Scaling for World Action Models via Zero-Shot Geometric Verification</title>
+<meta name="keywords" content="World Action Model, test-time scaling, Best-of-N, 机器人操作, cross-view depth consistency, optical flow, VGGT, 训练无关, action-future gate, RoboCasa">
+<meta name="description" content="Gated GeoBoN：训练无关的选择式 test-time scaling —— 用几何一致性给 World Action Model 的候选 rollout 打分，并仅在初始 rollout 内部不一致时才触发额外采样。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics</span>
+    <h1>Test-Time Scaling for World Action Models via Zero-Shot Geometric Verification</h1>
+    <div class="sub">Gated GeoBoN：用几何一致性、训练无关地挑选机器人的动作 rollout</div>
+    <div class="authors">Zesen Zhao, Minkyoung Cho, Hui Shen, Boyuan Zheng, Kunxiao Gao, Yulong Cao, Z. Morley Mao · University of Michigan, NVIDIA</div>
+    <p class="lead">机器人控制的 test-time scaling 有个特殊之处：必须在<b>执行动作之前</b>就判断额外算力值不值得花。World Action Model（WAM）天然给出了这个判断依据——每次 rollout 同时吐出一段 action chunk 和它预测的未来观测。本文提出 <b>Gated GeoBoN</b>：一个训练无关的<b>选择式</b> test-time scaling 框架，用冻结的几何基础模型给候选 rollout 打「跨视角深度重投影一致性」的分，并只在初始 rollout 看起来内部不一致时才触发额外采样。</p>
+    <div class="meta">
+      <span>Benchmark: RoboCasa / LIBERO Long / RoboTwin 2.0</span>
+      <span>训练无关 · 无需 task label</span>
+      <span><a href="https://arxiv.org/abs/2607.17454">📄 arXiv:2607.17454</a></span>
+      <span><a href="https://arxiv.org/pdf/2607.17454">PDF</a></span>
+    </div>
+    <div class="kw"><span>World Action Model</span><span>test-time scaling</span><span>Best-of-N</span><span>机器人操作</span><span>cross-view depth consistency</span><span>optical flow</span><span>VGGT geometry model</span><span>action–future gate</span><span>训练无关选择器</span><span>RoboCasa / LIBERO</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Test-time scaling 在语言/推理模型上已经很成熟：多花算力（如 Best-of-N 采样 + 打分选择）就能换来更好的结果。但机器人控制是<b>闭环、实时</b>的——你不能把每一步都放大到 N 个候选再慢慢挑，既拖慢频率、又不是每一步都值得。真正的问题是：<b>在真正下发动作之前，怎么零成本地判断这一步该不该多花算力，以及多个候选里哪个更靠谱？</b></p>
+    <blockquote>“robot control requires deciding whether extra compute is useful before executing an action. World Action Models (WAMs) make this decision natural: each rollout exposes both an action chunk and predicted future observations.”</blockquote>
+    <p>作者的关键洞察是：WAM 的 rollout 除了动作，还会<b>预测这段动作将导致的未来画面</b>。这就给了一个免费的自检信号——预测的未来是否在几何上/运动上自洽，可以在不知道任务是否成功、不用任何 task label 的前提下，反过来评估这次决策靠不靠谱。</p>
+    <figure>
+      <img src="img/gate-overview.webp" alt="Gated GeoBoN overview">
+      <figcaption><b>Figure 1.</b> action–future gate 先判断初始 WAM rollout 是否足够可靠、能否直接执行；一旦触发，GeoBoN 才额外采样多个 rollout，并选出「跨视角深度重投影不一致性」最低的那个候选。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>66.3→68.4%</b><small>RoboCasa 组均值 (Cosmos Policy, N=8)</small></div>
+      <div><b>80.8→82.5%</b><small>RoboCasa 组均值 (X-WAM, N=8)</small></div>
+      <div><b>74.8%</b><small>门控后仍保留的 always-on 增益</small></div>
+      <div><b>26.2%</b><small>仅在此比例的决策点触发额外采样</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">整套方法完全<b>训练无关（training-free）</b>，分两层：先用 <b>GeoBoN</b> 做固定预算的 Best-of-N 几何选择；再套一层轻量的 <b>action–future consistency gate</b>，把 GeoBoN 从「always-on」变成「按需触发」，即 <b>Gated GeoBoN</b>。</p>
+
+    <h3>GeoBoN：跨视角深度重投影一致性打分</h3>
+    <p>WAM 采样出 N 个 rollout，每个都带有预测的未来多视角观测。GeoBoN 用一个<b>冻结的几何基础模型 VGGT-Ω</b> 给每个候选打分：把 wrist-view 的 3D 点投影进 primary camera 视角，再和该视角直接预测的深度做对比，累计对数深度比的绝对偏差作为「不一致性」：</p>
+    <blockquote>e<sub>depth</sub>(τ<sub>i</sub>) = (1/|Ω<sub>i</sub>|) Σ | log( d<sub>proj</sub>(p) / d<sub>vggt</sub>(p) ) | ，在有效像素上求平均。</blockquote>
+    <p>不一致性越低，说明预测的未来在<b>跨视角几何上越自洽</b>，越可能对应一次靠谱的动作。GeoBoN 直接选不一致性最低的候选——整个打分<b>无需任务标签</b>。</p>
+
+    <h3>Action–Future Gate：只在需要时才多花算力</h3>
+    <p>门控用<b>光流</b>校验「动作」与「预测未来画面」是否一致：在 primary-view 的当前帧与预测帧之间算 dense optical flow，同时用 forward kinematics 把末端执行器位置投影到画面，得到「动作应产生的视觉运动」。对每条手臂计算二者的 cosine agreement：</p>
+    <blockquote>“the cosine agreement between predicted visual motion and projected action motion.”</blockquote>
+    <p>当 cosine agreement c<sub>l,r</sub> &lt; τ<sub>gate</sub>（阈值 <b>−0.2</b>）时判定为「内部不一致」，才触发 GeoBoN 采样；实现上还配有 1 cm 的 idle 阈值和投影轨迹周围 30-pixel 的 capsule 区域来过滤噪声。绝大多数决策点的初始 rollout 已足够可靠，因此门控把额外算力精准地集中在少数「可疑」步上。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <b>RoboCasa、LIBERO Long、RoboTwin 2.0</b> 三个 benchmark 上、跨 <b>五个 benchmark–backbone 组合</b>评测，backbone 覆盖 Cosmos Policy、X-WAM、LingBotVA、Motus。指标为任务成功率（%），主设置为固定预算 <b>N=8</b>，括号内为 95% 置信区间。</p>
+
+    <h3>Table 1 · 固定预算 GeoBoN（N=8）在每个设置都提升成功率</h3>
+    <table>
+      <tr><th>Benchmark · Backbone</th><th>Baseline</th><th>GeoBoN (N=8)</th><th>Δ (95% CI)</th></tr>
+      <tr><td>RoboCasa · Cosmos Policy</td><td>66.3%</td><td class="good">68.4%</td><td>+2.1 [+0.6, +7.3]</td></tr>
+      <tr><td>RoboCasa · X-WAM</td><td>80.8%</td><td class="good">82.5%</td><td>+1.7 [+0.3, +2.6]</td></tr>
+      <tr><td>LIBERO Long · Cosmos Policy</td><td>97.5%</td><td class="good">99.3%</td><td>+1.8</td></tr>
+      <tr><td>LIBERO Long · LingBotVA</td><td>97.2%</td><td class="good">98.3%</td><td>+1.1</td></tr>
+      <tr><td>RoboTwin 2.0 · Motus</td><td>87.8%</td><td class="good">89.9%</td><td>+2.1 [+0.2, +3.4]</td></tr>
+    </table>
+    <p>原文原话：fixed-budget GeoBoN “improves N=8 task success in every setting”。</p>
+
+    <h3>Table 2 · Gated GeoBoN：用 26.2% 的触发拿回 74.8% 的增益</h3>
+    <blockquote>“Gated GeoBoN recovers on average 74.8% of the always-on success gain while triggering additional sampling on only 26.2% of decision points.”</blockquote>
+    <p>即在 N<sub>max</sub>=8 下，门控只在约四分之一的决策点动用额外采样，却能保留 always-on 版本近四分之三的收益——算力代价与效果之间取得了很好的折中。</p>
+
+    <h3>Table 3 & 5 · 选择器有效性</h3>
+    <p>离线诊断（error recovery ER）显示 cross-view reprojection 是一个<b>不需任务标签的强选择器</b>：GeoBoN 在 4 个离线设置中的 3 个取得最好的 error recovery，并且是<b>唯一在所有设置下都能把在线闭环成功率提升到 baseline 之上</b>的选择器。与 Cosmos Policy 自带的 value head 相比（同样候选预算、只换选择器），GeoBoN 在 RoboCasa 上高出 <b>+1.3 ~ +2.3</b> 点、在 LIBERO Long 上高出 <b>+0.7 ~ +1.3</b> 点。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下第 1 点为作者<b>明确指出</b>的失败模式（论文有专门分析），第 2、3 点为<b>由方法设计推断</b>（inferred），论文未单列 Limitations 章节。</div>
+    <details class="lim" open><summary>False low-score selection：N 越大越容易选中「伪一致」离群点（stated）</summary><p>作者识别出的核心失败模式：候选池越大，Best-of-N 越有机会挑中一个 reprojection error 异常低的<b>虚假离群候选</b>。误选率随 N 上升——“The false low-score selection rate increases from 7% at N=2 to 12% at N=8 and 32% at N=16.” 这解释了为何性能会在 N=16 附近饱和甚至下降（evaluator noise + multiple-comparisons 效应），也是为什么「中等预算 + 选择式触发」优于「always-on 大规模采样」。</p>
+    <figure>
+      <img src="img/false-score-rate.webp" alt="false low-score selection rate vs N">
+      <figcaption><b>Figure 2.</b> false low-score selection rate 随候选预算增大而上升：更大的候选池给了 Best-of-N 更多机会去选中一个 reprojection 异常低的伪一致离群点。</figcaption>
+    </figure></details>
+    <details class="lim"><summary>几何自洽 ≠ 任务成功（inferred）</summary><p>选择器优化的是「跨视角深度一致性」这一代理信号，它与真实任务成功之间存在 gap——当候选之间差异极小时，打分噪声可能主导选择。</p>
+    <figure>
+      <img src="img/false-selection.webp" alt="representative false low-score selection">
+      <figcaption><b>Figure 3.</b> 一个代表性误选案例：候选未来在视觉上几乎完全一致，但几何评估器却给其中一个赋予异常低的 reprojection error，于是被 Best-of-N 错误选中。</figcaption>
+    </figure></details>
+    <details class="lim"><summary>依赖冻结几何模型与多视角观测（inferred）</summary><p>方法建立在冻结的 VGGT-Ω 几何基础模型、以及 primary/wrist 多视角观测和相机外参之上；门控还依赖 optical flow 与 forward kinematics 投影。当几何模型预测退化、视角/标定缺失或光流不可靠时，打分与门控信号的质量都会随之下降。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Test-Time Scaling for World Action Models via Zero-Shot Geometric Verification · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.17454">https://arxiv.org/abs/2607.17454</a>
+  </div>
+</footer>
+
+</body>
+</html>

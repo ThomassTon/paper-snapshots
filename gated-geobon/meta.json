@@ -1,0 +1,11 @@
+{
+  "slug": "gated-geobon",
+  "title": "Test-Time Scaling for World Action Models via Zero-Shot Geometric Verification",
+  "arxiv_id": "2607.17454",
+  "url": "https://arxiv.org/abs/2607.17454",
+  "category": "机器人 · Robotics",
+  "keywords": ["World Action Model", "test-time scaling", "Best-of-N", "机器人操作", "cross-view depth consistency", "optical flow", "VGGT geometry model", "action–future gate", "训练无关选择器", "RoboCasa / LIBERO"],
+  "summary_zh": "Gated GeoBoN：一个训练无关的选择式 test-time scaling 框架——用冻结几何模型 VGGT 给 World Action Model 的候选 rollout 打「跨视角深度重投影一致性」的分来做 Best-of-N，并用光流构成的 action–future gate 只在初始 rollout 内部不一致时才触发额外采样；仅在 26.2% 的决策点触发即可保留 74.8% 的 always-on 增益。",
+  "date": "2026-07-22",
+  "source": "arxiv-html"
+}
