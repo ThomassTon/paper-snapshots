@@ -1,0 +1,11 @@
+{
+  "slug": "patch-policy",
+  "title": "Patch Policy: Efficient Embodied Control via Dense Visual Representations",
+  "arxiv_id": "2607.18236",
+  "url": "https://arxiv.org/abs/2607.18236",
+  "category": "机器人 · Robotics",
+  "keywords": ["robot learning", "dense patch features", "Vision Transformer", "block-causal attention", "behavior cloning", "VLA", "DINOv2", "视觉表征", "高频反应式控制"],
+  "summary_zh": "让 transformer 策略直接消费冻结 ViT 的 dense patch tokens：核心是 block-causal attention mask（帧内双向、帧间因果），在保留时间因果的同时利用大规模视觉预训练。轻量快速，性能相对 global-pooled 策略提升 40%，并以约 0.7% 的参数量超过 fine-tuned OpenVLA-OFT 18%。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

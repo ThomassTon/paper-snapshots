@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patch Policy: Efficient Embodied Control via Dense Visual Representations</title>
+<meta name="keywords" content="robot learning, dense patch features, Vision Transformer, block-causal attention, behavior cloning, VLA, DINOv2, 视觉表征, 机器人策略">
+<meta name="description" content="Patch Policy 让 transformer 策略直接吃 ViT 的 dense patch tokens：靠 block-causal attention mask 保留时间因果，轻量、快速，性能超越 global-pooled 策略 40%，参数量仅 OpenVLA-OFT 的 0.7%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics · Embodied Control</span>
+    <h1>Patch Policy</h1>
+    <div class="sub">Efficient Embodied Control via Dense Visual Representations —— 让机器人策略直接吃 ViT 的 dense patch tokens</div>
+    <div class="authors">Gaoyue Zhou, Zichen Jeff Cui, Ada Langford, Bowen Tan, Yann LeCun, Lerrel Pinto · New York University</div>
+    <p class="lead">预训练 ViT 的 dense patch features 很强，却在机器人学习里被浪费了：主流策略要么把每帧压成一个 global token（丢掉精细空间细节），要么背上十亿参数 VLM 的全部开销。Patch Policy 用一个极简的架构扩展，让 transformer 策略<strong>直接消费冻结 ViT 的 dense patch tokens</strong>——核心是一个 <em>block-causal attention mask</em>，在保留时间因果的同时让模型跨大量 patch token 做注意力。轻量、快速、有效。</p>
+    <div class="meta">
+      <span>arXiv 2026-07-20</span><span>Behavior Cloning</span><span>4 sim + 3 real 环境</span>
+      <span><a href="https://arxiv.org/abs/2607.18236">📄 arXiv:2607.18236</a></span>
+      <span><a href="https://patch-policy.github.io">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>robot learning</span><span>dense patch features</span><span>Vision Transformer</span><span>block-causal attention</span><span>behavior cloning</span><span>VLA</span><span>DINOv2</span><span>视觉表征</span><span>高频反应式控制</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">当代机器人策略被困在两种次优范式里。其一，把观测压成 ResNet pooled feature 或 ViT CLS token 的单个 global 向量，形成一个严重的信息瓶颈——「aggressive spatial compression destroys the fine-grained, local details necessary for precise manipulation」。其二，直接 fine-tune 庞大的 vision-language-action（VLA）模型，虽然用上了 dense patch features，却「training and inference remain quite expensive overall」，继承了十亿参数 VLM 的全部成本。</p>
+    <blockquote>“Can we inherit the representational gains of large-scale vision pretraining, without inheriting the cost of billion-parameter generative models?”</blockquote>
+    <p>Patch Policy 给出的答案是：不需要大模型，关键在于<strong>直接访问冻结的、互联网预训练 backbone 的 dense patch features</strong>——「what matters is not scale but direct access to dense patch features from a frozen, Internet-pretrained backbone.」</p>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser: performance vs parameters and latency">
+      <figcaption>Figure 1. Patch Policy 在性能领先的同时，在参数量与推理延迟上都保持精简。作者在五种 SOTA 视觉表征上做了系统分析，dense patch-based 方法相对传统 global-feature 策略基线（WebSSL CLS）取得一致的性能增益。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>+40%</b><small>相对 global-pooled 表征策略的 relative improvement</small></div>
+      <div><b>+18%</b><small>超过 fine-tuned OpenVLA-OFT</small></div>
+      <div><b>0.7%</b><small>参数量仅为 OpenVLA-OFT 的比例</small></div>
+      <div><b>~11 ms</b><small>最低推理延迟（inference latency）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead">Patch Policy 是一个基于 transformer 的策略，直接摄入 ViT 未经压缩的 dense patch features。给定图像观测 o<sub>t</sub> ∈ ℝ<sup>C×H×W</sup>，一个冻结的 ViT encoder 抽出形状为 P×D 的 patch features（patch 数 × patch embedding 维度）；在长度为 T 的上下文窗口下堆成 T×P×D，展平为长度 T×P 的序列并加上 learned 1D positional embeddings，送入 transformer policy trunk 与 action head。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="Patch Policy architecture">
+      <figcaption>Figure 2. 架构。Patch Policy 由左侧的 observation trunk 与右侧的 policy head 组成：把多视角观测编码为 patch features，可选地把 goal embedding（图像 / 状态）拼接进当前时刻序列；对任意 transformer-based policy head 都兼容；用一个 block-wise causal mask 强制只条件于过去的观测。</figcaption>
+    </figure>
+    <h3>① Block-causal attention mask（核心）</h3>
+    <p>这是让 dense patch 与时间因果性共存的关键设计：「Patches maintain full bidirectional attention intra-frame but are causally masked inter-frame, allowing the model to integrate spatial information across each frame while preserving temporal causality.」即——<strong>帧内 patch 之间双向全注意力</strong>（充分整合空间信息），<strong>帧与帧之间因果遮罩</strong>（当前帧不能看到未来帧），从而在吃下每帧大量 patch token 与其它 state 信息的同时，保持标准策略的时间因果结构。</p>
+    <h3>② 冻结的互联网预训练 ViT backbone</h3>
+    <p>视觉 backbone 在训练中<strong>全程冻结</strong>，作者系统对比了五种 SOTA 表征：DINOv2、DINOv3、WebSSL、V-JEPA 2、SigLIP 2。真实机器人实验统一采用紧凑而表现顶尖的 <strong>DINOv2 ViT-S/14</strong>。</p>
+    <h3>③ 与任意 transformer policy head 兼容</h3>
+    <p>Patch Policy 只是一个架构扩展，可直接搭配现成的策略头：论文验证了 <strong>VQ-BeT</strong>（vector-quantized behavior transformer，分类-回归混合目标）与 <strong>Diffusion Policy</strong>（去噪目标）。训练时把一段 patch token 序列前向过 policy trunk 与 action head，对每一帧计算预测动作与 ground-truth 动作之间的损失。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead">评测覆盖 <strong>四个仿真套件</strong>（Push-T、LIBERO Goal、BlockPush、Cube）与 <strong>三个真实世界任务</strong>（Cable Insertion，约 2 mm 插入公差；Pen Collection，多物体 + 位姿变化；Tool Hanging）；此外在 CAP-EgoGym 上用 5000 episodes、在多样背景纹理与物体上评测 pick / open / close。基线包括使用 SOTA global-pooled 表征的策略与 fine-tuned OpenVLA-OFT。</p>
+    <figure>
+      <img src="img/environments.webp" alt="four simulated and three real-world environments">
+      <figcaption>Figure 3. 评测环境：四个仿真环境与三个真实世界环境。</figcaption>
+    </figure>
+    <p>Patch Policy 在全部四个仿真环境上都超过同时融合 DINOv2 与 SigLIP 特征的 fine-tuned OpenVLA-OFT，「confirming that dense spatial representations are vital for complex manipulation tasks」；在三个真实任务上也全部胜出，说明「for in-domain task learning, a lightweight policy trained from scratch over frozen dense features can be competitive with a heavy pretrained VLA fine-tuned on the same data.」</p>
+
+    <h3>Ablation · 空间压缩（Push-T，Table 4）</h3>
+    <p>把每帧保留的 patch 数逐步降到 1（等价于 global token），性能单调下滑，直接量化了「dense vs. global」的差距：</p>
+    <table>
+      <tr><th>每帧 patch 数</th><th>256</th><th>64</th><th>16</th><th>4</th><th>1（global）</th></tr>
+      <tr><td>Push-T success</td><td class="good">0.69</td><td>0.52</td><td>0.53</td><td>0.51</td><td>0.48</td></tr>
+    </table>
+
+    <h3>真实世界成功率（Table 2，Patch Policy-VQ-BeT + DINOv2 patch）</h3>
+    <table>
+      <tr><th>任务</th><th>Cable Insertion</th><th>Pen Collection<br><small>（第 3 支笔放置）</small></th><th>Tool Hanging<br><small>（工具挂上）</small></th></tr>
+      <tr><td>Final success</td><td class="good">0.70</td><td class="good">0.85</td><td class="good">0.90</td></tr>
+    </table>
+
+    <h3>Ablation · 视觉表征对比</h3>
+    <figure>
+      <img src="img/encoder-ablation.webp" alt="encoder ablation across pretrained visual representations">
+      <figcaption>Figure 5. Patch Policy 在不同预训练视觉表征上的对比（3 个随机种子的 mean ± std）。结论：「DINOv2 and WebSSL are the most effective vision backbones for robot learning tasks.」</figcaption>
+    </figure>
+    <p>此外，attention mask ablation（Table 12，Push-T 与 Cube）对比了 block-causal / full attention / token-causal 三种遮罩，支撑了 block-causal 的选择。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文<strong>作者明确陈述</strong>（stated），摘自其 Limitations 段落。</div>
+    <details class="lim" open><summary>只用了冻结 backbone</summary><p>「we focused exclusively on frozen vision backbones, and future work could explore end-to-end fine-tuning to adapt these representations for specialized visual domains.」——未做端到端微调，特化视觉域上仍有提升空间。</p></details>
+    <details class="lim"><summary>dense token 拉长序列、增加训练时间</summary><p>「dense tokens increase sequence length and training time. Optimizations like FlashAttention could accelerate both training and inference.」——序列变长带来开销，可用 FlashAttention 等优化加速。</p></details>
+    <details class="lim"><summary>仅作为 behavior cloning 策略评测</summary><p>「Patch Policy is currently evaluated purely as a behavior cloning policy. Extending this patch-based architecture to reinforcement learning could be a promising direction to surpass the performance ceiling of static expert demonstrations.」——尚未结合 RL，扩展到 RL 有望突破静态专家演示的性能上限。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Patch Policy: Efficient Embodied Control via Dense Visual Representations · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.18236">https://arxiv.org/abs/2607.18236</a> · Project: <a href="https://patch-policy.github.io">https://patch-policy.github.io</a>
+  </div>
+</footer>
+
+</body>
+</html>
