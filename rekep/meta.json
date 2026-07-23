@@ -1,0 +1,11 @@
+{
+  "slug": "rekep",
+  "title": "ReKep：面向机器人操作的关系型关键点约束时空推理",
+  "arxiv_id": "2409.01652",
+  "url": "https://arxiv.org/abs/2409.01652",
+  "category": "机器人 · Robotics",
+  "keywords": ["relational keypoint constraints", "robotic manipulation", "semantic keypoints", "VLM · GPT-4o", "DINOv2", "SAM", "constrained optimization", "closed-loop policy", "bimanual manipulation", "约束优化"],
+  "summary_zh": "ReKep 把操作任务表示为运行在语义关键点上的 Python 约束函数，通过分层优化实时求解末端位姿（SE(3)）构成闭环策略，并由 DINOv2/SAM 与 GPT-4o 自动生成约束，在单臂与双臂平台上完成多阶段、野外、双臂与反应式操作，无需任务专属数据。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

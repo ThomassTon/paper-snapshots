@@ -1,0 +1,11 @@
+{
+  "slug": "afford2act",
+  "title": "Afford2Act: Language-Conditioned Affordance Distillation to Semantic Grounded 2D Keypoints for Robotic Manipulation",
+  "arxiv_id": "2510.01433",
+  "url": "https://arxiv.org/abs/2510.01433",
+  "category": "机器人 · Robotics",
+  "keywords": ["robotic manipulation", "affordance", "2D keypoints", "imitation learning", "DINO", "language-conditioned", "gating network", "generalization", "稀疏状态表示"],
+  "summary_zh": "用语言条件的 affordance 先验自动蒸馏出一小组（K=19）语义 2D keypoints 作为操作策略输入，再以轻量 attention+gating 策略动态挑点；单视角 RGB、每任务 40 条示教，对未见物体达到 82% 成功率。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

@@ -1,0 +1,11 @@
+{
+  "slug": "kalm",
+  "title": "KALM: Keypoint Abstraction using Large Models for Object-Relative Imitation Learning",
+  "arxiv_id": "2410.23254",
+  "url": "https://arxiv.org/abs/2410.23254",
+  "category": "机器人 · Robotics",
+  "keywords": ["imitation learning", "keypoint abstraction", "VLM", "object-relative frame", "diffusion policy", "few-shot", "DINO features", "SAM", "manipulation", "泛化"],
+  "summary_zh": "KALM 让大型预训练视觉-语言模型自动提议候选 keypoints，再用少量机器人示教验证其跨视角/跨实例一致性，蒸馏出「任务相关且一致」的稀疏关键点；策略在以关键点为中心的 object-relative 坐标系里用扩散模型预测动作，仅 10 条示教、无需额外标注即可泛化到新视角与新物体。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

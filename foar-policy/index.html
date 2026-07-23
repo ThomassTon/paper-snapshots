@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoAR: Force-Aware Reactive Policy for Contact-Rich Robotic Manipulation</title>
+<meta name="keywords" content="force-aware policy, contact-rich manipulation, force/torque sensing, RISE, diffusion policy, imitation learning, future contact prediction, reactive control, 多模态特征融合, 机器人操作">
+<meta name="description" content="FoAR 在 RISE 基础上融合高频力/力矩感知，用 future contact predictor 动态调节力信息使用，并以简单位置控制的 reactive control 完成接触密集型操作任务。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">RA-L 2025 · Robotics</span>
+    <h1>FoAR: Force-Aware Reactive Policy for Contact-Rich Robotic Manipulation</h1>
+    <div class="sub">给视觉模仿策略装上"触觉"——用 future contact predictor 动态调节力/力矩信息，以简单位置控制完成接触密集型操作</div>
+    <div class="authors">Zihao He, Hongjie Fang, Jingjing Chen, Hao-Shu Fang, Cewu Lu · Shanghai Jiao Tong University</div>
+    <p class="lead">纯视觉策略难以区分"接触/非接触"状态，在擦写、削皮、切菜这类 contact-rich 任务上表现不稳。FoAR 在 RISE 策略基础上引入高频 force/torque 感知，用一个 future contact predictor 预测未来是否接触，据此在非接触段与接触段之间动态调节力信息的使用权重，并配合 reactive control 用简单位置控制完成精细接触操作，在所有任务上显著超越 baseline。</p>
+    <div class="meta">
+      <span>Contact-Rich Manipulation</span><span>Force/Torque Sensing</span><span>Real-World Imitation</span>
+      <span><a href="https://arxiv.org/abs/2411.15753">📄 arXiv:2411.15753</a></span>
+      <span><a href="https://tonyfang.net/FoAR/">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>force-aware policy</span><span>contact-rich manipulation</span><span>force/torque sensing</span><span>RISE</span><span>diffusion policy</span><span>future contact prediction</span><span>reactive control</span><span>多模态特征融合</span><span>imitation learning</span><span>机器人操作</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Contact-rich 任务（擦、削、切）对策略提出双重挑战：接触动力学复杂、且需要精确控制。纯视觉策略往往缺少像 force/torque 这样的关键接触反馈模态——单看图像很难判断工具与物体"到底接没接触上"，导致要么悬空空扫、要么用力过猛。</p>
+    <blockquote>"Vision-based policies often struggle with the skill required for such tasks, as they typically lack critical contact feedback modalities like force/torque information."</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="FoAR overview">
+      <figcaption>Figure 1 · FoAR 概览。上：仅凭 vision 难以区分接触与非接触状态（"Are they in contact? Vision 困惑，Force 清晰"），凸显引入 force/torque 的必要性。中：FoAR Policy 由 future contact predictor 输出接触概率 φ，指导多模态融合并预测机器人动作。右：reactive control 在 φ≈1 但力不足时做 force-aware refinement，微调动作后再执行。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>0.875</b><small>Wiping score（RISE 0.500）</small></div>
+      <div><b>100%</b><small>Peeling 削皮 ASR（RISE 50%）</small></div>
+      <div><b>3.9</b><small>Chopping 平均切段数（RISE 1.8）</small></div>
+      <div><b>100Hz</b><small>force/torque 采样，约 2s 窗口</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">FoAR 建立在 real-world 模仿策略 <b>RISE</b> 之上：point cloud 经 sparse 3D encoder + transformer 得到 scene feature，再由 diffusion action head 输出动作序列。FoAR 在此之上并联一条 force/torque 分支，并用 future contact predictor 把两条模态"按需"融合。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="FoAR architecture">
+      <figcaption>Figure 2 · FoAR 架构。上支路：point cloud p<sub>t</sub> → Sparse 3D Encoder → Transformer → scene feature h<sub>t</sub><sup>s</sup>。下支路：force/torque 序列 f<sub>t−T<sub>o</sub>:t</sub> → MLP → Transformer → force feature h<sub>t</sub><sup>f</sup>。future contact predictor（输入 RGB I<sub>t</sub> 与力信号）输出接触概率 φ，用于把 force feature 与 learnable embedding h* 加权融合，再与 scene feature 拼接送入 diffusion action head 做 action denoising。</figcaption>
+    </figure>
+    <h3>Force/Torque 编码</h3>
+    <p>采集高频 force/torque 数据（100Hz、约 200 个时间步 ≈ 2 秒），先经 3 层 MLP 得到 512 维 force token，再用带 sinusoidal positional encoding 的 transformer 编码为 force feature h<sub>t</sub><sup>f</sup>。相比只在末端拼一个瞬时力向量，这样保留了力信号随时间的变化趋势。</p>
+    <h3>Future Contact Predictor</h3>
+    <p>用 ResNet18 视觉编码器 + MLP 力编码器，输出接触概率 φ ∈ [0,1]，表示未来 ±2 秒窗口内发生接触的可能性。它是整个策略"何时相信力信息"的开关。</p>
+    <h3>多模态特征融合（φ 引导）</h3>
+    <p>融合特征把 scene feature 与 [φ × force feature + (1−φ) × learnable neutral embedding h*] 拼接。非接触段 φ→0，力分支被中性 embedding 顶替，避免噪声力信号干扰；接触段 φ→1，力信息被充分使用。由此实现"在非接触段与接触段之间动态调节 force/torque 数据的使用"。</p>
+    <h3>Reactive Control</h3>
+    <p>部署时的反应式修正：当预测接触概率超过阈值（δ<sub>φ</sub>=0.9）但检测到的力/力矩不足（δ<sub>f</sub>=8N、δ<sub>t</sub>=5N·m）时，沿估计方向对预测动作做一个小位移修正（ε=0.006m）。这让 FoAR "仅用简单的 position control" 也能把接触压实到位，而无需显式的力控/阻抗控制器。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在真实机器人上设计 3 类 contact-rich 任务——<b>Wiping</b>（擦白板，含 General 任意朝向变体）、<b>Peeling</b>（削黄瓜皮）、<b>Chopping</b>（切辣椒），每个任务都包含非接触段与接触段。指标为分阶段平均成功率 ASR(%) 与综合任务 score。Baseline 为 RISE 及其两个融合力信息的变体 RISE (force-token) / RISE (force-concat)。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="tasks">
+      <figcaption>Figure 3 · 三个任务的流程分解。每个任务都遵循 grasp → move → 接触操作（wipe / peel / cut）→ place 四步，覆盖非接触与接触阶段以全面评估策略。</figcaption>
+    </figure>
+
+    <h3>Wiping / Peeling（Table I）</h3>
+    <table>
+      <tr><th>Method</th><th>Wiping score</th><th>Wiping (General) score</th><th>Peeling score</th><th>Peeling ASR</th></tr>
+      <tr><td>RISE</td><td>0.500</td><td>0.500</td><td>0.377</td><td>50%</td></tr>
+      <tr><td>RISE (force-token)</td><td>0.575</td><td>0.600</td><td>0.487</td><td>75%</td></tr>
+      <tr><td>RISE (force-concat)</td><td>0.475</td><td>—</td><td>0.524</td><td>80%</td></tr>
+      <tr><td class="good">FoAR (ours)</td><td class="good">0.875</td><td class="good">0.850</td><td class="good">0.756</td><td class="good">100%</td></tr>
+    </table>
+    <p>FoAR 在三项 score 上均大幅领先，Wiping 的 wipe 阶段 ASR 达 100%（RISE 仅 75%），Peeling 的 peel 阶段 ASR 达 100%（RISE 仅 50%）。简单地把力"塞进"RISE（force-token / force-concat）虽有小幅提升，但远不及 φ 引导的动态融合。</p>
+
+    <h3>Chopping（Table II）</h3>
+    <table>
+      <tr><th>Method</th><th># Segments</th><th>Norm. Length Avg.</th><th>Norm. Length Std.</th><th>Place ASR</th></tr>
+      <tr><td>RISE</td><td>1.8 ± 0.6</td><td>0.727</td><td>0.411</td><td>30%</td></tr>
+      <tr><td class="good">FoAR (ours)</td><td class="good">3.9 ± 0.9</td><td class="good">0.353</td><td class="good">0.094</td><td class="good">70%</td></tr>
+    </table>
+    <p>切辣椒任务鼓励切成若干均匀小段且不因半切而粘连：FoAR 平均切出 3.9 段（RISE 1.8 段），切段长度更短更均匀（Avg 0.353、Std 0.094，均优于 RISE），说明力反馈帮助刀"切透"。</p>
+
+    <h3>Ablations（Table III · Wiping General）</h3>
+    <table>
+      <tr><th>Method</th><th>Score</th><th>Wipe ASR</th></tr>
+      <tr><td>FoAR w/o Reactive Control</td><td>0.650</td><td>80%</td></tr>
+      <tr><td class="good">FoAR w/ Reactive Control</td><td class="good">0.850</td><td class="good">100%</td></tr>
+    </table>
+    <p>去掉 reactive control 后 score 从 0.850 降到 0.650、wipe ASR 从 100% 降到 80%，验证了反应式位置修正的作用。鲁棒性测试中，面对重写、移动白板及组合扰动，FoAR 维持 0.80–0.85 的 score，而 RISE 仅维持 0.50–0.60。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 原文未设独立的 "Limitations" 章节，仅在结论中给出未来方向。下列第 1 条为作者明确提及的 future work（stated），第 2、3 条为依据方法设计推断（inferred）。</div>
+    <details class="lim" open><summary>控制策略仍较朴素（stated）</summary><p>FoAR 目前仅用 simple position control + reactive refinement 完成接触任务。作者指出未来可引入更先进的控制策略，如 compliance control、hybrid force/position control 来处理更复杂的接触。</p></details>
+    <details class="lim"><summary>单臂、任务集有限（stated / inferred）</summary><p>实验为单臂机械臂上的 3 类任务。作者提出可扩展到 dual-arm 或 humanoid 机器人以完成更复杂任务；当前泛化到全新任务类别的能力未被验证。</p></details>
+    <details class="lim"><summary>依赖 future contact predictor 与人工阈值（inferred）</summary><p>reactive control 依赖 δ<sub>φ</sub>=0.9、δ<sub>f</sub>=8N、δ<sub>t</sub>=5N·m、ε=0.006m 等手工设定的阈值，且 φ 预测器需要额外训练；这些超参在不同硬件/任务上可能需重新标定。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · FoAR: Force-Aware Reactive Policy for Contact-Rich Robotic Manipulation · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2411.15753">https://arxiv.org/abs/2411.15753</a> · Project: <a href="https://tonyfang.net/FoAR/">https://tonyfang.net/FoAR/</a>
+  </div>
+</footer>
+
+</body>
+</html>

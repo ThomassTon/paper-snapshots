@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KALM: Keypoint Abstraction using Large Models for Object-Relative Imitation Learning</title>
+<meta name="keywords" content="imitation learning, keypoint abstraction, VLM, object-relative frame, diffusion policy, manipulation, few-shot, generalization, DINO features, SAM">
+<meta name="description" content="KALM 用大型预训练模型自动蒸馏出「任务相关 + 跨实例一致」的稀疏 keypoints，并在 object-relative 坐标系里训练扩散策略，仅 10 条示教即可泛化到新视角与新物体。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:38px;line-height:1.18;margin:0 0 10px;font-weight:800;letter-spacing:.3px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:29px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px} @media(max-width:760px){.grid3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ICRA 2025 · Robot Imitation Learning</span>
+    <h1>KALM：用大模型蒸馏 Keypoint，做「以物体为中心」的模仿学习</h1>
+    <div class="sub">Keypoint Abstraction using Large Models for Object-Relative Imitation Learning</div>
+    <div class="authors">Xiaolin Fang, Bo-Ruei Huang, Jiayuan Mao, Jasmine Shone, Joshua B. Tenenbaum, Tomás Lozano-Pérez, Leslie Pack Kaelbling · MIT CSAIL 等</div>
+    <p class="lead">机器人要在物体位姿、相机视角、物体实例都变化的场景里从少量示教学会操作，很难。KALM 让大型预训练视觉-语言模型（VLM）自动<b>提议</b> keypoints，再用少量机器人示教<b>验证</b>其一致性，从而蒸馏出「任务相关 + 跨实例一致」的稀疏关键点；策略在以这些 keypoints 为中心的 <i>object-relative</i> 坐标系里预测动作，仅 <b>10 条示教</b>、无需额外人工标注，即可泛化到新视角与新物体。</p>
+    <div class="meta">
+      <span>任务：real-world 机械臂操作 + Meta-World 仿真</span>
+      <span>骨干：VLM + SAM + DINO/FPFH + Diffuser</span>
+      <span><a href="https://arxiv.org/abs/2410.23254">📄 arXiv:2410.23254</a></span>
+      <span><a href="https://kalm-il.github.io/">🌐 Project page</a></span>
+    </div>
+    <div class="kw"><span>imitation learning</span><span>keypoint abstraction</span><span>VLM</span><span>object-relative frame</span><span>diffusion policy</span><span>few-shot</span><span>DINO features</span><span>SAM</span><span>泛化</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">keypoint（关键点）是一种简洁而有力的操作表征：把动作锚定到少数几个语义点上，可以天然对背景、绝对位姿与视角变化保持不变。但过去要么靠专家<b>手工设计</b> keypoints、部署时还要额外采数据与人工标注；要么直接用大模型无监督地抽点——论文指出这类做法「error-prone」，与机器人任务约束不对齐。</p>
+    <blockquote>好的 keypoint 抽象必须同时满足两点：<b>task relevance</b>（关键点足以支撑任务完成）与 <b>cross-instance consistency</b>（关键点在不同视角、位姿、物体实例间都能被稳健地识别）。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="KALM teaser">
+      <figcaption><b>Figure 1（teaser）：</b>KALM 通过对大型预训练模型「提议 + 验证」来蒸馏 keypoint 抽象，只用少量机器人示教数据。蒸馏出的稀疏关键点（图中粉色点）驱动策略，在多个真实操作任务上仅凭 10 条示教、无需额外标注即展现强泛化。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>10</b><small>每个任务仅需示教条数</small></div>
+      <div><b>0</b><small>额外人工关键点标注</small></div>
+      <div><b>9/10</b><small>抬咖啡机把手（变视角）最佳成功率</small></div>
+      <div><b>~5×</b><small>数据效率优于 3D Diffuser Actor</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">KALM 分两阶段：<b>(a) Keypoint 蒸馏</b>——迭代地由 VLM 提议候选区域、用示教数据做一致性验证，筛出稳健关键点；<b>(b) keypoint-centric 策略</b>——在以关键点集合中心为原点的 object-relative 坐标系里，用扩散模型预测末端执行器轨迹。</p>
+    <figure>
+      <img src="img/overview.webp" alt="KALM overview">
+      <figcaption><b>Figure 2：KALM overview。</b>左侧为关键点蒸馏流程（VLM 粗定位区域 → SAM 分割 → 第二次 VLM 选 mask → FPS 采候选点 → 跨实例一致性验证）；右侧为推理期：在新场景上定位蒸馏得到的 keypoints，并由 Diffuser 在 object-relative 坐标系中去噪生成动作轨迹。</figcaption>
+    </figure>
+
+    <h3>① VLM 提议：从「任务描述」到「候选关键点」</h3>
+    <p>输入示教视频序列 &#8459; 与任务描述 <i>d</i>（如 “open the top drawer”）。<b>VLM&#8321;</b> 在叠了网格（grid overlay）的首帧图像上、以 zero-shot chain-of-thought 推理定位<b>任务相关区域</b>；随后 <b>SAM</b>（Segment Anything Model）在候选区域生成物体部件的 masks，<b>VLM&#8322;</b> 再从中挑出最相关的一个 mask；最后在该 mask 内的 3D 点上做 <b>Farthest Point Sampling（FPS）</b>，得到 N<sub>c</sub> 个几何显著、「visually distinct and thus tend to be consistently identifiable」的候选点。</p>
+
+    <h3>② Keypoint 检测函数 φ(k, I)：把「找对应点」当优化问题</h3>
+    <p>给定候选关键点 <i>k</i> 与新图像 <i>I</i>，φ 搜索使特征相似度最大的位置 <i>p</i>，融合 <b>DINO</b> 视觉特征（权重 λ&#8321;=0.75）与 <b>FPFH</b> 三维几何特征（λ&#8322;=0.25），并用 local group-based matching（半径 r=0.02m 内采 N&#8242;=8 个邻居）提升鲁棒性；若匹配不到则返回 <b>Null</b>。</p>
+
+    <h3>③ 一致性验证：只保留「跨示教都能被找到」的点</h3>
+    <p>对每个候选点，用其在所有示教上被成功检出的比例打分 &#934;(k) := (1/N)&#8721;&#120793;[φ(k,I<sub>i</sub>) ≠ Null] ≥ 1−δ（δ=0.3）；当满足 &#8721;<sub>k</sub>&#934;(k)/|&#119974;<sub>FPS</sub>| ≥ γ 才算成功，否则丢弃并重新提示 VLM。<b>这一步是把「大模型的猜测」变成「机器人可信赖的关键点」的核心。</b></p>
+
+    <h3>④ Keypoint-centric 扩散策略</h3>
+    <p>策略骨干为 <b>Diffuser</b>（基于扩散的轨迹模型）：输入稀疏关键点位置 p<sub>k</sub> 及其 DINO+FPFH 特征，输出末端执行器轨迹 τ<sub>EE</sub>（H=48 个位姿，每个 10 维：3D 位置 + 6D 旋转 + gripper）。关键设计是<b>在 object-relative（以关键点集合中心为原点）坐标系里预测动作</b>——从而对背景、视角变化以及物体/相机绝对位姿保持不变，并促成跨实例泛化。推理时：φ 定位关键点 → Diffuser 去噪生成若干候选轨迹 → 双向 <b>RRT</b> 运动规划检查可达性 → 执行第一条可行轨迹。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在 <b>Meta-World 仿真</b>（5 个任务）与 <b>真实 Franka 机械臂</b>（3 个任务）上评测，重点看在随机化相机与物体位姿、以及未见过物体（cross-object）下的泛化。每个任务仅 10 条示教。</p>
+
+    <h3>真实机械臂：跨视角 &amp; 跨物体成功率（Table II，各 10 次）</h3>
+    <p>基线 “w/o. Verification”：跳过一致性验证，直接让 VLM 选 N<sub>k</sub>=8 个关键点。可见验证步骤对稳健性至关重要。</p>
+    <table>
+      <tr><th>任务</th><th>KALM · View</th><th>KALM · Cross Obj.</th><th>w/o. Verif. · View</th><th>w/o. Verif. · Cross Obj.</th></tr>
+      <tr><td>Lifting the handle（抬咖啡机把手）</td><td class="good">9/10</td><td class="good">6/10</td><td>1/10</td><td>0/10</td></tr>
+      <tr><td>Opening the top drawer（开抽屉）</td><td class="good">6/10</td><td class="good">7/10</td><td>2/10</td><td>0/10</td></tr>
+      <tr><td>Pouring into a bowl（倒入碗中）</td><td class="good">8/10</td><td class="good">6/10</td><td>6/10</td><td>2/10</td></tr>
+    </table>
+    <div class="grid3">
+      <figure><img src="img/coffee.webp" alt="lifting coffee handle"><figcaption>抬咖啡机把手</figcaption></figure>
+      <figure><img src="img/drawer.webp" alt="opening drawer"><figcaption>开抽屉</figcaption></figure>
+      <figure><img src="img/pour.webp" alt="pouring into bowl"><figcaption>倒入碗中</figcaption></figure>
+    </div>
+    <p>硬件：Franka Research 3 机械臂 + 手腕 RealSense D435i 相机。KALM「demonstrates strong performance under view changes」并能泛化到 diffusion 训练时未见过的物体。</p>
+
+    <h3>仿真：少样本对比 &amp; 数据效率</h3>
+    <p>Meta-World 5 任务（DrawerOpen / DrawerClose / ButtonSide / ButtonTop / LeverPull），随机化相机（elevation∈[0,π/2]、azimuth∈[−π/2,π/2]、distance∈[1.5,2]）与物体位姿。基线含 <b>Diffuser</b>（仅 RGB）、<b>3D Diffuser Actor</b>（RGBD+transformer），以及「+ manual keypoints」的消融。论文：「Our method consistently outperforms these baselines, demonstrating that keypoints serve as an effective abstraction.」</p>
+    <figure>
+      <img src="img/data-efficiency.webp" alt="data efficiency">
+      <figcaption><b>Figure 4：Data efficiency。</b>横轴为示教数量从 10 增到 500，纵轴为 5 个任务的平均成功率。KALM 数据效率显著优于所有基线——约 100 条示教即达到峰值表现，而 3D Diffuser Actor 需约 500 条。</figcaption>
+    </figure>
+
+    <h3>消融 · Ablations</h3>
+    <ul>
+      <li><b>要不要 keypoints？</b> 加入 keypoint 抽象后（KALM 及「+ manual keypoints」）对比纯 RGB/RGBD 策略大幅提升，说明关键点是有效的动作表征。</li>
+      <li><b>要不要一致性验证？</b> 真实实验中，去掉验证的 “w/o. Verification” 在跨物体设定下几乎全线归零（多为 0/10），凸显「提议后再用示教验证」的必要性。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note：</b>原文没有单列 “Limitations” 章节（第 V 节为 Conclusion）。下列第 1 条为论文在 Related Work 中明确指出的、这一类方法的普遍问题（<i>stated</i>）；第 2、3 条为依据方法设计<b>推断</b>（<i>inferred</i>），非作者原文断言。</div>
+    <details class="lim" open><summary>依赖预训练模型的输出，易受其错误影响（stated）</summary><p>论文指出，依赖预训练模型「one-shot solutions」的方法「are prone to errors produced by these models」。KALM 正是用「示教验证 + 重新提示」来缓解这一问题，但候选质量仍受 VLM/SAM/DINO 能力上限约束。</p></details>
+    <details class="lim"><summary>需要 keypoints 在场景中可见且可稳健匹配（inferred）</summary><p>方法建立在「关键点跨视角/实例可被 φ 稳健检出」之上；当目标部件被遮挡、无纹理或几何高度对称、DINO/FPFH 特征退化时，φ 可能返回 Null，进而无法定位动作坐标系。</p></details>
+    <details class="lim"><summary>任务为「物体相对」的准静态操作，验证范围有限（inferred）</summary><p>评测集中在抽屉/按钮/拉杆/抬把手/倾倒等以单一物体为中心的操作；对多物体交互、长程/接触丰富的动态任务，object-relative 单坐标系表征与本文实验尚未覆盖。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    依据论文原文与图表整理 · KALM: Keypoint Abstraction using Large Models for Object-Relative Imitation Learning · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2410.23254">https://arxiv.org/abs/2410.23254</a> · 项目主页 <a href="https://kalm-il.github.io/">kalm-il.github.io</a>
+  </div>
+</footer>
+
+</body>
+</html>

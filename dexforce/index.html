@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DexForce：从力触觉演示中提取「力感知」动作</title>
+<meta name="keywords" content="dexterous manipulation, kinesthetic demonstration, force-informed action, imitation learning, diffusion policy, contact-rich, impedance control, Allegro Hand, 力触觉演示, 灵巧操作">
+<meta name="description" content="DexForce 用力触觉演示中测得的接触力，把「观测动作」修正为「力感知动作」，让扩散策略学会施加正确的力；六个接触密集任务平均成功率 76%，而不含力的动作近乎全败。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  .eq{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:16px 0;font-size:19px;text-align:center;font-family:"Cambria Math",Georgia,serif}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">RA-L 2025 · Robotics</span>
+    <h1>DexForce</h1>
+    <div class="sub">从力触觉演示中提取「力感知」动作，用于灵巧操作 · Extracting Force-informed Actions from Kinesthetic Demonstrations for Dexterous Manipulation</div>
+    <div class="authors">Claire Chen, Zhongchun Yu, Hojung Choi, Mark Cutkosky, Jeannette Bohg · Stanford University</div>
+    <p class="lead">接触密集的灵巧操作，成败取决于「在正确的时刻、正确的位置施加正确的力」。DexForce 在<b>力触觉演示（kinesthetic demonstration）</b>中直接测量指尖接触力，用一个弹簧刚度模型把「观测到的动作」修正为能复现这些力的<b>「力感知动作（force-informed actions）」</b>，再用它们训练视觉扩散策略。六个任务平均成功率 <b>76%</b>；而直接用不含力的动作训练，成功率几乎为零。</p>
+    <div class="meta">
+      <span>Allegro Hand + CoinFT 力矩传感器</span>
+      <span>CNN Diffusion Policy</span>
+      <span>6 个接触密集任务</span>
+      <span><a href="https://arxiv.org/abs/2501.10356">📄 arXiv:2501.10356</a></span>
+      <span><a href="https://clairelc.github.io/dexforce.github.io/">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>dexterous manipulation</span><span>kinesthetic demonstration</span><span>force-informed action</span><span>imitation learning</span><span>diffusion policy</span><span>contact-rich</span><span>impedance control</span><span>Allegro Hand</span><span>力触觉演示</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">模仿学习需要高质量的「状态-动作对」演示。对于接触密集的灵巧任务，这些动作必须能<b>产生正确的力</b>。但现有采集方式（遥操作 / 手部重定向）在接触密集任务上很难用：人到机器人的运动重定向不直观，而且操作者<b>缺乏直接的力触觉反馈</b>，无法判断施加的力是否合适。</p>
+    <blockquote>“For contact-rich dexterous manipulation tasks that require dexterity, the actions in these state-action pairs must produce the right forces.” —— 演示里的动作不仅要「到位」，更要「用对力」。</blockquote>
+    <p>DexForce 换了个思路：用<b>力触觉演示</b>（操作者亲手引导机器人手运动）——这种方式天然让人能感知到接触。但直接记录下的运动只是「达到某个位置」的轨迹，并没有编码「为达到该位置需要施加多少力」。DexForce 的贡献就是把这份被测量到的力，还原成机器人自己能复现的动作。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>核心思想：力触觉演示中测得的接触力 <b>f</b>，被用来把观测指尖位置 <b>x<sub>o</sub></b> 修正为「力感知目标」 <b>x<sub>f</sub></b>。当用阻抗控制器（impedance controller）跟踪 x<sub>f</sub> 时，机器人会产生完成任务所需的正确运动<b>与力</b>。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>76%</b><small>六任务平均成功率（力感知动作）</small></div>
+      <div><b>≈0%</b><small>不含力动作训练的策略</small></div>
+      <div><b>6</b><small>接触密集任务</small></div>
+      <div><b>2</b><small>可舒适演示的手指数上限</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">DexForce 是一套「演示采集」流程，核心是把「观测动作」变成「力感知动作」。它建立在阻抗控制器的<b>弹簧模型</b>之上：控制律第一项把「力—位移」建模为弹簧，在准静态（quasi-static）假设下，同一个弹簧模型可以反过来，由观测位置和接触力算出能复现该力的目标位置。</p>
+    <figure>
+      <img src="img/method.webp" alt="method pipeline">
+      <figcaption>方法总览。左列：力触觉演示中操作者施加不同大小的力，记录观测指尖位置 x<sub>o</sub> 与接触力 f；中列：由弹簧模型计算力感知目标 x<sub>f</sub>；右列：用阻抗控制器开环<b>回放（replay）</b>这些目标，让机器人自己复现运动和力，同时用腕部相机采集图像——这样训练数据里就<b>不再出现操作者的手</b>。</figcaption>
+    </figure>
+    <h3>力感知动作：一个弹簧修正</h3>
+    <p>给定某个观测指尖位置 x<sub>o</sub> 以及该手指施加在物体上的接触力 f，力感知目标为：</p>
+    <div class="eq">x<sub>f</sub> = x<sub>o</sub> + k<sub>f</sub> · f</div>
+    <p>其中 k<sub>f</sub> 是一个手工调节的标量刚度参数。直觉上：要让阻抗控制器真的「压」出力 f，就得把目标位置往施力方向多偏移一点（overshoot），偏移量正比于所需的力。论文对所有任务统一取 <b>k<sub>f</sub> = 0.0045</b>，调法是使回放能成功复现原始力触觉演示。</p>
+    <figure>
+      <img src="img/method_spring.webp" alt="spring model">
+      <figcaption>弹簧刚度直觉：阻抗控制的第一项将力与位移建模为弹簧；准静态下同一模型可反解——想复现更大的接触力，就把跟踪目标沿施力方向偏移更多。</figcaption>
+    </figure>
+    <h3>两阶段流程</h3>
+    <p>① <b>力触觉演示</b>：操作者手动引导机器人手完成任务，记录指尖位置与两指的 6 轴力/力矩；用上式算出力感知目标序列。② <b>开环回放采集</b>：用阻抗控制器跟踪这些力感知目标，机器人独立复现整段运动，并用腕部相机采集图像观测。回放得到的「新观测位置 + 图像」构成干净的机器人演示数据集，用于训练策略。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead"><b>硬件：</b>一只 Allegro Hand，腕部装 RealSense 相机（加鱼眼镜头扩大视野），拇指与食指根部各装一枚 <b>CoinFT</b> 硬币大小的电容式 6 轴力/力矩传感器。<b>策略：</b>对所有任务训练基于 CNN 的 Diffusion Policy，用 ResNet18 编码 RGB 图像；观测 horizon = 2，动作预测 horizon = 16，执行 horizon = 8，训练 1000 epochs；演示以 30Hz 记录、降采样到 10Hz。每个任务在<b>相同的 30 个随机初始物体配置</b>上评估。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="six tasks">
+      <figcaption>六个接触密集任务：slide cube、reorient smiley、open AirPods、grasp battery、unscrew nut、flip box。任务覆盖不同的接触交互类型——施加精确的力、以及不断建立与断开接触。因人手可舒适演示至多两指，故选取单指「外在灵巧（extrinsic dexterity）」与两指任务。</figcaption>
+    </figure>
+
+    <h3>力感知动作 vs. 不含力动作</h3>
+    <p>核心对照实验：同样的力触觉演示，一组用 DexForce 的<b>力感知动作</b>，另一组直接用<b>不考虑接触力</b>的观测动作训练策略。</p>
+    <div class="kpi">
+      <div><b>76%</b><small>力感知动作 · 六任务平均</small></div>
+      <div><b>near-zero</b><small>不含力动作 · 六任务</small></div>
+    </div>
+    <blockquote>“policies trained on our force-informed actions achieve an average success rate of 76% across all tasks. In contrast, policies trained directly on actions that do not account for contact forces have near-zero success rates.”</blockquote>
+
+    <h3>Ablation：把力放进策略「观测」里</h3>
+    <p>第二组实验消融的是<b>策略观测</b>中是否包含力信息（注意与上面「动作」的消融区分），三种设置：<b>RGB, F/T</b>（RGB + 原始 6 轴力/力矩向量）、<b>RGB, 0/1</b>（RGB + 二值接触信号，力幅超过 0.55N 记为 1）、<b>RGB only</b>（仅图像）。结论是：<b>加入力观测从不损害性能</b>，且对越需要精度与协调的任务帮助越大。</p>
+    <figure>
+      <img src="img/plot_force_ablations_all_tasks_horizontal.webp" alt="force observation ablation">
+      <figcaption>力观测消融（Fig. 8）：箭头表示相对 RGB-only 策略的成功率增减，* 表示统计显著（Fisher 精确检验，α=0.05）。上三行为分布内评估，底行为两个 OOD 评估。加入 6 轴力观测（RGB, F/T）通常优于二值接触信号（RGB, 0/1）。</figcaption>
+    </figure>
+    <table>
+      <tr><th>任务（力观测帮助最大者）</th><th>RGB, F/T 相对 RGB-only 的成功率提升</th></tr>
+      <tr><td>open AirPods</td><td class="good">+1600%</td></tr>
+      <tr><td>unscrew nut</td><td class="good">+136%</td></tr>
+      <tr><td>slide cube</td><td class="good">+58.8%</td></tr>
+    </table>
+    <p>论文分析：open AirPods、unscrew nut、slide cube 这三类任务在 RGB-only 下更易失败，因为机器人无法施加满足所需精度与协调度的力——例如 open AirPods 时 RGB-only 策略常把盖子往错误方向压得过重，导致盖子纹丝不动。</p>
+
+    <h3>刚度 k<sub>f</sub> 与 OOD 泛化</h3>
+    <figure>
+      <img src="img/stiffness_sweep.webp" alt="stiffness sweep">
+      <figcaption>刚度 k<sub>f</sub> 敏感性扫描：六个任务存在重叠的可行区间，所选 k<sub>f</sub> = 0.0045 落在所有任务的容许范围内；对力更敏感的任务容许区间更窄，也正对应它们从力观测中获益更大。</figcaption>
+    </figure>
+    <p><b>OOD 场景：</b>unscrew nut 训练时螺母初始旋转在 0°–360°，OOD 测试推到 360°–900°；flip box 的 OOD 是箱子加重 100g。这两项均包含在力观测消融的底行评估中。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文正文未设独立的 “Limitations” 章节；以下第 1 条为作者在文中<b>明确陈述</b>，第 2–3 条为依据方法设计的<b>合理推断（inferred）</b>。</div>
+    <details class="lim" open><summary>手指数受限于人手可舒适演示的范围（作者陈述）</summary><p>“a human operator can comfortably collect kinesthetic demonstrations with up to two robot fingers” —— 因此论文只考虑单指「外在灵巧」与两指任务，尚未覆盖需要多指全手协同的更复杂灵巧操作。</p></details>
+    <details class="lim"><summary>依赖手工调节的单一刚度 k<sub>f</sub>（inferred）</summary><p>力感知修正用一个全局标量 k<sub>f</sub>=0.0045。虽然刚度扫描显示各任务有重叠可行区间，但该值需针对硬件/任务手工调；对力更敏感的任务容许区间更窄，暗示换硬件或更极端任务时可能需要重新标定。</p></details>
+    <details class="lim"><summary>采集流程较重，规模化受限（inferred）</summary><p>方法建立在人工力触觉演示 + 阻抗控制器开环回放之上，每任务演示量有限（约 10–20 段量级）。相比遥操作大规模采集，该流程更依赖人工逐段引导与回放，扩展到大规模数据集的成本较高。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · DexForce (RA-L 2025) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2501.10356">https://arxiv.org/abs/2501.10356</a> · Project: <a href="https://clairelc.github.io/dexforce.github.io/">clairelc.github.io/dexforce.github.io</a>
+  </div>
+</footer>
+
+</body>
+</html>

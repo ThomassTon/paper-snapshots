@@ -1,0 +1,11 @@
+{
+  "slug": "adaptive-compliance-policy",
+  "title": "Adaptive Compliance Policy: Learning Approximate Compliance for Diffusion Guided Control",
+  "arxiv_id": "2410.09309",
+  "url": "https://arxiv.org/abs/2410.09309",
+  "category": "机器人 · Robotics",
+  "keywords": ["compliance control", "diffusion policy", "接触丰富操作", "force-torque sensing", "stiffness matrix", "virtual target pose", "bimanual manipulation", "imitation learning", "visuomotor policy"],
+  "summary_zh": "ACP 让 diffusion policy 在预测位姿之外，额外在线预测随空间与时间变化的近似顺应性（刚度）——沿反馈力方向低刚度、其余方向高刚度，从人类演示学习“何时该软、沿哪个方向软”，在翻起物体与双臂擦拭花瓶等接触丰富任务上比 SOTA 视觉运动策略提升 50% 以上。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

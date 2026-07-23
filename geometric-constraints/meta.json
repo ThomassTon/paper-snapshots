@@ -1,0 +1,11 @@
+{
+  "slug": "geometric-constraints",
+  "title": "Inferring geometric constraints in human demonstrations",
+  "arxiv_id": "1810.00140",
+  "url": "https://arxiv.org/abs/1810.00140",
+  "category": "机器人 · Robotics",
+  "keywords": ["learning by demonstration", "geometric constraints", "constraint inference", "force/torque", "virtual work", "SE(3) rigid body", "programming by demonstration", "力矩消歧", "约束识别"],
+  "summary_zh": "从人类演示中推断几何约束：先用运动学拟合六类约束模型，再用力/力矩信息在歧义情形下消歧，无需已知工具接触几何即可同时判定约束类型与估计其参数。",
+  "date": "2026-07-23",
+  "source": "arxiv-pdf"
+}

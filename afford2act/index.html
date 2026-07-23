@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFFORD2ACT：语言条件的 affordance 蒸馏，生成语义 2D keypoints 用于机器人操作</title>
+<meta name="keywords" content="robotic manipulation, affordance, 2D keypoints, imitation learning, DINO, language-conditioned, generalization, gating network, 稀疏状态表示">
+<meta name="description" content="Afford2Act 用语言条件的 affordance 先验自动蒸馏出一小组语义 2D keypoints 作为操作策略输入，单视角 RGB 下对未见物体达到 82% 成功率。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · Manipulation · Imitation Learning</span>
+    <h1>Afford2Act：把 affordance 蒸馏成语义 2D keypoints 来操作</h1>
+    <div class="sub">Language-Conditioned Affordance Distillation to Semantic Grounded 2D Keypoints for Robotic Manipulation</div>
+    <div class="authors">Anukriti Singh, Kasra Torshizi, Khuzema Habib, Kelin Yu, Ruohan Gao, Pratap Tokekar · University of Maryland</div>
+    <p class="lead">密集视觉输入把「任务相关线索」和「背景/光照/外观」这些无关变化纠缠在一起，难以泛化。Afford2Act 用<b>语言条件的 affordance 先验</b>先定位「该在哪里交互」，自动蒸馏出一小组（K=19）<b>语义 2D keypoints</b> 作为紧凑状态表示，再用一个轻量的 <b>attention + gating 策略</b>动态挑选当前最关键的点来控制。单视角 RGB、每任务仅 40 条示教，对 held-out 物体达到 <b>82%</b> 成功率。</p>
+    <div class="meta">
+      <span>6 real-robot tasks (UR3e)</span>
+      <span>Single external RGB view</span>
+      <span>K=19 keypoints (38-dim)</span>
+      <span><a href="https://arxiv.org/abs/2510.01433">📄 arXiv:2510.01433</a></span>
+      <span><a href="https://arxiv.org/pdf/2510.01433">PDF</a></span>
+    </div>
+    <div class="kw"><span>robotic manipulation</span><span>affordance</span><span>2D keypoints</span><span>imitation learning</span><span>DINO</span><span>language-conditioned</span><span>gating network</span><span>generalization</span><span>稀疏状态表示</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">学习机器人操作策略的核心是一个表示问题：如何抽取既<b>紧凑</b>又<b>有表达力</b>的操作相关特征？图像 / 点云 / 稠密语义特征细节丰富，但会给策略塞进大量无关信息、易过拟合到单一环境；2D keypoints 稀疏、只保留物体的关键特征，支持轻量策略与实时推理。真正的难点在于：如何<b>自动而可靠地发现</b>这些 keypoints——选太少或选错会丢失关键信息，靠人工挑选又难以跨任务、跨物体扩展。</p>
+    <blockquote>"We present Afford2Act, which uses language-conditioned affordance priors to localize where interaction should occur and extract a small set of semantic 2D keypoints that capture functionally relevant object parts."</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="affordance-guided keypoint extraction">
+      <figcaption>Figure 1. 上：给定语言 prompt，pipeline 把 224×224 图像压缩为 19 个 keypoints（38 维）——最多 15 个落在物体的 actionable region、4 个落在机械臂末端；右上小框是 affordance heatmap。下：泛化到大量未见实例。绿点为 affordance 选中的 keypoints。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>82%</b><small>held-out 未见物体成功率</small></div>
+      <div><b>19</b><small>keypoints（15 物体 + 4 末端）</small></div>
+      <div><b>40</b><small>每任务示教条数</small></div>
+      <div><b>~15 min</b><small>单张 RTX 2080 训练一个策略</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">整个 keypoint 蒸馏分四步、<b>全自动、无需人工标注</b>，且预训练的 affordance 与 correspondence 模块<b>只在第一帧运行一次</b>；随后策略只在稀疏 2D keypoint 轨迹上训练，因此非常轻量、数据高效。</p>
+    <figure>
+      <img src="img/pipeline.webp" alt="Afford2Act pipeline">
+      <figcaption>Figure 2. Afford2Act pipeline。Step 1 输入单视角 RGB 示教 + 语言 prompt；Step 2 做 affordance-guided keypoint distillation，用 DINO 特征定位 actionable region 并选取 reference anchor 点；Step 3 建立跨实例对应，保持语义 keypoint 在不同物体间的一致性；Step 4 训练策略。</figcaption>
+    </figure>
+    <h3>① Affordance Localization：语言先验定位「在哪交互」</h3>
+    <p>给定示教首帧 I₁ 与 affordance prompt A，用预训练的 <b>One-Shot Open Affordance 模型</b> 产生热图 H = f_aff(I₁, A) ∈ [0,1]^{H×W}；再用一个鲁棒的 quantile 阈值（配合轻度平滑）得到二值 mask M。该 mask 能捕捉刀刃、杯沿这类细结构，并稳健地滤掉杂乱背景。</p>
+    <h3>② Reference Keypoint Extraction + 跨实例对应</h3>
+    <p>在 reference 帧上用 <b>DINO backbone</b> 计算稠密特征（part-sensitive，利于可靠的跨实例对应），仅在 affordance mask 的 ROI 内聚类，得到 K 个 reference anchor 点。面对新示教时，对每个 anchor 在新帧 ROI 内按 <b>cosine similarity</b> 取最佳匹配位置及置信度——保证索引 i 始终指向同一「功能部件」（如 "handle tip"），即便物体几何与外观变化；把匹配限制在 affordance mask 内，也减少了匹配到视觉相似但任务无关区域的错误。</p>
+    <h3>③ Temporal Tracking：CoTracker 跨帧跟踪</h3>
+    <p>首帧初始化 K 个点后，用基于 transformer 的 point tracker（<b>CoTracker</b>）沿整段示教联合跟踪。联合跟踪利用 keypoint 间的相关性提升对遮挡的鲁棒性（如抓取时夹爪挡住 handle），并保持索引一致。每段示教最终表示为一条 K 个「任务相关、instruction-conditioned」keypoints 的轨迹。</p>
+    <h3>④ Policy：Transformer + Gating 动态挑点</h3>
+    <p>每一步把 K 个 keypoints 各嵌入成 token，经 Transformer encoder 得到上下文化特征（让「刀刃上的点」与「手柄上的点」被区别对待）。关键是引入一个 <b>gating network</b> g_θ：对每个 token 打非负重要性分并 softmax 归一，从而<b>下调任务无关 keypoints</b> 的权重——把「候选生成」和「相关性估计」显式分离。加权聚合得到紧凑场景嵌入 h_t，经共享 MLP 分成两个线性头，分别预测末端 delta 动作与夹爪指令。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">硬件为 UR3e 机械臂 + 侧装 RealSense D435i 单相机。围绕 6 个 affordance（hold / cut_with / sweep / pour / stir / kick）实例化成 6 个操作任务（抓取-举起、切、扫、倒、搅、踢球）。每任务用 <b>40 条遥操作示教</b>训练一个独立策略，在 <b>20 个真实回合</b>上评测，seen / unseen 分开报告。所有 keypoint-selection 对比都用相同下游策略结构、固定 K=19，以隔离「表示质量」而非「控制器容量」。</p>
+
+    <h3>E1 · 对比不同 keypoint 选择先验</h3>
+    <p>与多种 keypoint 选择策略对比（同为 K=19、同一下游策略）：YOLO+DINO、YOLO+Uniform Grid、DINO Only、SAM+DINO，以及人工挑选的 <b>Hand-Picked (P3PO-style)</b>。结论：依赖 YOLO 检测的方法对未见类别泛化提升有限——因为它们依赖已知类别标签（总在找「cup」），几何一变（如遇到 teapot）就失灵，杂乱场景中框不准时也会退化。Afford2Act 不依赖物体标签，直接经 affordance 模型识别「交互热点」；人工挑选基线是「语义化稀疏 keypoints」的<b>上界参考</b>，而 Afford2Act 无需逐任务指定点即可达到可比性能。</p>
+    <figure>
+      <img src="img/keypoint-methods.webp" alt="success rate across keypoint selection methods">
+      <figcaption>Figure 5. 各 keypoint 选择方法在所有任务上的平均总成功率（seen / unseen 分列）。</figcaption>
+    </figure>
+
+    <h3>E2 · 对比不同输入模态</h3>
+    <p>与三个稠密输入基线对比：<b>RGB-BC</b>（ResNet-18 + MLP，原始 RGB）、<b>RGB-D-BC</b>（4 通道 RGB-D）、<b>UAD-2D-BC</b>（输入换成 UAD 生成的 affordance mask）。还试了 <b>Pi0</b> 基础模型——在本设置下<b>无一成功</b>：Pi0 依赖额外的腕部视角、且训练分布中不含 UR3e 本体，与本文单外部相机的假设不匹配。结果：keypoint 策略持续优于 RGB / RGB-D，尤其在未见物体上（稠密像素输入易过拟合单一环境）；UAD 因高维表示在少量示教下表现不足。语义轨迹评分（rubric）还显示 RGB / RGB-D BC 会「先做倒/切的末端动作再抓」，动作顺序混乱，而 keypoint 策略通常能到达最终子目标，仅偶有最后一步滑落。</p>
+    <figure>
+      <img src="img/data-scaling.webp" alt="data scaling">
+      <figcaption>Figure 9. 数据规模缩放：即便只用 10 条示教，Afford2Act 也超过所有基线，且随示教增多性能差距保持稳定；图像基线在数据减少时显著退化——凸显本方法的数据高效性。误差棒为跨任务的标准差。</figcaption>
+    </figure>
+
+    <h3>E3 · 泛化 & 定性 rollout</h3>
+    <p>沿四个维度评估分布迁移：① 同类未见实例；② 共享功能部件的<b>新类别</b>（如用 spatula 代替 spoon 搅拌）；③ 场景变化（背景/光照）；④ 干扰物（额外物体、旁边走动的人）。keypoint 策略对同类未见实例迁移很强，对若干新类别也能迁移（尤其当功能部件相似时），背景变化与杂乱环境下依然鲁棒——一个极端例子：训练用来举 mug 的策略，在严重杂乱场景中成功举起了 teapot，pipeline 仍能定位到正确的交互 keypoints。</p>
+    <figure>
+      <img src="img/rollouts.webp" alt="real-world rollouts">
+      <figcaption>Figure 3. 真实 rollout（未见实例）：Pour（上）/ Cut（中）/ Stir（下），每行从左到右为 approach → interaction → completion。绿点为 affordance 选中的 keypoints，半透明环大小表示随时间变化的 attention 权重——keypoints 始终锚定在任务相关部件上。</figcaption>
+    </figure>
+
+    <h3>Ablations & 多阶段扩展</h3>
+    <table>
+      <tr><th>消融 / 设置</th><th>成功率</th><th>说明</th></tr>
+      <tr><td>完整模型（含 gating）</td><td class="good">86%</td><td>overall success rate</td></tr>
+      <tr><td>去掉 gating（等权）</td><td>52%</td><td>杂乱场景下退化尤其明显</td></tr>
+      <tr><td>Stir 任务 · Two-Stage Re-Anchoring</td><td class="good">90%</td><td>VLM 检测抓取完成后更新 prompt、重锚点</td></tr>
+    </table>
+    <p><b>Language Prompt 鲁棒性：</b>同义或相近措辞（"brush_with" 换 "sweep"、"mix" 换 "stir"）产生几乎一致的 affordance 预测。<b>Effective Keypoint Count：</b>定义 K_eff = 1 / Σ w_i²，实测 K_eff 通常远小于 K=19，说明 gating 在任意时刻只关注一小部分 keypoints。<b>多阶段：</b>在天然多阶段的 Stir 任务上，用 VLM 触发相位切换 + 在线重锚，成功率达 90%，展示了 online keypoint refresh 对多阶段操作的潜力。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下两点均为论文 §IV-H "Failure Cases and Limitations" 中作者<b>明确陈述</b>的失败模式；缓解方向为作者提出的建议。</div>
+    <details class="lim" open><summary>affordance 先验不准 / 不完整（主要失败模式）</summary><p>因为 keypoint 蒸馏以预测的 actionable region 为条件，mask 有误就可能漏掉真正的接触区或混入干扰物，导致 keypoints 不稳、控制出错（Fig. 11 中夹爪与 spatula 碰撞的例子即由弱 affordance masking 引起）。</p></details>
+    <details class="lim"><summary>单视角 RGB 的部分可观测性</summary><p>单一 RGB 视角下的严重遮挡或视角歧义，会破坏 affordance 定位与跟踪，即便该行为本身是可行的。作者指出这些失败主要反映<b>感知可靠性</b>而非 keypoint 策略设计本身。</p></details>
+    <details class="lim"><summary>作者建议的缓解方向</summary><p>confidence-aware filtering、轻量 re-anchoring、以及 occlusion / mask-noise 数据增强；更进一步是让 keypoint 表示随场景演变<b>在线更新</b>，结合轻量任务规划与置信度感知重采样，以提升长时程执行下（尤其可见性或接触变化时）的适应性。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Afford2Act · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2510.01433">https://arxiv.org/abs/2510.01433</a>
+  </div>
+</footer>
+
+</body>
+</html>

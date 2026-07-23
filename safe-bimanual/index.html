@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeBimanual：面向安全双臂操作的扩散轨迹优化</title>
+<meta name="keywords" content="bimanual manipulation, diffusion policy, test-time trajectory optimization, cost-guided sampling, safety constraints, VLM scheduler, RoboTwin, dual-arm cooperation, 安全约束, 扩散去噪引导">
+<meta name="description" content="SafeBimanual 是一个即插即用的测试期轨迹优化框架，用代价函数在扩散去噪采样中注入安全约束，并由 VLM 动态调度，使预训练双臂扩散策略更安全、成功率更高。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">CoRL 2025 · Robotics</span>
+    <h1>SafeBimanual</h1>
+    <div class="sub">Diffusion-based Trajectory Optimization for Safe Bimanual Manipulation<br>面向安全双臂操作的扩散轨迹优化</div>
+    <div class="authors">Haoyuan Deng · Wenkai Guo · Qianzhun Wang · Zhenyu Wu · Ziwei Wang</div>
+    <p class="lead">给<b>任意预训练的双臂扩散策略</b>加一个即插即用的测试期（test-time）轨迹优化外壳：把物理安全约束写成可微<b>代价函数</b>，在扩散去噪采样中做<b>梯度引导（cost-guided sampling）</b>，并由一个 <b>VLM</b> 根据任务阶段动态调度该激活哪些约束——在提升成功率的同时显著减少撕扯物体、机械臂互撞等危险行为。</p>
+    <div class="meta">
+      <span>RoboTwin 8 项仿真任务</span><span>真实机器人 Galaxea R1</span><span>plug-and-play / 无需重训</span>
+      <span><a href="https://arxiv.org/abs/2508.18268">📄 arXiv:2508.18268</a></span>
+      <span><a href="https://arxiv.org/pdf/2508.18268">PDF</a></span>
+    </div>
+    <div class="kw"><span>bimanual manipulation</span><span>diffusion policy</span><span>test-time trajectory optimization</span><span>cost-guided sampling</span><span>safety constraints</span><span>VLM scheduler</span><span>RoboTwin</span><span>dual-arm cooperation</span><span>安全约束</span><span>扩散去噪引导</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">双臂操作在家庭服务与制造中广泛应用，近期基于 diffusion 的策略在建模动作分布上表现出色。但这些策略<b>忽视了双臂操作的物理安全约束</b>：两臂协作时容易出现撕扯物体、机械臂/夹爪互相碰撞、戳穿物体等危险行为，损坏机器人与物体，同时也拉低成功率。</p>
+    <blockquote>"they ignored the physical safety constraints of bimanual manipulation, which leads to the dangerous behaviors with damage to robots and objects."</blockquote>
+    <p>作者先对危险行为做了一次系统梳理：在 <b>65 个双臂任务、1320 条示范</b>上统计，<b>超过 96.2%</b> 的不安全交互都落入两大类五小类——<b>物体级（object-level）</b>：object-object collision、behavior misalignment；<b>夹爪级（gripper-level）</b>：gripper poking、gripper tearing、gripper-gripper collision。这一 taxonomy 正是后续代价函数设计的依据。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>Figure 1：不安全双臂操作分类（上）与 SafeBimanual 修正后的安全行为（下）。右侧柱状图给出总体表现——相比 diffusion methods，SafeBimanual 把平均成功率从 <b>37.0%</b> 提到 <b>50.7%</b>（+13.7），把危险率（danger rate）从 <b>43.9%</b> 降到 <b>25.1%</b>（−18.8）。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>+13.7%</b><small>仿真成功率提升（vs SOTA diffusion）</small></div>
+      <div><b>−18.8%</b><small>不安全交互减少</small></div>
+      <div><b>+32.5%</b><small>真实世界任务成功率提升</small></div>
+      <div><b>96.2%</b><small>危险行为落入 5 类 taxonomy</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">SafeBimanual 不改动、不重训底层策略，而是在<b>去噪采样过程</b>中注入安全性。核心三件事：（1）把每类危险行为写成一个可微的 <b>safety cost function</b>；（2）在 diffusion denoising 的最后若干步用代价梯度引导轨迹（cost-guided sampling）；（3）用 <b>VLM 自适应代价调度器</b>按任务阶段决定激活哪些代价、绑定哪些关键点。</p>
+    <figure>
+      <img src="img/framework.webp" alt="framework">
+      <figcaption>Figure 2：整体框架。左侧由冻结的 Vision Foundation Model + 6D Pose Estimator 生成关键点与位姿；中间的 <b>Adaptive Safety Cost Scheduler</b>（GPT-4o）针对当前阶段（如 Stage 1 "Pouring Cola" → Behavior Alignment cost；Stage 3 "Lifting Plate" → Grippers Tearing cost）选出该用的代价与关键点；这些约束以梯度形式引导 diffusion 采样，把"physically unsafe"的轨迹修正为"safe"；底部为五个 safety cost 的几何示意。</figcaption>
+    </figure>
+
+    <h3>Cost-Guided Diffusion Sampling</h3>
+    <p>在标准 diffusion 采样的每一步去噪均值 μ 上，叠加一个沿安全代价负梯度的修正项：</p>
+    <blockquote>Aₜᵏ⁻¹ = μ(Aₜᵏ, Oₜ, k) − ρₖ ∇_Aᵏ 𝒞_sched(A₀|ₖ, 𝒫, sₜ) + σₖ ε</blockquote>
+    <p>其中 𝒞_sched 是被调度器激活的代价之和，𝒫 为关键点集合，sₜ 为当前任务阶段。为在"探索动作分布"与"满足安全"之间平衡，引导<b>只施加在最后 M 步</b>（M = 0.3K）去噪上，避免过早破坏策略学到的动作先验。</p>
+
+    <h3>五个 Safety Cost Functions</h3>
+    <p>按 taxonomy 一一对应，全部可微：</p>
+    <ul>
+      <li><b>C₁ Objects Collision Cost</b>：保持两侧被操作物体关键点的距离，避免 object-object collision（𝒞₁ = −‖kₜˡ − kₜʳ‖₂）。</li>
+      <li><b>C₂ Behavior Alignment Cost</b>：对倒水等协作任务，约束轴向对齐与竖直偏移，纠正 behavior misalignment。</li>
+      <li><b>C₃ Grippers Poking Cost</b>：惩罚夹爪接近方向与"关键点—指尖"向量的偏差，防止戳穿物体。</li>
+      <li><b>C₄ Grippers Tearing Cost</b>：维持初始抓取宽度 d₀，防止撕扯物体（(‖pₜˡⁱᵖ − pₜʳⁱᵖ‖ − d₀)²）。</li>
+      <li><b>C₅ Grippers Collision Cost</b>：保持两夹爪指尖的最小间隙，避免夹爪互撞（−‖pₜˡⁱᵖ − pₜʳⁱᵖ‖₂）。</li>
+    </ul>
+
+    <h3>VLM-based Adaptive Safety Cost Scheduler</h3>
+    <p>用 <b>GPT-4o + chain-of-thought</b>：给定观测、关键点与任务阶段，先从预定义 taxonomy 中<b>识别当前的不安全交互模式</b>，再以二值 mask 激活相应代价项，并抽取关系关键点——物体表面点由 <b>ReKeP</b> 提出，夹爪指尖由 forward kinematics 得到，物体中心由 <b>Omni6DPose</b> 估计。由此，整个双臂操作过程中"最优的安全约束"是<b>逐阶段动态生成</b>的，而非全程固定权重。</p>
+    <figure>
+      <img src="img/platform-keypoints.webp" alt="platform and keypoint tracking">
+      <figcaption>Figure 6：真实实验平台 Galaxea R1（ZED 头部相机 / L515 / D435i 腕部相机，左）与关键点提出与跟踪（右）——RGB 上抽取关键点，通过 2D pixel tracking + point cloud 得到 3D 位置，用于 Behavior Alignment、Gripper Without Poking（含遮挡与刚体假设处理）、Gripper Without Tearing 等约束。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <b>RoboTwin</b> 的 8 项双臂仿真任务上，把 SafeBimanual 分别套在 <b>DP、DP3、RDT-1b</b> 等预训练 diffusion 策略上；指标为 <b>success rate (SR)</b> 与 <b>danger rate (DR，越低越安全)</b>。整体上，SafeBimanual 带来 <b>+13.7% SR</b> 与 <b>−18.8% 不安全交互</b>（相对 SOTA diffusion 方法）。</p>
+    <table>
+      <tr><th>Base policy（8 任务均值）</th><th>SR 原始</th><th>SR + SafeBimanual</th><th>DR 原始</th><th>DR + SafeBimanual</th></tr>
+      <tr><td>DP</td><td>20.7%</td><td class="good">36.0%</td><td>45.6%</td><td class="good">20.9%</td></tr>
+      <tr><td>DP3</td><td>53.9%</td><td class="good">67.3%</td><td>35.3%</td><td class="good">19.1%</td></tr>
+      <tr><td>RDT-1b</td><td>36.4%</td><td class="good">48.9%</td><td>50.8%</td><td class="good">35.3%</td></tr>
+    </table>
+    <p>典型单任务（verbatim）：Dual Bottles Pick (Easy) 上 DP 从 33%→46% SR、23%→9% DR；Pour Water 上 DP3 从 79%→89% SR、21%→11% DR；Pick Apple Handover 上 DP3 从 82%→94% SR、18%→3% DR。</p>
+
+    <h3>真实世界结果</h3>
+    <p>在真人形机器人 <b>Galaxea R1</b> 上测 4 项家庭任务（Pass Banana / Pour Water / Wipe Bowl / Place Fruits），相比基线 diffusion policy <b>成功率提升 32.5%</b>，作者归因于"enhances object-level generalization and reduces compounding errors over extended sequences"。长程 "Prepare Breakfast" 基准同时涵盖全部五种不安全模式，SafeBimanual 也能协调完成多阶段操作。</p>
+    <figure><img src="img/realworld-results.webp" alt="real-world results"><figcaption>Figure 4：真实世界结果。四项任务上 DP vs SafeBimanual 的成功率（越高越好）与危险率（越低越好）对比——SafeBimanual 在提升成功率的同时压低了危险率，如 Pass Banana 成功率 70%→90%、危险率 30%→0%。</figcaption></figure>
+
+    <h3>Ablations（Table 2，8 任务 × 20 episodes）</h3>
+    <p>逐项 leave-one-out 表明每个代价都有贡献，其中 <b>VLM 调度 + CoT 推理是关键</b>：完整模型 SR <b>35.5%</b> / DR <b>19.8%</b>；去掉 VLM 改用固定权重跌至 SR 19.4% / DR 42.5%；有 VLM 但<b>无 CoT</b>也仅 SR 25.6% / DR 36.9%。单去某一代价项时，去掉 C₃ Gripper Poking 影响最大（SR 25.0% / DR 37.5%）。</p>
+    <table>
+      <tr><th>Ablation</th><th>Avg SR</th><th>Avg DR</th></tr>
+      <tr><td>w/o C₁ Objects Collision</td><td>31.8%</td><td>24.4%</td></tr>
+      <tr><td>w/o C₂ Behavior Alignment</td><td>33.8%</td><td>23.1%</td></tr>
+      <tr><td>w/o C₃ Gripper Poking</td><td>25.0%</td><td>37.5%</td></tr>
+      <tr><td>w/o C₄ Gripper Tearing</td><td>33.1%</td><td>21.3%</td></tr>
+      <tr><td>w/o C₅ Gripper Collision</td><td>30.0%</td><td>24.4%</td></tr>
+      <tr><td>w/o VLM（固定权重）</td><td>19.4%</td><td>42.5%</td></tr>
+      <tr><td>w/ VLM w/o CoT</td><td>25.6%</td><td>36.9%</td></tr>
+      <tr><td class="good">SafeBimanual（full）</td><td class="good">35.5%</td><td class="good">19.8%</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下各点均为论文<b>明确陈述（stated）</b>的局限，引文摘自原文。</div>
+    <details class="lim" open><summary>不保证绝对安全</summary><p>"SafeBimanual does not guarantee complete safety under all conditions. In extreme or highly cluttered environments, residual unsafe behaviors may still occur."</p></details>
+    <details class="lim"><summary>难以处理语义层面的任务失败</summary><p>方法针对物理安全，对"语义任务失败（如执行顺序错误）"帮助有限——"Less effective in addressing semantic task failures, such as incorrect execution order."</p></details>
+    <details class="lim"><summary>依赖视觉关键点与位姿估计</summary><p>约束建立在视觉关键点与估计位姿之上，会受遮挡与噪声影响（"suffers from occlusion and noise"）。</p></details>
+    <details class="lim"><summary>受 VLM 推理能力制约</summary><p>"Quality of constraint scheduling depends on the reasoning ability of the vision-language model (VLM)"；在折叠等主观任务中，VLM 可能漏掉与人类偏好对齐的细粒度步骤。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · SafeBimanual (CoRL 2025) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2508.18268">https://arxiv.org/abs/2508.18268</a>
+  </div>
+</footer>
+
+</body>
+</html>

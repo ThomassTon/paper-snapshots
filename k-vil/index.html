@@ -1,0 +1,191 @@
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-VIL：基于关键点的视觉模仿学习</title>
+<meta name="keywords" content="visual imitation learning, keypoint, geometric constraints, principal manifold estimation, object-centric task representation, one-shot imitation, admittance control, movement primitive, 机器人操作">
+<meta name="description" content="K-VIL 从少量人类演示视频中自动提取稀疏、以物体为中心、与本体无关的关键点几何约束任务表示，并用关键点导纳控制器在新场景中复现操作技能。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  .tbl-scroll{overflow-x:auto}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">IEEE T-RO 2023 · Visual Imitation Learning</span>
+    <h1>K-VIL：基于关键点的视觉模仿学习</h1>
+    <div class="sub">Keypoints-based Visual Imitation Learning — 从少量人类视频中提取几何约束任务表示</div>
+    <div class="authors">Jianfeng Gao, Zhi Tao, Noémie Jaquier, Tamim Asfour · Karlsruhe Institute of Technology (KIT) · IEEE Transactions on Robotics, 2023</div>
+    <p class="lead">K-VIL 直接从 RGB-D 演示视频中<strong>联合学习几何任务约束与控制策略</strong>：它自动提取一组 <em>sparse、object-centric、embodiment-independent</em> 的关键点及其几何约束，配上 local frames 与 movement primitives，构成可泛化的任务表示；再由一个新颖的 <strong>keypoint-based admittance controller (KAC)</strong> 在杂乱新场景中复现技能。方法支持 one-shot 学习，并能在新演示到来时增量更新。</p>
+    <div class="meta">
+      <span>大类：机器人 · Robotics</span>
+      <span>任务：real-world manipulation</span>
+      <span><a href="https://arxiv.org/abs/2209.03277">📄 arXiv:2209.03277</a></span>
+      <span><a href="https://ieeexplore.ieee.org/document/10189175">IEEE T-RO / DOI</a></span>
+    </div>
+    <div class="kw"><span>visual imitation learning</span><span>keypoint</span><span>geometric constraints</span><span>principal manifold estimation</span><span>object-centric representation</span><span>one-shot imitation</span><span>admittance control</span><span>movement primitive</span><span>机器人操作</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">视觉模仿学习（visual imitation learning）能让机器人直观、高效地获得新的操作技能。但作者指出核心难点在于：<em>"simultaneously learning geometric task constraints and control policies from visual inputs alone remains a challenging problem"</em> —— 仅凭视觉输入同时学出几何任务约束与控制策略，仍是未解问题。</p>
+    <p>作者用一个直觉例子贯穿全文：看几段"从水壶往不同茶杯里倒水"的视频，人就能同时理解"什么是倒水（what）"和"如何倒（how）"。从计算角度看，水壶的<strong>壶嘴</strong>和<strong>壶底</strong>可用两个关键点 <span style="color:#2f5fd0">k₁</span>、<span style="color:#2e8b57">k₂</span> 表示：倒水任务 = 把壶嘴 k₁ 对齐到杯口上方一点（<strong>point-to-point</strong> 约束）+ 把壶底 k₂ 对齐到一条控制倾角的曲线（<strong>point-to-curve</strong> 约束）。这样一组"关键点 + 几何约束"就能参数化日常操作任务。</p>
+    <blockquote>本文提出以关键点几何约束刻画任务，从视频演示中教机器人操作技能，并要求技能<strong>可泛化、可在全新场景复用</strong>。为此需解决三大挑战：(i) 任务相关关键点的检测与高效提取；(ii) 可泛化、与本体无关的任务表示；(iii) 演示任务的复现及其对新场景的自适应。</blockquote>
+    <figure>
+      <img src="img/overview.webp" alt="K-VIL 方法总览">
+      <figcaption><strong>Fig. 1 · K-VIL 总览。</strong>(a) 含形状 / 位姿 / 轨迹变化的人类演示视频；(b) 在物体表面稠密采样 candidate points；(c) 提取 sparse keypoints k₁、k₂ 及其几何约束（此处为 point-to-point 与 point-to-curve）、关联的 local frame 𝓕 与描述关键点运动的 movement primitives；(d) 将学到的可泛化几何任务表示适配到新场景并由机器人执行。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>5</b><small>基础几何约束类型 (p2p/p2l/p2P/p2c/p2S)</small></div>
+      <div><b>1</b><small>最少可从单段视频 (one-shot) 学习</small></div>
+      <div><b>亚毫米</b><small>可泛化任务的控制精度 Acc.</small></div>
+      <div><b>6</b><small>真实日常操作任务上验证</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">给定 N 段 RGB-D 演示视频，K-VIL 先做<strong>预处理</strong>生成学习所需数据，再由 <strong>Principal Constraints Estimation (PCE)</strong> 联合抽取稀疏关键点及其几何约束，最后组装成完整任务表示交给 KAC 执行。整条流水线如下图。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="K-VIL 架构流水线">
+      <figcaption><strong>Fig. 2 · K-VIL 架构。</strong>预处理（Sec. IV-A）产出 candidates 与 descriptors 𝓟_c/𝓓_c、轨迹 𝓣_c、物体属性 𝓢/Φ、物体角色 𝓡 与 local frames。PCE（Sec. IV-B）按演示数量分支：N=1 走 <strong>Distance Criteria</strong>，N&gt;1 用 PCA-based <strong>Variance Criteria</strong>，N&gt;10 再加 PME-based Variance Criteria，并用 <strong>HAC</strong> 消除冗余关键点。输出任务表示 = 关键点描述子 𝓓、几何约束 𝓒、运动基元 Ω，最终送入 <strong>KAC</strong>。</figcaption>
+    </figure>
+
+    <h3>预处理：candidates、角色与 local frames</h3>
+    <p>用 <strong>Mask R-CNN</strong> 得到物体掩膜，在每个物体可见区域<strong>稠密均匀采样</strong> candidate points（实验中每个 slave 物体采 P=300 个点，手部采 21 个）；每个点既是潜在关键点也是潜在 local frame 原点。再借助 <strong>Dense Object Net (DON)</strong> 的 correspondence function 追踪这些点在视频中的运动、恢复 3D 轨迹并得到深度视觉描述子。通过<strong>物体运动显著性</strong>判定 role：轨迹方差最小者为 <em>master</em>，其余为 <em>slave</em> —— K-VIL 只在 master 上建 local frames、只在 slave 上取关键点。local frame 由其 Q 个最近邻 candidate（实验中 Q=50，手部 10）的参考位置定义，靠最小化邻域点位移的均方误差在新实例上重新检测。</p>
+
+    <h3>五类几何约束 (PME) 与 PCE</h3>
+    <p>约束用<strong>低维流形</strong>刻画。K-VIL 借助 <strong>Principal Manifold Estimation (PME)</strong>，把随时间变化的一组 3D 点作为低维嵌入求解：PME 最小化 <em>reconstruction error + 曲率正则项 λ‖κ_f‖²</em>；当 λ→∞ 时退化为线性 PCA。流形的线性与内在维度 d 决定约束类型，共五种基础约束：</p>
+    <figure>
+      <img src="img/constraints.webp" alt="五类几何约束">
+      <figcaption><strong>Fig. 4 · 五类几何约束。</strong>(a) <strong>p2p</strong> point-to-point (d=0, 主点)；(b) <strong>p2l</strong> point-to-line (d=1, 线性 → 主直线)；(c) <strong>p2P</strong> point-to-plane (d=2, 线性 → 主平面)；(d) <strong>p2c</strong> point-to-curve (d=1, 非线性 → 主曲线)；(e) <strong>p2S</strong> point-to-surface (d=2, 非线性 → 主曲面)。图中黑点为各演示的 candidate，绿点为其在流形上的投影，密度函数 σ(x) 编码关键点在流形上的高似然区域，蓝叉为约束外推得到的关键点位置。</figcaption>
+    </figure>
+    <p><strong>PCE</strong> 据此抽约束：one-shot（N=1）用启发式 <em>distance-based criteria</em>（因单演示不足以学出泛化技能，视为特例）；few-shot（N&gt;1）则用演示间的<strong>变化性</strong>（variance criteria）来判定关键点与约束，并用 <strong>Hierarchical Agglomerative Clustering (HAC)</strong> 去除冗余的关键点选择，得到最终稀疏集合 𝓟。</p>
+
+    <h3>运动编码 VMP 与关键点导纳控制器 KAC</h3>
+    <p>关键点运动相对其 local frame 编码为 <strong>Via-point Movement Primitives (VMP)</strong>：VMP 结合线性基础轨迹与非线性 shape modulation，权重服从高斯分布、可 MLE 学习；相较 ProMP，它对超出演示分布的 via-points 有更强<strong>外推</strong>能力，兼顾灵活时间缩放与运动风格保持（实验用 20 个 kernel）。执行时，新颖的 <strong>KAC</strong> 把每条约束转成 <em>attraction force</em> 与 <em>density force</em> 的合力，并引入<strong>优先级 (priority)</strong> 机制处理一组带优先级的几何约束——这正是它能在单演示、大形状变化下仍可靠外推的关键。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在真实机器人上验证 6 个日常任务：press button (PB)、fetch tissue (FT)、insert sticks (IS)、pour water (PW)、hang hat (HH)、clean table (CT)，涉及不同约束类型与多种类别物体。DON 以自监督、任务无关方式训练，手部用 MediaPipe 检测 21 个关键点、当作特殊物体。KAC 在 18 个任务上评测，每个任务复现 N_r=20 次，报告 <strong>control accuracy (Acc.)</strong>、<strong>control precision (Prec.)</strong> 与 <strong>success rate (R)</strong>。</p>
+
+    <h3>任务表示的可泛化性：需要多少演示？</h3>
+    <p>作者强调物体位姿 / 形状的变化对学出可泛化表示至关重要。对 PB、FT，从少于 4 段演示学出的约束对机器人<strong>不可达</strong>，导致 0% 成功率；<em>"the task representations learned from 4 demonstrations are generalizable ... KAC reaches sub-millimeter control accuracy and precision, as well as ≥ 90% success rates"</em>。抽出的约束多与人类直觉吻合：按按钮为单个 p2p、插入为 p2p+p2l、倒水为 p2p+p2c。</p>
+
+    <figure>
+      <img src="img/accuracy.webp" alt="KAC 各任务关键点调节误差箱线图">
+      <figcaption><strong>Fig. 17 · KAC 的调节误差 (mm，对数轴)。</strong>对表 VIII 中任务 C–R、各 20 次试验，展示每个关键点 k₁/k₂/k₃ 在结束窗口 𝒯_end 内相对目标的 regulation error 分布；空心圈为均值（即控制精度 Acc.）。可见可泛化任务（如 C、F、P）误差在 1 mm 量级甚至亚毫米，而不可泛化 / 单演示大变化任务（如 N、O）误差显著更大。</figcaption>
+    </figure>
+
+    <h3>KAC 定量结果（表 VIII 摘录，逐字）</h3>
+    <div class="tbl-scroll">
+    <table>
+      <tr><th>任务 (演示数)</th><th>约束 (TR)</th><th>Acc. k₁ (mm)</th><th>Acc. k₂ (mm)</th><th>R (%)</th></tr>
+      <tr><td>C · PB (4)</td><td>p2p</td><td class="good">0.67</td><td>–</td><td>90</td></tr>
+      <tr><td>F · FT (4)</td><td>p2p</td><td class="good">0.82</td><td>–</td><td>100</td></tr>
+      <tr><td>A/B · PB (1/3)</td><td>3×p2p / p2p,p2l</td><td>失败</td><td>失败</td><td>0</td></tr>
+      <tr><td>G · PW (1)</td><td>3×p2p</td><td>4.81</td><td>15.01</td><td>95</td></tr>
+      <tr><td>I · PW (4)</td><td>p2p, p2P</td><td>2.01</td><td>0.88</td><td>94</td></tr>
+      <tr><td>J · PW (11)</td><td>p2p, p2c</td><td>0.93</td><td>6.80</td><td>100</td></tr>
+      <tr><td>L · HH (1)</td><td>3×p2p</td><td>13.53</td><td>—</td><td>95</td></tr>
+      <tr><td>M · HH (3)</td><td>p2p</td><td class="good">1.48</td><td>–</td><td>95</td></tr>
+      <tr><td>N · IS (1)</td><td>3×p2p</td><td>17.77</td><td>—</td><td>62</td></tr>
+      <tr><td>P · IS (3)</td><td>p2p, p2l</td><td class="good">1.01</td><td>0.63</td><td>95</td></tr>
+    </table>
+    </div>
+    <p style="color:var(--muted);font-size:14px">"–" 表示该关键点不需要；"—/失败" 表示因执行失败无数据或为不参与比较的灰值。数字逐字摘自论文表 VIII。</p>
+
+    <h3>消融 · priority 的作用</h3>
+    <p>去掉 KAC 的优先级机制（记 <em>np</em>）后：单演示插入任务 <strong>IS₁ 62% → IS<sub>np,1</sub> 25%</strong>，因为三个相同的虚拟弹簧-阻尼系统达平衡、k₃ 反而以牺牲 k₁/k₂ 为代价取得最高精度。对已可泛化的任务（PW₁₁、IS₃），去优先级<strong>不影响成功率</strong>，但控制精度与重复性下降。作者同时说明：<em>"thanks to the priority introduced in KAC, HH₁ and IS₁ achieve 95% and 62% success rate, respectively, despite the single available demonstration."</em> IS₁ 偏低是因为复现时用了<strong>极长的 stick</strong>，需要很强的泛化——k₂ 最大误差约 150 mm，恰好对应演示与复现所用 stick 的最大长度差。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 以下各点均为作者在论文 "Limitations and Future Work" 一节中<strong>明确陈述 (stated)</strong> 的内容，非从设计推断。</div>
+    <details class="lim" open><summary>依赖表面可见关键点：不适用于透明 / 反光 / 极薄物体</summary><p>K-VIL 假设关键点位于物体表面，且要求<strong>所有关键点在演示中均可见（无遮挡）</strong>；这排除了透明、反光、薄物体，<em>"hinders K-VIL from being used in many real-world tasks"</em>。作者建议未来将 dense correspondence 与场景表示模型 (如 NeRF-supervision) 或点生成模型结合以处理 (self-)occlusion。</p></details>
+    <details class="lim"><summary>关键点是 sub-symbolic 参数，缺乏语义解释</summary><p>K-VIL 的关键点对应运动的 sub-symbolic 参数，<em>"do not necessarily have a clear semantic interpretation"</em>。弥合符号与亚符号表示之间的鸿沟仍是 (visual) IL 的重要挑战；作者提出未来可结合 affordance / 空间关系 / 抓取点提取方法把关键点与符号任务表示关联。</p></details>
+    <details class="lim"><summary>仅限单臂、单层 master-slave、五类基础约束、非周期运动</summary><p>本文只考虑可由五类基础几何约束、在<strong>单层 master-slave 关系</strong>下建模的 <strong>uni-manual</strong> 操作任务。未来计划扩展到更多约束类型、双臂协调（bimanual，含 master-slave 层级）、以及搅拌 / 擦拭等<strong>周期运动</strong>与<strong>关节物体 (articulated objects)</strong>。</p></details>
+    <details class="lim"><summary>无演示变化时性能下降</summary><p>物体位姿 / 形状的变化对学出可泛化表示至关重要，尤其在演示很少时。缺乏此类变化时，K-VIL 仍能凭 dense visual descriptors 泛化到同类物体，但<em>"achieve lower control accuracy, precision, and success rate, and may fail in some extreme cases, e.g., in the one-shot VIL setup"</em>。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    图文摘自论文原始来源与图表 · K-VIL: Keypoints-based Visual Imitation Learning · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2209.03277">https://arxiv.org/abs/2209.03277</a> · <a href="https://ieeexplore.ieee.org/document/10189175">IEEE T-RO 2023</a>
+  </div>
+</footer>
+
+</body>
+</html>

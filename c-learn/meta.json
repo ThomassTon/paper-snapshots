@@ -1,0 +1,11 @@
+{
+  "slug": "c-learn",
+  "title": "C-LEARN：从示范中学习几何约束以完成共享自主下的多步操作",
+  "arxiv_id": "",
+  "url": "https://ieeexplore.ieee.org/document/7989466/",
+  "category": "机器人 · Robotics",
+  "keywords": ["learning from demonstration", "geometric constraints", "shared autonomy", "keyframes", "task space regions (TSR)", "CAD constraints", "multi-step manipulation", "dual-arm robot", "运动规划", "技能迁移"],
+  "summary_zh": "把多步操作任务表示为关键帧序列＋每帧一组几何约束（TSR 体积约束与 CAD 姿态/轨迹约束），先从多次示范建够取抓取知识库，再仅凭一次示范学会完整任务并交给 Drake 优化式规划器求解；在共享自主框架下用双臂 Optimus 达到 100% 成功率，并可零额外示范迁移到腿式 Atlas 仿真。",
+  "date": "2026-07-23",
+  "source": "pdf"
+}

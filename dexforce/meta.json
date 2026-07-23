@@ -1,0 +1,11 @@
+{
+  "slug": "dexforce",
+  "title": "DexForce: Extracting Force-informed Actions from Kinesthetic Demonstrations for Dexterous Manipulation",
+  "arxiv_id": "2501.10356",
+  "url": "https://arxiv.org/abs/2501.10356",
+  "category": "机器人 · Robotics",
+  "keywords": ["dexterous manipulation", "kinesthetic demonstration", "force-informed action", "imitation learning", "diffusion policy", "contact-rich", "impedance control", "Allegro Hand", "力触觉演示"],
+  "summary_zh": "DexForce 在力触觉演示中直接测量指尖接触力，用弹簧刚度模型 x_f = x_o + k_f·f 把「观测动作」修正为能复现该力的「力感知动作」，再开环回放采集干净数据训练视觉扩散策略；六个接触密集任务平均成功率 76%，而不含力的动作训练近乎全败。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

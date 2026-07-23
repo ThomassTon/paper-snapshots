@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discrete Bimanual Manipulation for Wrench Balancing</title>
+<meta name="keywords" content="bimanual manipulation, dual-arm robot, wrench balancing, in-hand manipulation, Dexterous Manipulation Graph, extrinsic dexterity, force-torque sensing, grasp point sliding, ABB YuMi, 双臂协调">
+<meta name="description" content="双臂机器人共同抓取托盘时，通过离散的手内滑动重新分布抓取点，用 DMG 规划让两臂承受的力与力矩趋于平衡。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ICRA 2020 · Robotics</span>
+    <h1>Discrete Bimanual Manipulation for Wrench Balancing</h1>
+    <div class="sub">双臂共抓托盘时，用离散的手内滑动重新分配抓取点，让两臂承受的力与力矩趋于平衡</div>
+    <div class="authors">Silvia Cruciani*, Diogo Almeida*, Danica Kragic (KTH Royal Institute of Technology) · Yiannis Karayiannidis (Chalmers University of Technology) · *equal contribution</div>
+    <p class="lead">双臂机器人靠共同抓取一块刚性托盘来突破单臂负载极限，但只要托盘上物体的质量分布不均，两只手臂承受的 wrench（力/力矩）就会显著不同，甚至超出各自的 payload。本文把"平衡 wrench"建模成一个几何优化问题，并首次用<b>离散双臂手内滑动</b>（一次只动一只手）把抓取点滑到更均衡的位置，用视觉 + 力/力矩感知闭环执行。</p>
+    <div class="meta">
+      <span>2020 IEEE ICRA · pp. 2631–2637</span>
+      <span>平台：ABB YuMi 双臂</span>
+      <span>无 arXiv 版本</span>
+      <span><a href="https://portal.research.lu.se/en/publications/discrete-bimanual-manipulation-for-wrench-balancing/">📄 Lund 研究门户</a></span>
+      <span><a href="http://www.diva-portal.org/smash/get/diva2:1366107/FULLTEXT01.pdf">🔗 全文 PDF (DiVA)</a></span>
+    </div>
+    <div class="kw"><span>bimanual manipulation</span><span>dual-arm robot</span><span>wrench balancing</span><span>in-hand manipulation</span><span>Dexterous Manipulation Graph</span><span>extrinsic dexterity</span><span>force-torque sensing</span><span>grasp point sliding</span><span>ABB YuMi</span><span>双臂协调</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">双臂系统能通过共同抓取一个物体来突破单臂的抓取力与负载上限。但作者指出：如果被抓物体质量分布不均，两臂承受的 wrench 会明显不同——"<i>a stark increase in the wrenches experienced by the other</i>"——这会显著增大超出单臂最大抓取力或 payload 的风险。当托盘上不断放置/移走物体时，其 center of mass (COM) 会移动，抓取点也需随之调整。</p>
+    <blockquote>"We consider the problem of balancing the wrenches experienced by a dual-arm robot grasping a rigid tray. … Our approach is based on sequential sliding motions of the grasp points on the surface of the object, to attain a more balanced configuration."</blockquote>
+    <p>为什么不能用现成方案？作者逐一排除：(1) <b>regrasp 重新抓取</b>需要松开抓取，在托盘还载着物体时会造成掉落，不可行；(2) 用<b>非抓握式（non-prehensile）平衡抓取</b>会导致托盘大幅倾斜，同样不适合载物场景。因此他们转向 <b>dexterous manipulation</b>：在不松开抓取的前提下移动接触点。由于用的是并联夹爪（parallel grippers，本身不灵巧），方案依赖 <b>extrinsic dexterity</b>——利用双臂系统的冗余度，让一只夹爪的手指沿托盘表面滑动而不改变托盘位姿。</p>
+    <figure>
+      <img src="img/fig1_overview.webp" alt="system overview">
+      <figcaption><b>Fig.1 系统总览。</b>力/力矩测量 (p<sub>i</sub>, f<sub>i</sub>, τ<sub>i</sub>) 被送入 estimator 得到 COM 估计 p̂<sub>com</sub>，用来初始化规划流程；vision 提供托盘坐标系 Σ<sub>t</sub> 的精确位姿，其余量都在该系下表达。优化器求出目标抓取点 (p₁*, p₂*)，交给 DMG 生成手内滑动路径，再经 robot motion planning 转成关节轨迹执行。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>2</b><small>接触点的双臂灵巧操作（非单手）</small></div>
+      <div><b>DMG</b><small>把 Dexterous Manipulation Graph 扩到双抓取</small></div>
+      <div><b>视觉+力矩</b><small>两种感知联合规划与执行</small></div>
+      <div><b>Discrete</b><small>一次只动一只手臂，逐段执行</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">方法分三步：先把 wrench 分布<b>几何化建模</b>并写成一个优化问题（求目标抓取点）；再用 <b>Kalman filter</b> 从力/力矩量在线估计 COM；最后用扩展后的 <b>DMG</b> 规划两只夹爪的手内滑动路径，逐一顺序执行。</p>
+
+    <h3>1 · Wrench 的几何建模</h3>
+    <p>两夹爪在 p₁、p₂ 抓取托盘，COM 在托盘表面的投影记为 p<sub>com</sub>，受力 f<sub>com</sub>。定义虚拟连杆（virtual sticks）r₁ = p<sub>com</sub> − p₁，r₂ = p₂ − p<sub>com</sub>，抓取点相对位置 p<sub>r</sub> = p₂ − p₁。各点受力按投影比例分配：f₁ = (1−r′₁)f<sub>com</sub>，f₂ = (1−r′₂)f<sub>com</sub>，其中 r′<sub>i</sub> = (r<sub>i</sub><sup>⊤</sup>p<sub>r</sub>)/‖p<sub>r</sub>‖²。两点的力矩由 r<sub>a</sub> = p<sub>com</sub> − (r′₁p₂ + r′₂p₁) 决定，τ<sub>i</sub> = r<sub>a</sub> × f<sub>com</sub>。</p>
+    <figure>
+      <img src="img/fig2_quantities.webp" alt="wrench quantities">
+      <figcaption><b>Fig.2 wrench 平衡相关量示意。</b>两夹爪在 p₁、p₂ 抓取托盘；p<sub>com</sub> 是 COM 在托盘表面的投影，力 f<sub>com</sub> 作用于此。r₁、r₂ 为虚拟连杆，r′₁、r′₂ 是它们在相对位置 p<sub>r</sub> 上投影的大小，r<sub>a</sub> 决定两抓取点的力矩。</figcaption>
+    </figure>
+    <p><b>Definition 1（Balanced Wrenches）：</b>当两抓取点测得的 wrench 满足 <b>f<sub>e</sub> = f₂ − f₁ = 0</b> 且 <b>τ<sub>e</sub> = (τ₁+τ₂)/2 = 0</b> 时，即为平衡。于是"平衡 wrench"变成寻找抓取配置 (p₁*, p₂*) 的优化问题（式8）：<code>min α‖f<sub>e</sub>‖² + β‖τ<sub>e</sub>‖²</code>，约束 g<sub>i</sub>(p<sub>i</sub>) ≤ 0 限定抓取点落在托盘可达区域；α、β &gt; 0 补偿力与力矩单位不同的权重。</p>
+    <p>在物体不滑动、不滚动的假设下（ḟ<sub>com</sub> = 0），误差完全由抓取点与 COM 的几何位置决定：f<sub>e</sub> = (r′₁ − r′₂)f<sub>com</sub>，τ<sub>e</sub> = r<sub>a</sub> × f<sub>com</sub>。据此改写为 <b>Problem 1</b>（式10）：<code>min α(r′₁ − r′₂)² + β‖r<sub>a</sub>‖² + γ c(p<sub>r</sub>)</code>。其中 c(p<sub>r</sub>) 是一个非线性项（式11）：当 ‖p<sub>r</sub>‖ 小于阈值 d<sub>min</sub> 时施加惩罚，避免解把两抓取点挤得太近（几何上不可行）。</p>
+
+    <h3>2 · COM 估计（Kalman filter）</h3>
+    <p>Problem 1 依赖 p<sub>com</sub>，而它会随托盘上物体的增减而移动，无法预知。作者用 Kalman filter 在线估计：过程模型 ṗ<sub>com</sub> = 0、观测模型 z = C p̂<sub>com</sub>（式12–14），观测量由实测力/力矩构造，并假设施加力沿托盘表面法向 n，从而由测量法向投影得到 r′<sub>i</sub>。任务开始后即冻结当前估计，直至任务完成。</p>
+
+    <h3>3 · 双抓取版 DMG + 顺序执行</h3>
+    <p><b>DMG（Dexterous Manipulation Graph）</b>原本描述"单个夹爪的一根手指如何沿物体表面移动"：图节点是接触点 + 可连续旋转的朝向区间，边表示手指可在两点间滑动。本文把它<b>扩展到两只夹爪同时握持</b>——为每只夹爪各维护一套 in-hand path，且规划时要同时考虑对侧手指（避免自碰撞、避开托盘上的障碍）。优化器（SLSQP）先给出目标抓取点，DMG 再用 <b>Dijkstra</b> 搜索最短滑动路径，并把跨越障碍的边加大代价以保证无碰撞。</p>
+    <p>关键的"离散"体现在执行上：<b>一次只滑动一只夹爪，另一只保持静止并牢牢抓住托盘</b>。这种 discrete coordinated motion 既简化了规划，又通过始终有一只手固定抓取来减少托盘的意外运动。<b>Algorithm 1（Find In-Hand Paths）</b>比较"先动谁"的两种顺序，取合并路径更短者。最终路径经插值满足接触约束，用 <b>TRAC-IK</b> 求关节位形，再生成两臂的关节轨迹并顺序执行。</p>
+    <figure>
+      <img src="img/fig3_solutions.webp" alt="balancing solutions">
+      <figcaption><b>Fig.3 同一个 p<sub>com</sub> 下，α/β 取值不同会得到很不一样的平衡解。</b>只优化力 (β=0，蓝三角)、只优化力矩 (α=0，红方块)、两者兼顾 (α=10, β=100，绿圆)。图 (b) 中同时最小化力与力矩的绿色解把两抓取点挤得很近，可能不可行——正是式(11) 的距离代价 c(p<sub>r</sub>) 要惩罚的情形。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">平台为 <b>ABB YuMi</b> 协作双臂机器人（单臂 payload 极限约 500 g）。每个手腕装一枚 <b>OptoForce HEX 六轴力/力矩传感器</b>；托盘位姿由外部 <b>Microsoft Kinect2</b> 检测 <b>AprilTag</b> 标记得到。托盘为矩形铝面板，面积 <b>300×200 mm</b>、重 <b>186 g</b>；托盘+夹爪+力矩传感器合计约 <b>600 g</b>，已超过 YuMi 单臂 500 g 的 payload——因此必须双臂共抓。全程 γ = 1000、d<sub>min</sub> = 0.15 m；观测协方差噪声取 0.1·I，过程噪声取 0.01·I。作者分两种任务考察：只平衡力（β=0）与只平衡力矩（α=0）。</p>
+
+    <table>
+      <tr><th>任务</th><th>权重设置</th><th>力矩误差 τ<sub>e</sub></th><th>力误差 f<sub>e</sub></th><th>平均执行时间</th><th>抓取稳定性</th></tr>
+      <tr><td>Force balancing</td><td>β=0, α≤10</td><td class="good">0.15 → 0.025 N·m（降低）</td><td>下降（见 Fig.4a/b）</td><td>45 s（38–53 s）</td><td>稳定</td></tr>
+      <tr><td>Torque balancing</td><td>β=100, α=0</td><td class="good">明显下降（Fig.4c）</td><td>~1 → 2 N（略升）</td><td>20 s（15–27 s）</td><td>仍稳定</td></tr>
+    </table>
+    <p><b>Force balancing：</b>展示了 15 次连续执行（Fig.4b，均值以红线标出）。作者强调"<i>The successful force balancing experiments do not increase the torque error, but actually contribute to lowering it</i>"——报告的所有成功执行都把力矩误差从平均初值 <b>0.15 N·m</b> 降到平均终值 <b>0.025 N·m</b>。</p>
+    <p><b>Torque balancing：</b>20 次运行（Fig.4c）。执行时间更短（因计算出的路径更短）。尽管力误差平均从约 1 N 升到 2 N，抓取仍保持稳定。相较之下，只平衡力的问题里，只有那些"恰好也降低了力矩"的轨迹才成功。</p>
+    <figure>
+      <img src="img/fig4_results.webp" alt="experimental results">
+      <figcaption><b>Fig.4 力平衡系统实验结果。</b>(a) 单次执行的力误差 f<sub>e</sub>（上）与力矩误差 τ<sub>e</sub>（下）随时间演化，蓝/黄箭头分别标记一次滑动轨迹的起止时刻；(b) 同一目标下 15 次连续执行（均值红线）；(c) 力矩平衡任务的 20 次连续执行。注意 (c) 的 τ<sub>e</sub> 纵轴量级远小于 (a)(b)。</figcaption>
+    </figure>
+    <h3>Discussion — 平衡力矩才是关键</h3>
+    <p>作者的核心观察：<b>最小化力矩对维持托盘稳定平衡至关重要</b>。只平衡力时，成功的执行无一例外都是那些同时降低了力矩的轨迹；而"平衡了力却增大力矩"的轨迹会因超出 payload 导致系统失败（托盘掉落）。这解释了为何 Problem 1 中的 β‖r<sub>a</sub>‖² 项不可或缺。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 本文无独立的 "Limitations" 章节；以下要点部分为作者在 Experiments/Discussion/Future work 中<b>明确陈述（stated）</b>，部分为根据方法设计<b>推断（inferred）</b>，已逐条标注。</div>
+    <details class="lim" open><summary>依赖 IK 解，遇动态障碍即放弃（stated）</summary><p>作者明确表示系统依赖所需路径存在 IK 解，"<i>if there are no IK solutions for a desired trajectory on the tray, we do not execute the balancing task</i>"；避开动态障碍留作 future work。</p></details>
+    <details class="lim"><summary>准静态假设：物体不在托盘上滑动/滚动（inferred / stated）</summary><p>建模时设 ḟ<sub>com</sub>=0，即假设 COM 在运动中不变、托盘上物体不滑不滚。这限制了对易滚动或松散负载的适用性。</p></details>
+    <details class="lim"><summary>离散顺序执行，非在线连续调整（stated）</summary><p>为简化规划并减少托盘意外运动，作者刻意采用 discrete、一次动一臂的执行方式；当 COM 变化时需由用户提示系统重新执行流程，而非全程在线跟随。</p></details>
+    <details class="lim"><summary>接触面小导致轻微俯仰/倾斜（stated）</summary><p>Fig.4 中部分轨迹受托盘相对 YuMi 指尖的小幅 pivoting/tilting 影响；作者建议改用接触面更大的指尖可缓解并保证全程牢固抓取。</p></details>
+    <details class="lim"><summary>规模验证有限（inferred）</summary><p>实验只在单一 YuMi + 一块 300×200 mm 铝托盘上验证；未报告不同形状/材质物体、多物体或更大负载下的泛化。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Discrete Bimanual Manipulation for Wrench Balancing (IEEE ICRA 2020, pp. 2631–2637) · for study reference only<br>
+    原文 / Paper: <a href="https://portal.research.lu.se/en/publications/discrete-bimanual-manipulation-for-wrench-balancing/">Lund 研究门户</a> · <a href="http://www.diva-portal.org/smash/get/diva2:1366107/FULLTEXT01.pdf">全文 PDF (DiVA)</a> · <a href="https://ieeexplore.ieee.org/document/9196527/">IEEE Xplore</a>
+  </div>
+</footer>
+
+</body>
+</html>

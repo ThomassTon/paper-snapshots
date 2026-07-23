@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从局部最优演示中学习约束（成本函数不确定下）</title>
+<meta name="keywords" content="constraint learning, learning from demonstration, KKT conditions, inverse optimal control, mixed integer programming, locally-optimal demonstrations, safe planning, 逆最优控制">
+<meta name="description" content="用 KKT 最优性条件 + MILP，从局部最优演示中学习安全约束，即使成本函数不确定。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">IEEE RA-L 2020 · Learning from Demonstration</span>
+    <h1>从局部最优演示中学习约束（成本函数不确定下）</h1>
+    <div class="sub">Learning Constraints from Locally-Optimal Demonstrations under Cost Function Uncertainty</div>
+    <div class="authors">Glen Chou, Necmiye Ozay, Dmitry Berenson · University of Michigan, Ann Arbor</div>
+    <p class="lead">传统 IRL/IOC 学的是「成本函数」，但很多真实规划问题真正需要的是<strong>硬约束（安全集）</strong>。本文提出用演示所满足的 <strong>KKT 最优性条件</strong> 构造一个 <strong>MILP</strong>，从<strong>仅局部最优</strong>且<strong>成本函数不确定</strong>的演示中反解出参数化约束，并给出所恢复安全/不安全集的<strong>保守性理论保证</strong>。在 7-DOF 机械臂与四旋翼（约束空间高达 23 维）上验证，优于依赖采样低成本轨迹的既有方法。</p>
+    <div class="meta">
+      <span>7-DOF Kuka iiwa</span><span>Quadrotor · 23 维约束</span><span>MILP / KKT</span>
+      <span><a href="https://arxiv.org/abs/2001.09336">📄 arXiv:2001.09336</a></span>
+      <span><a href="https://arxiv.org/pdf/2001.09336">PDF</a></span>
+    </div>
+    <div class="kw"><span>constraint learning</span><span>learning from demonstration</span><span>KKT conditions</span><span>inverse optimal control</span><span>mixed integer programming</span><span>locally-optimal demonstrations</span><span>safe planning</span><span>逆最优控制</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">从演示中学习（LfD）以往聚焦在通过 IOC/IRL 学习成本/奖励函数。但真实规划问题（如城市中飞行的四旋翼）还要求系统遵守<strong>硬约束</strong>——轨迹必须留在安全状态集内。约束比「软化」的成本惩罚更严格，更适合安全关键场景；而且约束往往<strong>跨任务共享</strong>，识别出来有助于机器人泛化。</p>
+    <blockquote>“We consider the problem of learning parametric constraints shared across tasks from approximately locally-optimal demonstrations under parametric cost function uncertainty.”</blockquote>
+    <p>此前工作（<em>wafr</em>、<em>corl</em>）迈出了识别约束的第一步，但有两条强假设：(1) 演示近似<strong>全局最优</strong>；(2) 演示者的<strong>成本函数被精确已知</strong>。然而人类并非总是任务专家，要求其提供近全局最优的演示不合理；且学习者也很少能精确知道被优化的成本函数。本文的核心洞见是：局部最优、满足约束的演示<strong>必然满足 KKT 条件</strong>——这是约束优化局部最优的一阶必要条件——由此绕开对全局最优与已知成本的依赖。</p>
+    <figure>
+      <img src="img/global_local7.webp" alt="global vs local intuition">
+      <figcaption><strong>全局 vs 局部最优的可学习性差异（2D 直觉）。</strong>Pink：真实约束（障碍）；Green/cyan：演示；Red：采样的低成本（不安全）轨迹。<em>左</em>：局部最优学到的比全局最优少——一条测度为零的水平线障碍（orange 虚线）就能使演示局部最优，导致学到的保证安全/不安全体积为零。<em>中</em>：在盒式参数化下无可学习性差距，恢复出 𝒢<sub>s</sub>=𝒮、𝒢<sub>¬s</sub>=𝒜。<em>右</em>：假设全局最优可能得到<strong>非保守</strong>解（红点线若为采样的不安全轨迹），而水平线障碍可解释局部最优、给出保守恢复。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>KKT</b><small>用 KKT 一阶必要条件反解约束</small></div>
+      <div><b>MILP</b><small>直接搜索连续参数空间，无需枚举</small></div>
+      <div><b>23</b><small>四旋翼未知约束参数维数</small></div>
+      <div><b>𝒢⊆真集</b><small>恢复的安全/不安全集有保守性保证</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">把每个任务写成一个约束优化问题（forward problem）：在已知动力学 <em>x<sub>t+1</sub>=f(x<sub>t</sub>,u<sub>t</sub>,t)</em>、已知起止约束下，最小化（可能非凸、参数 γ 未知的）成本 <em>c<sub>Π</sub>(ξ,γ)</em>，同时满足未知的安全集约束 <em>𝒮(θ)</em>。给定若干「近似局部最优」演示，目标是反解出定义安全集 <em>𝒮(θ)={p | g(p,θ)≤0}</em> / 不安全集 <em>𝒜(θ)</em> 的参数 θ（以及可选地恢复成本参数 γ）。</p>
+
+    <h3>核心：用 KKT 条件反解约束（Inverse KKT）</h3>
+    <p>局部最优演示满足 KKT 条件：<strong>primal feasibility、Lagrange 乘子非负、complementary slackness、stationarity</strong>。把约束参数 θ、成本参数 γ 与各演示的乘子 λ、ν 一起当作<strong>决策变量</strong>，求「使所有演示的 KKT 条件成立」的 θ 即为可行性问题（Problem 2）。为处理演示的次优性（近似局部最优），可将 stationarity 与 complementary slackness 松弛为目标中的 ℓ<sub>1</sub> 惩罚（Problem 3）。</p>
+    <blockquote>“By using the KKT conditions, which <em>implicitly</em> define the unsafe set instead of explicitly through unsafe trajectories, our method sidesteps both the need for an exact cost function to classify the safety of sampled trajectories as well as any sampling difficulties.”</blockquote>
+
+    <h3>两类参数化 → 两种可解形式</h3>
+    <p><strong>(a) Unions of offset-parameterized（如轴对齐超矩形盒）</strong>：θ 不与约束状态 p 相乘。用 <strong>big-M</strong> 公式编码「或」约束与 complementary slackness 的二值变量 q、z；由于 λ（连续）与 q（二值）的双线性项可被 <strong>McCormick 精确线性化</strong>，整个恢复问题化为一个可<strong>精确求解 θ</strong> 的 MILP（Problem 4）。</p>
+    <p><strong>(b) Unions of affine constraints</strong>：θ 与 p 相乘，stationarity 中出现 θ、λ、q 之间的三线性项，精确求解需 MINLP。本文给出一个 <strong>MILP 松弛</strong>（Problem 6）：只在乘子非零（演示触到约束边界）时才有松弛间隙，其余无损。此时无法直接恢复 θ，但仍可通过查询判断某状态是否保证安全/不安全。</p>
+
+    <h3>提取安全/不安全体积 + 未知参数化 + 成本不确定</h3>
+    <ul>
+      <li><strong>查询 oracle（Problem 5）</strong>：给某状态 p 加上 <em>g(p,θ)&gt;0</em> 或 <em>≤0</em> 再检验可行性——不可行即证明 p <strong>保证安全 / 保证不安全</strong>，否则「不确定」。</li>
+      <li><strong>体积提取（Problem 7）</strong>：求以查询点为中心、完全落在保证安全（或不安全）集内的最大盒，从而把连续空间中的安全体积批量提取出来供规划器使用。</li>
+      <li><strong>未知参数化</strong>：把复杂集近似为多个简单集之并，通过「不断加简单集直到 Problem 2 可行」来<strong>增量估计</strong>所需简单集数目的下界。</li>
+      <li><strong>成本不确定</strong>：若 <em>c<sub>Π</sub>(·,γ)</em> 对 γ 仿射，则把 γ 也作为决策变量放进 MILP 即可联合求解——提取到的是<strong>对所有可能成本参数都稳健</strong>的安全/不安全集。</li>
+    </ul>
+
+    <h3>理论保证</h3>
+    <p><strong>保守性（Thm 1 & 2）</strong>：当约束参数化已知时，从可行集投影提取的 𝒢<sub>s</sub>、𝒢<sub>¬s</sub> 满足 <em>𝒢<sub>¬s</sub>⊆𝒜</em> 且 <em>𝒢<sub>s</sub>⊆𝒮</em>（内近似）——因为真参数 θ* 一定在可行集内。<strong>可学习性（Thm 3）</strong>：在相同初始参数集下，局部最优可学习的不安全集是全局最优可学习集的子集（<em>𝒢<sub>¬s</sub><sup>loc,*</sup>⊆𝒢<sub>¬s</sub><sup>glo,*</sup></em>）；成本不确定只会降低可学习性。作者指出：该定理成立于「采样到全部不安全轨迹」的极限，实际采样远不完整（尤其非线性动力学），故本文的 KKT 方法反而常学到更多。</p>
+    <figure>
+      <img src="img/nonlinear_squashed3.webp" alt="nonlinear constraint">
+      <figcaption><strong>约束在参数中仿射即可，但在状态中可高度非线性。</strong>参数化 g(p,θ)=2(x⁴+y⁴)−5(x³+y³)+5(x−1)³+5(y+1)³−θ 给出高度非线性的状态空间约束；仅用两条演示（θ=2）即恢复 𝒢<sub>s</sub>=𝒮、𝒢<sub>¬s</sub>=𝒜。Blue：真实约束边界；Red/green：学到的不安全/安全状态；Purple/orange：两条演示。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">除 2D 直觉示例外，在<strong>高维</strong>系统上评估：7-DOF Kuka iiwa 机械臂与四旋翼。Baseline 为基于「采样低成本轨迹」的既有方法 <em>corl</em>（并假设其成本函数精确已知）。指标为学到的 𝒢<sub>s</sub>/𝒢<sub>¬s</sub> 相对真实 𝒮/𝒜 的<strong>覆盖率（coverage）与准确率（accuracy）</strong>。所有计时在 3.1 GHz Intel Core i7 / 16 GB RAM 笔记本上记录。</p>
+
+    <h3>机械臂「调酒师」（15 个约束参数）</h3>
+    <p>7-DOF 机械臂需从吧台柜或另一调酒师处递饮品给顾客，同时满足末端位姿约束（不洒）、扫掠体不碰家具、以及对顾客的 <em>proxemics</em>（社交距离）约束。<strong>五条次优人类演示</strong>在 HTC Vive VR 环境中采集，优化关节空间路径长度。用 Problem 4 的次优版本恢复 15 个参数，<strong>耗时 17.2 秒</strong>；查询/体积提取每次平均 <strong>16.4 / 12.1 秒</strong>（10 次平均）。结果：本文方法恢复出 <strong>𝒢<sub>s</sub>=𝒮、𝒢<sub>¬s</sub>=𝒜</strong>；baseline 因扫掠体约束把 Problem 3 的决策变量放大 18 倍、可用轨迹样本受限，在位置约束上表现差（学不到吧台/吧柜不安全，也学不全安全集）。提取的安全体积交给 <strong>CBiRRT</strong> 规划器生成新的安全轨迹。</p>
+    <figure>
+      <img src="img/arm_viz_box3.webp" alt="arm bartender demos and planned trajectories">
+      <figcaption><strong>机械臂调酒师示例。</strong>左：人类演示（proxemics 约束禁止手臂过分靠近顾客、以及从左/右/尤其顶部做大幅挥扫——顾客会觉得有攻击性）。右：用<strong>学到的约束</strong>为新任务规划出的安全轨迹（CBiRRT）。</figcaption>
+    </figure>
+
+    <h3>椭圆末端约束（把查询放进规划回路）</h3>
+    <p>末端质心须落在含玻璃器皿的椭圆柱之外——一个在状态中非线性的约束。用 <strong>affine-relaxed KKT</strong> 版的查询问题，仅两条演示即恢复 𝒢<sub>s</sub>=𝒮、𝒢<sub>¬s</sub>=𝒜。将 <strong>STOMP</strong> 规划器的碰撞/约束检查替换为在线求解 Problem 5，规划出两条新轨迹（规划耗时 2、6 分钟）；每次查询平均仅 <strong>0.073 秒</strong>，且可用上次查询结果 warm-start 加速。</p>
+
+    <h3>四旋翼（23 个约束参数，成本不确定）</h3>
+    <p>四旋翼携带易碎载荷穿越城市：需避开两栋建筑、满足控制/位姿/角速度约束，共 <strong>23 个未知约束参数</strong>，用 <strong>六条演示</strong>求解 Problem 4，<strong>耗时 19.4 秒</strong>。方法从单盒参数化起步，靠不可行自动检测出位置约束需要再加一个盒。演示为合成生成，方法假设成本参数不确定 γ<sub>r</sub>∈[0.01, 3]，而 baseline 假设成本精确已知。查询/体积提取平均 <strong>26.6 / 43.0 秒</strong>。结论：在简单凸约束（角速度、控制）上两者相当；但 baseline 在不安全集与位置约束上因「同时辨识众多约束 + 二阶非线性动力学下采样困难」而表现差、准确率剧烈波动。提取的安全体积交给轨迹优化器（CasADi）生成新安全轨迹。</p>
+    <figure>
+      <img src="img/quad_viz_fix2.webp" alt="quadrotor demonstrations and planned trajectories">
+      <figcaption><strong>四旋翼场景。</strong>左：六条演示（携易碎载荷、避开建筑）。右：用学到的约束规划出的新安全轨迹。</figcaption>
+    </figure>
+    <figure>
+      <img src="img/quad_stats_fix_v2.webp" alt="quadrotor coverage and accuracy statistics">
+      <figcaption><strong>四旋翼统计：随演示数增加，𝒢<sub>s</sub>/𝒢<sub>¬s</sub> 的覆盖率与准确率。</strong>各约束空间（位置 xyz、控制 u、位姿 αβγ、角速度 α̇β̇γ̇）分别绘制；带 [6] 的曲线为 baseline（corl）。本文方法在安全集覆盖/准确上接近 1；baseline（橙、品红、棕、青虚线）在不安全集与位置约束上覆盖低、波动大——因不完整轨迹采样与多约束辨识歧义。x 轴与左图六条演示按颜色对应。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下前两条为作者在 Discussion/Conclusion 中<strong>明确陈述（stated）</strong>的未来工作/不足；后两条为依据方法设计<strong>推断（inferred）</strong>。</div>
+    <details class="lim" open><summary>需要闭式已知动力学（stated）</summary><p>作者写道方法「require the dynamics to be known in closed form」，而 baseline 方法（wafr、corl）只需一个模拟器。计划扩展以处理不确定动力学。</p></details>
+    <details class="lim"><summary>决策变量随演示数线性增长（stated）</summary><p>“the number of decision variables in our method scales linearly with the number of demonstrations, making it important that the demonstrations are informative”——故演示必须对未知约束有信息量。作者计划开发主动学习以获取有信息量的演示。</p></details>
+    <details class="lim"><summary>次优演示下失去形式化保守性保证（inferred，作者以 Remark 指出）</summary><p>保守性定理建立在精确局部最优上；用次优演示（Problem 3）时，成本次优与 KKT 违反之间关系一般未知，难以保证保守性。作者在 Remark 中指出实践中恢复的集合「仍趋于保守」，但这不是形式化保证。</p></details>
+    <details class="lim"><summary>可扩展性与松弛限制（inferred）</summary><p>offset 参数化在简单集数目 N<sub>c</sub> 较大时求解未必高效（原文：“may not be efficient for large N<sub>c</sub>”）；affine 参数化的精确恢复需 MINLP，故退而用 MILP 松弛——只能查询安全性、无法直接恢复 θ。此外可学习性依赖演示是否与约束充分交互。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Learning Constraints from Locally-Optimal Demonstrations under Cost Function Uncertainty · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2001.09336">https://arxiv.org/abs/2001.09336</a> · IEEE RA-L 2020 (vol. 5, pp. 3682–3690)
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "slug": "uncertain-constraint-il",
+  "title": "Uncertainty-Aware Constraint Learning for Adaptive Safe Motion Planning from Demonstrations",
+  "arxiv_id": "2011.04141",
+  "url": "https://arxiv.org/abs/2011.04141",
+  "category": "机器人 · Robotics",
+  "keywords": ["learning from demonstration", "constraint learning", "planning under uncertainty", "chance-constrained planning", "robust optimization", "KKT conditions", "Bayesian belief", "safe motion planning", "机器人"],
+  "summary_zh": "从演示中学习「不确定约束」：用 robust optimization 恢复所有与演示一致约束的集合 F_θ 并转成约束信念，再据此做机会约束规划，并在执行中用传感数据更新信念、闭环重规划，在 7-DOF 机械臂与 12D 四旋翼上以概率安全兼顾安全与效率。",
+  "date": "2026-07-23",
+  "source": "arxiv-pdf"
+}

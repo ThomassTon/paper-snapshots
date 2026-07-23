@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForceVLA：用力感知 MoE 增强 VLA 的接触密集操作</title>
+<meta name="keywords" content="Vision-Language-Action, force-aware MoE, contact-rich manipulation, flow matching, 力反馈, 多模态融合, π0, 机器人插拔">
+<meta name="description" content="ForceVLA 把 6 轴力/力矩作为一等模态，用 FVLMoE 在动作解码阶段融合视觉-语言与实时力反馈，在 5 个接触密集任务上比 π0 基线平均成功率提升 23.2%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · VLA · 接触密集操作</span>
+    <h1>ForceVLA</h1>
+    <div class="sub">用 Force-aware MoE 增强 VLA 模型的接触密集操作 (Contact-rich Manipulation)</div>
+    <div class="authors">Jiawen Yu, Hairuo Liu, Qiaojun Yu 等 · 复旦大学 / 上海交通大学 / 上海创智学院 / 上海 AI Lab 等 · 2025</div>
+    <p class="lead">现有 VLA 模型主要依赖视觉与语言，在插拔、装配、擦拭这类<strong>需要精细力控</strong>的接触密集任务上很脆弱，尤其是遮挡或动态不确定条件下。ForceVLA 把末端 6 轴力/力矩当作<strong>一等模态 (first-class modality)</strong>，用一个力感知 MoE 模块 <strong>FVLMoE</strong> 在动作解码阶段动态融合视觉-语言表征与实时力反馈，在 5 个真实接触密集任务上比强 π<sub>0</sub> 基线平均成功率提升 <strong>23.2%</strong>。</p>
+    <div class="meta">
+      <span>π<sub>0</sub> + Flow Matching backbone</span>
+      <span>FVLMoE：E=4 experts, Top-k=1</span>
+      <span>ForceVLA-Data：244 条轨迹 / 14 万步</span>
+      <span><a href="https://arxiv.org/abs/2505.22159">📄 arXiv:2505.22159</a></span>
+      <span><a href="https://sites.google.com/view/forcevla2025">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>Vision-Language-Action</span><span>force-aware MoE</span><span>contact-rich manipulation</span><span>flow matching</span><span>力反馈 force-torque</span><span>多模态融合</span><span>π0</span><span>机器人插拔 / 装配</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">接触密集操作不只是语义理解和空间规划，它<strong>本质上由交互力驱动</strong>。人类天然会整合触觉与本体感觉来调整操作策略，而现有 VLA 严重依赖视觉/语言线索，常常忽略力这一对精确物理交互至关重要的模态——结果在插入、工具使用、装配等任务上（尤其遮挡或视觉条件差时）表现脆弱甚至失败。</p>
+    <blockquote>"6D external force sensed at the robot's end-effector should be treated as a first-class modality and formally integrated into the action expert module to enable phase-aware action generation based on force feedback during physical interaction."</blockquote>
+    <p>论文还强调：力需求会<strong>随任务阶段演化</strong>——精细抓取、受控插入、柔顺表面接触各自需要不同形式的力调制；现有方法缺乏感知并适应这些动态变化的机制。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="ForceVLA vs baseline without force">
+      <figcaption>Figure 1：ForceVLA 与无力输入基线的对比。没有力反馈时，策略无法修正位姿误差、错误地完成插入；ForceVLA 利用外部力信号动态调整插入策略，即便初始对不齐也能成功完成。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>+23.2%</b><small>平均成功率 vs π<sub>0</sub>-base 基线</small></div>
+      <div><b>60.5%</b><small>ForceVLA 五任务平均成功率</small></div>
+      <div><b>80%</b><small>插头插入等任务最高成功率</small></div>
+      <div><b>90%</b><small>视觉遮挡 (Visual Occlusion) 下成功率</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead">ForceVLA 是端到端多模态机器人策略，构建在 π<sub>0</sub> 框架之上，整合视觉、语言、本体感觉与 6 轴力反馈，通过 conditional flow matching 生成动作。多路 RGB 视觉与语言指令由基于 PaliGemma 的 SigLIP 视觉-语言模型编码为上下文嵌入；核心创新 FVLMoE 把力读数投影为 token 并与视觉-语言嵌入融合，其输出作为引导信号注入 flow-based 动作头。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="ForceVLA architecture">
+      <figcaption>Figure 3：ForceVLA 总览。视觉与语言输入经预训练 VLM 形成上下文嵌入；外部力信号被投影后经 FVLMoE 模块与 VLM 输出融合；得到的多模态特征引导 flow-based 动作头生成接触感知的机器人动作。</figcaption>
+    </figure>
+    <h3>关键点 1 · FVLMoE：晚期融合的力感知 MoE</h3>
+    <p>力模态在 VLM 处理完视觉与语言之后才引入——FVLMoE 因此扮演类似"高级皮层联合区"的角色，把 VLM 预训练的视觉-语言表征与新引入的 force token 整合。原始 6 轴力/力矩 <em>f<sub>raw</sub></em> ∈ ℝ<sup>6</sup> 经线性投影 φ<sub>F</sub> 成一个 force token，与 VL 特征拼接为 E<sub>in</sub> = [E<sub>VL</sub>; E<sub>F</sub>]。序列先过一层带多头自注意力 + FFN 的 encoder 做共享精炼，再进入 <strong>sparse MoE 层（E = 4 个 expert MLP，Top-k = 1 路由）</strong>，经残差连接得到融合特征，最后线性投影匹配动作 expert 维度。</p>
+    <h3>关键点 2 · 注入 Flow 动作头 & 数据集</h3>
+    <p>融合特征取最后 H<sub>action</sub> 个 token 作为引导 G<sub>FVLMoE</sub>，与 VLM 处理本体状态 s<sub>t</sub> 和带噪动作轨迹得到的 S<sub>suffix</sub> 逐元素相加注入——让接触感知的上下文在每个去噪步直接调制生成的动作序列。数据方面，作者用 Flexiv Rizon 7-DOF 机械臂 + Dahuan 自适应夹爪、Quest3 VR 遥操作采集了 <strong>ForceVLA-Data</strong>：同步的视觉 / 本体感觉 / 力-力矩信号，覆盖 5 个接触密集任务，共 <strong>244 条轨迹、约 14 万同步时间步</strong>。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead">在 5 个真实接触密集任务上评测：Bottle Pumping、Plug Insertion、USB Drive Insertion、Whiteboard Wiping、Cucumber Peeling。基线均从 SOTA 的 π<sub>0</sub> 架构派生：π<sub>0</sub>-base（w/o F 与 w/ F，力直接拼接到状态输入）以及对应的 π<sub>0</sub>-fast 变体。每任务约 50 条专家演示训练；插入/按压任务各 20 次、擦白板 10 次、削黄瓜 15 次试验评测。</p>
+
+    <h3>主结果（五任务平均成功率）</h3>
+    <table>
+      <tr><th>Model</th><th>平均成功率</th><th>说明</th></tr>
+      <tr><td>π<sub>0</sub>-fast w/ F</td><td>14.2%</td><td>紧凑 token 空间被朴素力 token 扰乱</td></tr>
+      <tr><td>π<sub>0</sub>-fast w/o F</td><td>31.0%</td><td>—</td></tr>
+      <tr><td>π<sub>0</sub>-base w/o F</td><td>37.3%</td><td>标准 π<sub>0</sub>，无力输入</td></tr>
+      <tr><td>π<sub>0</sub>-base w/ F</td><td>40.2%</td><td>力直接拼接，仅微弱提升</td></tr>
+      <tr><td class="good">ForceVLA (Ours)</td><td class="good">60.5%</td><td>较 π<sub>0</sub>-base w/o F 提升 +23.2%</td></tr>
+    </table>
+    <p>关键结论："beyond the presence of force data, <strong>how it is integrated</strong> is critical to performance gains." 把原始力信号直接喂给 π<sub>0</sub>-base 只从 37.3% 涨到 40.2%，而 ForceVLA 借 FVLMoE 达到 60.5%——说明有效融合而非仅有力数据才是关键。</p>
+
+    <figure>
+      <img src="img/main-results.webp" alt="Main task success rates">
+      <figcaption>Figure 5：各方法在五个接触密集任务上的主成功率。ForceVLA 显著超越所有基线；"Wipe Board-1" 指成功完成擦拭动作的成功率，"Wipe Board-2" 指完全擦除标记的成功率。</figcaption>
+    </figure>
+
+    <h3>削黄瓜任务 (Cucumber Peeling)</h3>
+    <table>
+      <tr><th>Model</th><th>Avg. Peel Length (cm) ↑</th><th>Min. Strokes to Clean ↓</th></tr>
+      <tr><td>π<sub>0</sub>-base w/o F</td><td>10.27</td><td>14</td></tr>
+      <tr><td>π<sub>0</sub>-base w/ F</td><td>13.17</td><td>10</td></tr>
+      <tr><td class="good">ForceVLA (Ours)</td><td class="good">14.12</td><td class="good">7</td></tr>
+    </table>
+
+    <h3>泛化能力 (Table 2)</h3>
+    <p>在物体几何、插座高度、视觉遮挡、不稳定插座等扰动下评测。ForceVLA 平均 63.78%，明显领先。注意这里并非全面碾压：π<sub>0</sub>-fast w/o F 在 Height Gen. 上并列最好 (88.89%)，而 <strong>Unstable Socket 一列 ForceVLA 仅 20%，反而低于 π<sub>0</sub>-fast w/ F 的 30%</strong>。</p>
+    <table>
+      <tr><th>Model</th><th>Obj. Gen.1</th><th>Obj. Gen.2</th><th>Height Gen.</th><th>Visual Occ.</th><th>Unstable Socket</th><th>Average</th></tr>
+      <tr><td>π<sub>0</sub>-base w/o F</td><td>48.0</td><td>10.0</td><td>66.67</td><td>60.0</td><td>10.0</td><td>38.93</td></tr>
+      <tr><td>π<sub>0</sub>-base w/ F</td><td>32.0</td><td>10.0</td><td>77.78</td><td>30.0</td><td>10.0</td><td>31.96</td></tr>
+      <tr><td>π<sub>0</sub>-fast w/o F</td><td>80.0</td><td>35.0</td><td>88.89</td><td>50.0</td><td>10.0</td><td>52.78</td></tr>
+      <tr><td>π<sub>0</sub>-fast w/ F</td><td>32.0</td><td>5.0</td><td>44.44</td><td>50.0</td><td>30.0</td><td>32.29</td></tr>
+      <tr><td class="good">ForceVLA (Ours)</td><td class="good">80.0</td><td class="good">40.0</td><td class="good">88.89</td><td class="good">90.0</td><td>20.0</td><td class="good">63.78</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/trajectory.webp" alt="Trajectory visualizations">
+      <figcaption>Figure 7：跨任务与条件的轨迹可视化。(a) USB 插入、(b) 瓶泵按压、(c) 稳定/不稳定插座下的插头插入。当出现失败时 ForceVLA 会重试或调整位姿（重定向、重抓取、柔顺跟随移动的插座），最终完成任务——而基线常重复失败动作或施加过大力。</figcaption>
+    </figure>
+
+    <h3>Ablations · 消融（插头插入任务成功率）</h3>
+    <p>验证"力应在何时、以何种方式融入"这一核心设计。<strong>Early fusion 会严重损害性能</strong>：在 VLM 之前用 MoE 融合力 (MoE before VLM) <strong>完全失败（0%）</strong>——改变预训练 VLM 的输入表征会破坏其学到的特征分布。晚期融合更好："concatenate after VLM" 达 60%，而 ForceVLA 用 FVLMoE 在 VLM 之后自适应融合达到 <strong>80%</strong>。</p>
+    <table>
+      <tr><th>Model</th><th>Success Rate</th></tr>
+      <tr><td>baseline (π<sub>0</sub>)</td><td>45%</td></tr>
+      <tr><td>linear before VLM</td><td>55%</td></tr>
+      <tr><td>MoE before VLM</td><td>0%</td></tr>
+      <tr><td>concatenate after VLM</td><td>60%</td></tr>
+      <tr><td class="good">ForceVLA (Ours)</td><td class="good">80%</td></tr>
+    </table>
+    <p>路由分析（附录 C）：不同任务表现出不同的 expert 利用模式——insert plug / peel cucumber 有明显的阶段性专家分化，wipe board 则始终偏好单一专家；Expert 0 在多任务中占据近半 token，疑似充当"通用专家"负责多模态融合或共享控制原语。</p>
+    <figure>
+      <img src="img/router.webp" alt="Router expert load analysis">
+      <figcaption>Figure 9：不同任务在各完成度下的 expert 负载开环评估（(a) Pump Bottle、(b) Insert Plug、(c) Wipe Board、(d) Peel Cucumber、(e) Insert USB）。纵轴为平均 expert 负载，横轴为任务完成百分比，体现路由随任务语义与时间结构动态分配计算。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 以下两点为论文 "Limitation" 章节<strong>作者明确陈述 (stated)</strong>；第三点为<strong>依据实验数据推断 (inferred)</strong>。</div>
+    <details class="lim" open><summary>使用的是估计的外部力矩，而非高保真直接测量 (stated)</summary><p>"ForceVLA currently utilizes estimated external wrench values." 这些估计在极端触觉敏感场景下可能无法达到直接高保真测量的精度；作者提出可探索更好的传感器或先进标定技术来进一步细化精细控制能力。</p></details>
+    <details class="lim"><summary>依赖集成式、通常高成本的力/力矩传感平台，限制可及性 (stated)</summary><p>实验主要在带集成力-力矩传感的机器人平台上验证，这类平台成本高，自然限制了更广泛的可及性。作者表示正在评估 ForceVLA 在更常见、低成本、外接或改装力传感平台上的适应性与性能，以推动力感知操作研究的普及。</p></details>
+    <details class="lim"><summary>不稳定/动态扰动下并非全面领先 (inferred)</summary><p>由 Table 2 可见：在 Unstable Socket 条件下 ForceVLA 仅 20%，低于 π<sub>0</sub>-fast w/ F 的 30%；在 Height Gen. 上也只是与 π<sub>0</sub>-fast w/o F 并列 (88.89%)。说明在剧烈物理不稳定场景中，力感知融合带来的收益仍不稳健、有待提升。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · ForceVLA: Enhancing VLA Models with a Force-aware MoE for Contact-rich Manipulation · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2505.22159">https://arxiv.org/abs/2505.22159</a>
+  </div>
+</footer>
+
+</body>
+</html>

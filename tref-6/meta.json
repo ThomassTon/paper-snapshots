@@ -1,0 +1,11 @@
+{
+  "slug": "tref-6",
+  "title": "TReF-6: Inferring Task-Relevant Frames from a Single Demonstration for One-Shot Skill Generalization",
+  "arxiv_id": "2509.00310",
+  "url": "https://arxiv.org/abs/2509.00310",
+  "category": "机器人 · Robotics",
+  "keywords": ["One-Shot Imitation Learning", "Dynamic Movement Primitives", "Task-Relevant Frame", "6DoF reference frame", "influence point", "Grounded-SAM", "vision-language model", "OOD generalization", "机器人操作"],
+  "summary_zh": "TReF-6 仅凭单条演示轨迹的几何结构，优化出一个 influence point 作为 6DoF 任务相关坐标系原点，再用 GPT-4o + Grounded-SAM 做语义锚定与新场景定位，据此重参数化 DMP，实现跨物体位姿与铰链几何的一次性技能泛化；真机开门任务总成功率相对 privileged DMP 提升 58.3%。",
+  "date": "2026-07-23",
+  "source": "arxiv-latex"
+}

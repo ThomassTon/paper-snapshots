@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLMimic: Vision Language Models are Visual Imitation Learner for Fine-grained Actions</title>
+<meta name="keywords" content="visual imitation learning, Vision Language Model, human video, object-centric interaction, hierarchical constraints, fine-grained action, robotic manipulation, RLBench, skill adaptation, long-horizon">
+<meta name="description" content="VLMimic 用 VLM 直接从少量人类视频学习细粒度机器人动作，以分层约束表示 skill，并通过迭代对比策略适应新环境。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Visual Imitation Learning</span>
+    <h1>VLMimic</h1>
+    <div class="sub">Vision Language Models are Visual Imitation Learner for Fine-grained Actions</div>
+    <div class="authors">Guanyan Chen, Meiling Wang, Te Cui, Yao Mu, Haoyang Lu, Tianxing Zhou, Zicai Peng, Mengxiao Hu, Haizhou Li, Yuan Li, Yi Yang, Yufeng Yue（北京理工大学 等）</div>
+    <p class="lead">仅用 <b>5 段人类视频</b>，让 VLM 不再只当高层 planner，而是直接学出<b>细粒度动作层级</b>的 skill：先从视频里 ground 出 object-centric 运动，用<b>分层约束表示</b>（semantic + geometric constraints）把 skill 存进 knowledge bank，再靠<b>迭代对比策略</b>把 skill 迁移到未见环境。</p>
+    <div class="meta">
+      <span>只用 5 段人类视频</span><span>RLBench 12 + 真实世界 14 + 长程 6 任务</span><span>无需运动基元 / 无需机器人示教</span>
+      <span><a href="https://arxiv.org/abs/2410.20927">📄 arXiv:2410.20927</a></span>
+      <span><a href="https://arxiv.org/pdf/2410.20927">PDF</a></span>
+    </div>
+    <div class="kw"><span>visual imitation learning</span><span>Vision Language Model</span><span>human video</span><span>object-centric interaction</span><span>hierarchical constraints</span><span>fine-grained action</span><span>robotic manipulation</span><span>RLBench</span><span>skill adaptation</span><span>long-horizon</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Visual imitation learning (VIL) 是让机器人快速习得新技能的直观途径。近来的 VLM 在视觉-语言推理上很强，但现有 VIL 方法只是"天真地"把 VLM 当高层 planner——学出 high-level plan，底层执行仍依赖预先定义的 <b>motion primitives</b>，这正是主要瓶颈。</p>
+    <blockquote>"Current VIL methods naively employ VLMs to learn high-level plans from human videos, relying on pre-defined motion primitives for executing physical interactions, which remains a major bottleneck."</blockquote>
+    <p>作者归纳出三重障碍：(1) VLM 仍缺乏对<b>细粒度动作</b>的识别能力；(2) 运动信号本身<b>冗余</b>，难以直接理解；(3) 示范场景与目标场景存在<b>差异</b>，阻碍 skill 直接迁移。VLMimic 的目标：让 VLM 直接学到细粒度动作层级，且只需极少量人类视频。</p>
+    <figure>
+      <img src="img/x1.webp" alt="teaser">
+      <figcaption>Figure 1：(a) 典型 VIL 方法难以泛化到未见环境；(b) 现有方法把 VLM 仅用作 planner，难以生成 low-level action；(c) VLMimic 从人类视频 ground 出 action movement，学出带细粒度动作的 skill，并由 skill adapter 更新 skill 以泛化；(d) 在极少量人类视频下取得更优性能。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>5</b><small>仅用 5 段人类视频</small></div>
+      <div><b>0.76</b><small>RLBench 平均成功率</small></div>
+      <div><b>+27%</b><small>RLBench 超最佳 baseline</small></div>
+      <div><b>+37%</b><small>长程任务超 baseline</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">VLMimic 是三段式流水线：<b>Human-Object Interaction Grounding</b>（把视频解析成段、抽取 object-centric 运动）→ <b>Skill Learner</b>（用分层约束表示从运动中学出 skill 并入库）→ <b>Skill Adapter</b>（在新场景用迭代对比策略更新 skill）。</p>
+    <figure>
+      <img src="img/x2.webp" alt="architecture">
+      <figcaption>Figure 2：VLMimic 总体框架。(a) human-object interaction grounding 模块把视频拆成多个 segment 并捕捉 object-centric movement；(b) skill learner 从 action motion 中抽取知识、derive skill；(c) 在新场景下 skill adapter 更新已学 skill 以完成适应。</figcaption>
+    </figure>
+
+    <h3>① Human-Object Interaction Grounding</h3>
+    <p>四阶段把原始人类视频转为结构化的 object-centric 交互：借助 vision foundation model + VLM 做 <b>task recognition</b>（识别任务与相关物体）；用 <b>SAM-Track</b> + 点云分析做 <b>video parsing</b>（切分 segment）；做 <b>subtask recognition</b>（区分 grasping / manipulation 阶段）；再用 <b>FrankMocap、ICP、BundleSDF、FoundationPose</b> 抽取每段内的 object-centric interaction。</p>
+    <figure>
+      <img src="img/x3.webp" alt="grounding module">
+      <figcaption>Figure 3：Human-object interaction grounding 模块。(a) 从人类视频识别任务与相关物体；(b) 据此把视频解析成多个 segment；(c) 在每个 segment 内识别 object-centric interaction。</figcaption>
+    </figure>
+
+    <h3>② Skill Learner：Hierarchical Constraint Representations</h3>
+    <p>核心创新是用<b>两级分层约束</b>表示 skill，而非依赖固定运动基元：</p>
+    <ul>
+      <li><b>Semantic constraints（Φ<sub>s</sub>）</b>：高层动作描述，由 VLM 从可视化的交互中识别得到。</li>
+      <li><b>Geometric constraints（Φ<sub>m</sub>）</b>：用 keypoint 数值与物体属性给出的精确数值化约束。</li>
+    </ul>
+    <p>两者以 key-value 形式存入 <b>knowledge bank</b>，同时服务于 high-level planning 与底层 skill 的复用。</p>
+
+    <h3>③ Skill Adapter：Iterative Comparison Strategy</h3>
+    <p>面对未见环境时，先从 knowledge bank 检索 high-level plan，再通过<b>迭代对比</b>——在"已适配交互"与"检索到的交互"之间做 comparative analysis——细化约束；grasping 与 manipulation 约束分别有各自的适配逻辑，并用 VLM 的感知分析做 <b>failure reasoning</b>，从而高效适应新场景。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 RLBench（仿真，12 个 manipulation 任务）、真实世界（14 个 manipulation + 6 个 long-horizon 任务）上评测，主结果均只用 <b>5 段人类视频</b>。Baseline：R3M-DP、Diffusion Policy (DP)、GraphIRL、Code as Policy (CaP)、Demo2Code。指标为 overall success rate（括号内为标准差）。</p>
+
+    <h3>RLBench（Table 1，平均成功率）</h3>
+    <table>
+      <tr><th>Method</th><th>Success rate</th></tr>
+      <tr><td>R3M-DP</td><td>0.13 (±0.12)</td></tr>
+      <tr><td>Diffusion Policy</td><td>0.15 (±0.13)</td></tr>
+      <tr><td>GraphIRL</td><td>0.12 (±0.12)</td></tr>
+      <tr><td>Code as Policy</td><td>0.44 (±0.33)</td></tr>
+      <tr><td>Demo2Code</td><td>0.49 (±0.32)</td></tr>
+      <tr><td><b>VLMimic</b></td><td class="good">0.76 (±0.17)</td></tr>
+    </table>
+    <p>较最佳 baseline Demo2Code（0.49）提升 <b>over 27%</b>。</p>
+
+    <h3>真实世界 manipulation（Table 2，Seen / Unseen 环境）</h3>
+    <table>
+      <tr><th>Method</th><th>Seen (SE)</th><th>Unseen (UE)</th></tr>
+      <tr><td>R3M-DP</td><td>0.49 (±0.20)</td><td>0.09 (±0.10)</td></tr>
+      <tr><td>Diffusion Policy</td><td>0.55 (±0.21)</td><td>0.10 (±0.10)</td></tr>
+      <tr><td>GraphIRL</td><td>0.25 (±0.21)</td><td>0.07 (±0.08)</td></tr>
+      <tr><td>Code as Policy</td><td>0.39 (±0.22)</td><td>0.37 (±0.24)</td></tr>
+      <tr><td>Demo2Code</td><td>0.43 (±0.21)</td><td>0.37 (±0.26)</td></tr>
+      <tr><td><b>VLMimic</b></td><td class="good">0.76 (±0.11)</td><td class="good">0.71 (±0.15)</td></tr>
+    </table>
+    <p>SE 超最佳 baseline 约 <b>21%</b>，UE 超 <b>34%</b>；在未见环境的鲁棒性尤为突出（多数 baseline 从 SE 到 UE 大幅崩塌）。</p>
+
+    <h3>长程任务（Table 3）</h3>
+    <table>
+      <tr><th>Method</th><th>Success rate</th></tr>
+      <tr><td>R3M-DP</td><td>0.13 (±0.09)</td></tr>
+      <tr><td>Diffusion Policy</td><td>0.07 (±0.07)</td></tr>
+      <tr><td>GraphIRL</td><td>0.02 (±0.04)</td></tr>
+      <tr><td>Code as Policy</td><td>0.02 (±0.04)</td></tr>
+      <tr><td>Demo2Code</td><td>0.02 (±0.04)</td></tr>
+      <tr><td><b>VLMimic</b></td><td class="good">0.50 (±0.15)</td></tr>
+    </table>
+    <p>长程任务上 baseline 几乎全线失败（≤0.13），VLMimic 达 0.50，超 baseline <b>over 37%</b>。</p>
+
+    <h3>Ablations（Table 4）</h3>
+    <ul>
+      <li><b>分层约束</b>：只用 semantic 得 0.68、只用 geometric 得 0.61，两者结合在 seen 环境达 <b>0.76</b>——两级约束互补。</li>
+      <li><b>Grasping 学习方式</b>：直接数值预测 0.52、DBSCAN 聚类 0.59，而 VLM-based grouping 达 <b>0.76</b>。</li>
+      <li><b>迭代对比</b>：0 次迭代 0.61，4 次迭代在 unseen 环境升至 <b>0.77</b>——迭代对比策略带来显著泛化增益。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 第 1 条为作者明确 stated；第 2、3 条为根据方法设计 inferred（原文未展开）。</div>
+    <details class="lim" open><summary>推理延迟与算力开销（stated）</summary><p>原文："Current VLMs are still limited by inference latency and computational resource requirements. We believe that the progression of lightweight VLMs will mitigate these limitations." 作者寄望于轻量化 VLM 的发展来缓解。</p></details>
+    <details class="lim"><summary>依赖大量视觉基础模型级联（inferred）</summary><p>grounding 模块串联 SAM-Track、FrankMocap、ICP、BundleSDF、FoundationPose 等多个模型，任一环节的位姿/分割误差都可能沿流水线传播，影响 object-centric 交互抽取质量。</p></details>
+    <details class="lim"><summary>评测规模有限（inferred）</summary><p>主结果基于 5 段人类视频、RLBench 12 + 真实世界 14 + 长程 6 个任务；更开放、更复杂的动态/双臂/接触密集场景下的表现尚待验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · VLMimic: Vision Language Models are Visual Imitation Learner for Fine-grained Actions · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2410.20927">https://arxiv.org/abs/2410.20927</a>
+  </div>
+</footer>
+
+</body>
+</html>

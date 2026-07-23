@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReKep：面向机器人操作的关系型关键点约束时空推理</title>
+<meta name="keywords" content="robotic manipulation, relational keypoint constraints, keypoint, VLM, GPT-4o, DINOv2, SAM, constrained optimization, closed-loop policy, bimanual manipulation, 视觉基础模型, 约束优化">
+<meta name="description" content="ReKep 用运行在语义关键点上的 Python 约束函数表示操作任务，配合分层优化实时求解末端位姿，并由大视觉模型与 VLM 自动生成约束。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · Manipulation</span>
+    <h1>ReKep：关系型关键点约束的时空推理</h1>
+    <div class="sub">Relational Keypoint Constraints for Robotic Manipulation</div>
+    <div class="authors">Wenlong Huang, Chen Wang, Yunzhu Li, Ruohan Zhang, Li Fei-Fei · Stanford University（部分作者亦属 Columbia / UIUC）</div>
+    <p class="lead">ReKep 把操作任务表示为运行在<strong>语义关键点（semantic keypoints）</strong>上的一串 Python 约束函数，每个函数把一组 3D 关键点映射为一个数值代价。通过分层优化，这些约束可被现成求解器实时求解为末端位姿序列（<em>SE(3)</em>），构成闭环策略；约束本身则由大视觉模型与 VLM 从自由形式语言指令与 RGB-D 观测<strong>自动生成</strong>，无需任务专属数据或训练。</p>
+    <div class="meta">
+      <span>2024 · arXiv preprint</span>
+      <span>Wheeled single-arm + Stationary dual-arm</span>
+      <span>Zero task-specific data</span>
+      <span><a href="https://arxiv.org/abs/2409.01652">📄 arXiv:2409.01652</a></span>
+      <span><a href="https://rekep-robot.github.io/">Project page</a></span>
+    </div>
+    <div class="kw"><span>robotic manipulation</span><span>relational keypoint constraints</span><span>semantic keypoints</span><span>VLM · GPT-4o</span><span>DINOv2 · SAM</span><span>constrained optimization</span><span>closed-loop policy</span><span>bimanual manipulation</span><span>约束优化</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">把机器人操作任务表示为"关联机器人与环境的约束（constraints）"是一种很有前景的行为编码方式。但一直缺乏一种约束形式，能同时满足三点要求。论文将此凝练为核心问题：</p>
+    <blockquote>如何构造约束，使其 1) versatile to diverse tasks（适配多样任务）、2) free of manual labeling（无需人工标注）、3) optimizable by off-the-shelf solvers to produce robot actions in real-time（可被现成求解器实时求解为动作）。</blockquote>
+    <p>ReKep 的答案是：用运行在语义关键点上的 Python 函数来写约束。它天然可微、可组合，既能被 VLM 以代码形式自动生成（解决标注），又能交给通用数值优化器实时求解（解决实时性），还能覆盖 multi-stage、in-the-wild、bimanual、reactive 等多种行为（解决通用性）。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="ReKep teaser">
+      <figcaption>Figure 1：ReKep 把多样的操作行为表示为一串可优化的时空约束函数。以倒茶（pouring）为例：第一个 ReKep 将抓取点约束在茶壶把手（<span style="color:#2a6">blue</span>），随后的 ReKep 把壶嘴（<span style="color:#a33">red</span>）拉向杯口上方（<span style="color:#2a6">green</span>），同时另一约束保持茶壶竖直，最后再触发倾倒。约束作用于语义关键点，随任务阶段推进而切换。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>68.6%</b><small>ReKep (Auto) 全部 7 任务平均成功率</small></div>
+      <div><b>~10 Hz</b><small>局部优化器闭环求解频率</small></div>
+      <div><b>k=5</b><small>每个 mask 上 k-means 聚类得关键点候选</small></div>
+      <div><b>0</b><small>任务专属数据 / 额外训练 / 环境模型</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">ReKep 表示为把一组环境中的 3D 关键点映射到标量代价的 Python 函数：约束满足即代价 ≤ 0。一个任务被写成一串 ReKep（分为 sub-goal 与 path 两类约束，按 stage 组织）。系统据此构建约束优化问题，通过分层分解只求解"下一个 sub-goal + 到达它的 path"，配合点跟踪（point tracker）形成实时感知-动作闭环。约束由基础模型自动合成。</p>
+    <figure>
+      <img src="img/overview.webp" alt="ReKep system overview">
+      <figcaption>Figure 2：ReKep 系统总览。DINOv2 先在场景中提出关键点并叠加到 RGB 图上；图像与指令一起送入 GPT-4o，生成一串以 Python 程序表达的 ReKep 约束，指定不同任务阶段各关键点之间的期望关系（sub-goal 与 path 约束）。随后由优化器求解末端位姿并闭环执行。</figcaption>
+    </figure>
+
+    <h3>关键点提出（Keypoint Proposal）</h3>
+    <p>给定 RGB 图，先用 <strong>DINOv2</strong> 提取 patch-wise 特征并双线性插值上采样到原图尺寸；用 <strong>Segment Anything (SAM)</strong> 抽取场景中所有 mask，覆盖相关物体。对每个 mask 内的特征用 <strong>k-means（k=5，cosine 相似度）</strong> 聚类，取聚类质心作为关键点候选，再借助深度投影到世界坐标系。整个过程无需任务级标注，即可得到与语义相关、跨物体覆盖的关键点集合。</p>
+
+    <h3>ReKep 生成（VLM as code）</h3>
+    <p>把带编号关键点的图像与自由语言指令一并输入 <strong>GPT-4o</strong>，让其直接输出 Python 形式的约束程序，指定各阶段关键点应满足的关系（如"壶嘴对齐杯口""保持茶壶竖直"）。这些约束天然作为 <em>C<sub>sub-goal</sub></em> / <em>C<sub>path</sub></em> 序列组织成任务的 stage skeleton。</p>
+
+    <h3>分层优化（Hierarchical Optimization）</h3>
+    <p>为实时求解完整问题，论文将其<strong>分解</strong>为只优化"当前阶段的 sub-goal 位姿 + 到达该 sub-goal 的 path"（伪代码见 Algorithm 1）。所有优化问题用 <strong>SciPy</strong> 实现、决策变量归一化到 [0,1]：初次用 <strong>Dual Annealing + SLSQP</strong>（约 1 秒）求全局解，之后基于上一解只跑局部优化器，约 <strong>10 Hz</strong> 闭环。Sub-Goal 求解还纳入辅助控制代价：scene collision avoidance、reachability、pose regularization、solution consistency，双臂设置下再加 self-collision。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <strong>轮式单臂平台</strong> 与 <strong>固定双臂平台</strong> 上设计 7 个任务，分别考察 multi-stage (m)、in-the-wild (w)、bimanual (b)、reactive (r) 行为：Pour Tea (m,w,r)、Stow Book (w)、Recycle Can (w)、Tape Box (w,r)、Fold Garment (b)、Pack Shoes (b)、Collaborative Folding (b,r)。每个设置 10 次试验、随机化物体位姿，报告成功率。基线为 <strong>VoxPoser</strong>；ReKep 评测两个变体：<strong>Auto</strong>（基础模型自动生成约束）与 <strong>Annot.</strong>（人工标注约束）。</p>
+
+    <figure>
+      <img src="img/tasks.webp" alt="Experiment tasks">
+      <figcaption>Figure 3：7 个实验任务与优化结果可视化，涵盖带常识的野外指定、有时空依赖的多阶段任务、有几何感知的双臂协同，以及与人协作、受扰动时的反应性。</figcaption>
+    </figure>
+
+    <h3>Table 1 · 常规成功率（两平台合计 7 任务，各 10 次）</h3>
+    <table>
+      <tr><th>Task</th><th>VoxPoser</th><th>ReKep (Auto)</th><th>ReKep (Annot.)</th></tr>
+      <tr><td>Pour Tea</td><td>0/10</td><td>3/10</td><td class="good">8/10</td></tr>
+      <tr><td>Recycle Can</td><td>3/10</td><td>6/10</td><td class="good">8/10</td></tr>
+      <tr><td>Stow Book</td><td>0/10</td><td>3/10</td><td class="good">6/10</td></tr>
+      <tr><td>Tape Box</td><td>4/10</td><td>7/10</td><td class="good">8/10</td></tr>
+      <tr><td>Fold Garment</td><td>0/10</td><td>5/10</td><td class="good">6/10</td></tr>
+      <tr><td>Pack Shoes</td><td>0/10</td><td>3/10</td><td class="good">5/10</td></tr>
+      <tr><td>Collab. Folding</td><td>0/10</td><td>4/10</td><td class="good">7/10</td></tr>
+      <tr><td><strong>Total</strong></td><td>10.0%</td><td>44.3%</td><td class="good">68.6%</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14.5px">注：论文命名对应关系为 VoxPoser = 基线，"Auto" = 自动生成 ReKep，"Annot." = 人工标注 ReKep（即上表第 3、4 列均为 ReKep 变体）。</p>
+
+    <h3>Table 2 · 外部扰动下成功率（执行中改变物体位姿，Dist.）</h3>
+    <table>
+      <tr><th>Task (Dist.)</th><th>VoxPoser</th><th>ReKep (Auto)</th><th>ReKep (Annot.)</th></tr>
+      <tr><td>Pour Tea</td><td>0/10</td><td>2/10</td><td class="good">4/10</td></tr>
+      <tr><td>Tape Box</td><td>2/10</td><td>3/10</td><td class="good">5/10</td></tr>
+      <tr><td>Collab. Folding</td><td>0/10</td><td>3/10</td><td class="good">5/10</td></tr>
+      <tr><td><strong>Total</strong></td><td>6.7%</td><td>26.7%</td><td class="good">46.7%</td></tr>
+    </table>
+    <p>由于关键点被高频跟踪，系统能对外部扰动做出反应并重规划。ReKep 能正确建模多阶段任务的时序依赖（如壶嘴须先对齐杯口再倒）、利用常识（可乐罐应回收）、构建双臂协同（同时折左右袖）与人机协作（与人一起对齐四角折大毯子），并在受限空间生成运动学上有挑战的行为（Stow Book、把两只鞋密集塞进小体积的 Pack Shoes）。</p>
+
+    <h3>泛化的操作策略（Generalization）</h3>
+    <figure>
+      <img src="img/folding.webp" alt="Novel bimanual folding strategies">
+      <figcaption>Figure 5：ReKep 对不同类别衣物自动构造的新颖双臂折叠策略及其成功率。由于该任务每次关联两个点，需对齐的两点用箭头相连，关键点颜色表示顺序。以 sweater 为例：两臂先同时折起两只袖子，再合拢完成折叠。</figcaption>
+    </figure>
+
+    <h3>System Error Breakdown</h3>
+    <p>论文进一步给出系统误差分解（Figure 4），按模块归因失败来源；主要瓶颈与其设计假设一致——集中在关键点跟踪与前向模型近似等感知/建模环节（详见下节 Limitations）。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为作者在 "Conclusion &amp; Limitations" 中<strong>明确陈述（stated）</strong>的局限；论文另在 Appendix A.11 有扩展讨论。</div>
+    <details class="lim" open><summary>依赖基于刚性假设的关键点前向模型</summary><p>"the optimization framework relies on a forward model of keypoints based on rigidity assumption" —— 优化框架依赖刚性假设下的关键点前向模型；不过高频反馈闭环在一定程度上放松了对该模型精度的要求。</p></details>
+    <details class="lim"><summary>依赖准确的点跟踪（point tracking）</summary><p>ReKep 需要准确的点跟踪才能在闭环中正确优化动作，而点跟踪本身因"heavy intermittent occlusions（严重的间歇性遮挡）"而是一项有挑战的 3D 视觉任务。</p></details>
+    <details class="lim"><summary>假设固定的阶段序列（fixed skeleton）</summary><p>当前形式假设每个任务有固定的 stage 序列（skeleton）。若要用不同 skeleton 重规划，就需高频运行关键点提出与 VLM，带来相当的计算挑战。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · ReKep: Spatio-Temporal Reasoning of Relational Keypoint Constraints for Robotic Manipulation · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2409.01652">https://arxiv.org/abs/2409.01652</a>
+  </div>
+</footer>
+
+</body>
+</html>

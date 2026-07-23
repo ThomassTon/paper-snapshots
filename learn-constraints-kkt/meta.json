@@ -1,0 +1,11 @@
+{
+  "slug": "learn-constraints-kkt",
+  "title": "从局部最优演示中学习约束（成本函数不确定下）",
+  "arxiv_id": "2001.09336",
+  "url": "https://arxiv.org/abs/2001.09336",
+  "category": "机器人 · Robotics",
+  "keywords": ["constraint learning", "learning from demonstration", "KKT conditions", "inverse optimal control", "mixed integer programming", "locally-optimal demonstrations", "safe planning", "逆最优控制"],
+  "summary_zh": "用演示满足的 KKT 最优性条件构造 MILP，从仅局部最优、且成本函数不确定的演示中反解参数化安全约束，并给出所恢复安全/不安全集的保守性保证；在 7-DOF 机械臂与 23 维四旋翼上优于基于采样的既有方法。",
+  "date": "2026-07-23",
+  "source": "arxiv-latex"
+}

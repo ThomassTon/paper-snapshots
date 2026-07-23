@@ -1,0 +1,11 @@
+{
+  "slug": "codig-racing",
+  "title": "CoDiG：面向机器人的约束感知扩散引导 · 自主赛车实时避障",
+  "arxiv_id": "2505.13131",
+  "url": "https://arxiv.org/abs/2505.13131",
+  "category": "生成模型 · Generative Models",
+  "keywords": ["diffusion model", "constraint-aware guidance", "barrier function", "实时避障", "autonomous racing", "trajectory planning", "warm-start", "safety-critical robotics", "MPC"],
+  "summary_zh": "CoDiG 把 barrier function 融入扩散模型去噪的 reverse SDE，在采样时用轻量 barrier 梯度把轨迹引向可行域，无需重训网络或外部投影；在微型自主赛车实机上配合 warm-start 实现 2.5 Hz 实时重规划与 100% 避障成功率。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

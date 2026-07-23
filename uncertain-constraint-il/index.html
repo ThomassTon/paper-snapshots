@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uncertainty-Aware Constraint Learning for Adaptive Safe Motion Planning from Demonstrations</title>
+<meta name="keywords" content="learning from demonstration, constraint learning, planning under uncertainty, chance-constrained planning, robust optimization, KKT, Bayesian belief, safe motion planning, 机器人">
+<meta name="description" content="从演示中学习不确定约束：用鲁棒优化恢复所有一致约束的信念，再据此做机会约束规划与闭环自适应策略，在高维系统上兼顾安全与效率。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">CoRL 2020 · Robotics · Safe Planning</span>
+    <h1>Uncertainty-Aware Constraint Learning for Adaptive Safe Motion Planning from Demonstrations</h1>
+    <div class="sub">从演示中学习「不确定约束」：不去满足所有可能约束，而是对约束建立信念，据此在安全与效率间做权衡的自适应规划</div>
+    <div class="authors">Glen Chou, Necmiye Ozay, Dmitry Berenson · University of Michigan, Ann Arbor</div>
+    <p class="lead">约束学习 (constraint learning) 天生 <b>ill-posed</b>：一条演示往往对应无穷多个可行约束。本文用 robust optimization 恢复所有与演示一致的约束集合 <b>F<sub>θ</sub></b>，转化为约束信念 (belief)；再用它做 chance-constrained 规划，并在执行中不断用传感数据更新信念、闭环重规划——在保证概率安全的前提下尽量高效地完成任务。</p>
+    <div class="meta">
+      <span>7-DOF arm + 12D quadrotor</span><span>约束维度最高 30D</span><span>Keywords: LfD · planning under uncertainty · safe learning</span>
+      <span><a href="https://arxiv.org/abs/2011.04141">📄 arXiv:2011.04141</a></span>
+      <span><a href="https://proceedings.mlr.press/v155/chou21a.html">PMLR v155 (CoRL 2020)</a></span>
+    </div>
+    <div class="kw"><span>learning from demonstration</span><span>constraint learning</span><span>planning under uncertainty</span><span>chance-constrained planning</span><span>robust optimization</span><span>KKT conditions</span><span>Bayesian belief</span><span>safe motion planning</span><span>机器人</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">把任务建模为「带约束的优化」并从演示中学习 cost 与 constraint，是学习复杂操作/移动任务的有力框架。但约束学习的核心难题是 <b>unidentifiability of the constraints</b>：一条演示常常对应一个<b>无穷大</b>的可行约束集合。</p>
+    <blockquote>"a core problem in LfD, and constraint-learning in particular, is the unidentifiability of the constraints: there is often an infinite set of possible constraints which are sufficient to explain a demonstration."</blockquote>
+    <p>此前工作 [1] 通过只规划「保证安全 (guaranteed-safe)」轨迹——即满足<b>所有</b>与数据一致的可能约束——来回避这一问题。但在真实场景里可能约束的集合太大，这样做会让规划直接<b>不可行</b>（例如杂乱家居环境中的机械臂：除非演示恰好激活了每一个约束，否则无法宣称一条轨迹一定安全）。</p>
+    <p><b>本文的洞见：</b>在巨大约束不确定性下规划，关键是要对<b>可能约束的集合</b>进行推理、规划出在安全与效率间权衡的轨迹，并用执行中采集到的约束信息去更新这个集合。方法允许轨迹穿过「可能不安全」空间 proj<sub>C</sub>(F<sub>θ</sub>)，但要最小化约束违反。</p>
+    <div class="kpi">
+      <div><b>∞ → belief</b><small>把无穷多可能约束 F<sub>θ</sub> 转成可用信念</small></div>
+      <div><b>30D</b><small>可学习/满足的最高约束维度</small></div>
+      <div><b>closed-loop</b><small>执行中更新信念并重规划</small></div>
+      <div><b>concept</b><small>示意图为方法概念图，非真实场景照片</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">整体分两步走：<b>(1)</b> 从演示构建约束信念 b(θ)；<b>(2)</b> 用信念做开环 chance-constrained 规划，并把开环轨迹组装成闭环策略——边执行、边用传感数据更新信念、边重规划，直到完成任务。论文同时给出「理想但难解 (红)」与「可解近似 (蓝)」两套变体。</p>
+    <figure>
+      <img src="img/method-flow.webp" alt="method flow">
+      <figcaption>Fig. 1：自适应规划的整体流程。左（黄）从演示初始化约束信念：解 Prob. 2 的鲁棒化版本 Prob. 3 / Alg. 1，提取所有一致约束 F<sub>θ</sub>；右（绿）为闭环策略：用信念规划（Prob. 5 理想 / Prob. 6 可解采样近似）→ 执行中采集约束数据 → 更新 belief b(θ) → 重规划。红色为理想但 intractable 的子问题，蓝色为可解变体。</figcaption>
+    </figure>
+
+    <h3>① 局部最优演示 + KKT ⇒ 逆约束学习</h3>
+    <p>演示被视为近似求解「前向任务」Prob. 1（一个带约束优化）到局部最优，即在容差内满足 <b>KKT 条件</b>。逆问题 Prob. 2 反过来求解：找到参数 θ 与 Lagrange 乘子 (λ, ν)，使演示的 KKT 条件（primal feasibility、complementary slackness、stationarity）成立。这样得到的每个 θ 都能让演示成为局部最优——但满足条件的 θ 通常有无穷多个，其集合 <b>F<sub>θ</sub></b> 正是「约束不确定性」的刻画。</p>
+
+    <h3>② Robust optimization 提取整个 F<sub>θ</sub></h3>
+    <p>假设未知约束 A(θ) 可表示为约束空间中「若干 box 的并」（任意形状都能用足够多 box 逼近，附录再放松此假设）。作者证明此时 F<sub>θ</sub> 同样是 box 的并。利用鲁棒线性规划的恒等式 sup<sub>‖u‖∞≤1</sub> aᵀu = ‖a‖₁，把「KKT 在整个 box θ+s·u 上鲁棒成立」写成不含 u 的形式，得到可用 <b>MILP / MISOCP</b> 表示的约束。以 box 的体积（几何均值 conic-representable，是体积的单调变换）为目标最大化，即可解出 F<sub>θ</sub> 内最大的 box；反复「提取—移除—重解」直到不可行，就能完整枚举整个 F<sub>θ</sub>（Alg. 1）。由此还能定义 learned guaranteed-safe / unsafe 集合 G<sub>s</sub> / G<sub>¬s</sub>（对所有 θ∈F<sub>θ</sub> 都安全/不安全的约束状态）。</p>
+
+    <h3>③ Chance-constrained 规划（Prob. 5 / Prob. 6）</h3>
+    <p>理想的 Prob. 5 要求新任务的轨迹以足够高概率满足不确定约束，但需在任意形状 Θ<sub>s</sub> 上对高维 θ 积分，intractable。可解的 <b>Prob. 6</b> 把 Θ<sub>s</sub> 限制为若干 box 的并，对每个 box 做「Riemann-sum」式积分（本文聚焦 <b>uniform prior</b> p(θ)，可闭式积分、且体积的单调变换为凹）。对 piecewise-affine 动力学，Prob. 6 可写成 MISOCP（体积约束使其成为 MIBLP，可解但可能慢）。<b>Theorem 3</b>：Prob. 6 的解是 Prob. 5 的一个「保证可行、可能次优」的解。两个目标变体：Prob. MCV（最小化期望约束违反数，用 Prob. 6-ε<sub>min</sub>）与 Prob. MEC（最小化一般代价，用 Prob. 6-R）。</p>
+
+    <h3>④ 复杂约束 ⇒ 采样近似（MCR / BTP）</h3>
+    <p>当约束/动力学非线性、Prob. 6 无法写成 mixed-integer convex program 时，改用<b>有限采样</b>近似：<b>MCR</b>（Minimum Constraint Removal，增量建路图、违反最少约束地连接起终点，近似 Prob. 6-ε<sub>min</sub>）与 <b>BTP</b>（Blindfolded Traveler's Problem，对加性代价用带安全概率 p(e) 的路图，A* 以修正边代价规划，近似 Prob. 6-R）。代价是这些采样解不保证对 Prob. 5 可行。</p>
+
+    <h3>⑤ 信念更新 + 闭环策略（policy tree）</h3>
+    <p>执行中传感到的 possibly-safe / unsafe 状态集合 C<sub>s</sub>, C<sub>¬s</sub>（可来自 bump 传感、有限量程 LiDAR、或无法精确定位的 uncertain contact 测量），用来把与观测一致的约束筛出 F<sub>θ</sub><sup>s,¬s</sup> 并做 Bayesian 后验更新 b<sub>ex</sub>(θ)。闭环策略在 receding-horizon 下：每步更新 b(θ)、重解 Prob. 6-ε<sub>min</sub> / 6-R、当旧计划次优或不安全时切换。由于只在「可能不安全」的状态处才可能切换，策略可表示为一棵稀疏的 <b>policy tree</b>（初始计划 + 少量应急 contingency），可离线预计算以支持实时执行。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在三个场景验证方法能在高维系统上安全、高效地规划：混合不确定性四旋翼、7-DOF 机械臂（含接触传感不确定性）、四旋翼迷宫。约束从 F<sub>θ</sub> 中 uniform 抽样评估。指标：Prob. MCV 看约束违反数，Prob. MEC 看任务代价（越低越好）。</p>
+
+    <h3>场景一：Mixed quadrotor uncertainty（Prob. MCV）</h3>
+    <p>四旋翼载不确定重量的载荷、绕不确定障碍飞行。<b>仅 1 条演示</b>学习 7D 约束 θ∈R⁷（6 维障碍 + 1 维控制）。学到 ‖u‖₂²≤97.85 保证安全，而 ‖u‖₂²∈(97.85, 100] 可能不安全。解 Prob. 6-ε<sub>min</sub>（双积分近似、每条轨迹限 30 步）得 Plan 1：抬高越过所有可能障碍，同时预计算应急计划。</p>
+    <figure>
+      <img src="img/quadrotor.webp" alt="quadrotor mixed uncertainty">
+      <figcaption>Fig. 6：混合不确定性四旋翼。A–B 初始的控制/状态约束不确定性（粉色为演示，proj(F<sub>θ</sub>) 为可能不安全区）；C 新任务的初始 Plan 1；D–F 预计算的 contingencies，若初始计划不安全则切换。</figcaption>
+    </figure>
+    <table>
+      <tr><th>策略（约束违反数，均值±标准差，越低越好）</th><th>violations</th></tr>
+      <tr><td class="good">Ours（对无穷约束集合优化）</td><td class="good">0.54 ± 0.94</td></tr>
+      <tr><td>Scenario approach [26]（采样并全部强制）</td><td>1.30 ± 1.36</td></tr>
+      <tr><td>Optimistic（只避 G<sub>¬s</sub>，违反后重规划）</td><td>9.10 ± 4.65</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14.5px">运行时间：Alg. 1 约 3.3 s，Prob. 6 约 1.1 s。</p>
+
+    <h3>场景二：7-DOF arm with contact sensing uncertainty（Prob. MEC）</h3>
+    <p>机械臂在储物架附近作业。<b>2 条演示</b>学习 θ∈R⁶ 的货架约束，任务是从架下移到架上（代价为路径长度 Σ‖x<sub>t+1</sub>−x<sub>t</sub>‖₂），用 100 个 uniform 样本喂给 BTP。执行中臂撞上一个<b>未建模</b>的下层障碍（箱子）；接触传感器（uncertain contact model）告知碰撞，方法把 300 个末端采样点加入 C<sub>¬s</sub>。此时方法<b>自动判定单个 box 无法解释全部数据</b>，把参数升级为两个 box（θ∈R¹²），重提取 F<sub>θ</sub>、重采样 BTP，绕开不确定区到达目标。</p>
+    <figure>
+      <img src="img/arm.webp" alt="7-DOF arm contact sensing">
+      <figcaption>Fig. 7：带接触传感不确定性的机械臂。A 演示；B 初始约束不确定性（红）与计划（蓝）；C 初始计划撞上未建模约束，触发信念更新；D 在线重规划。</figcaption>
+    </figure>
+    <table>
+      <tr><th>策略（任务代价 rad，越低越好）</th><th>cost</th></tr>
+      <tr><td class="good">Ours（演示 + union-of-boxes）</td><td class="good">8.19</td></tr>
+      <tr><td>BTP without demos / boxes</td><td>18.24</td></tr>
+      <tr><td>Optimistic approach</td><td>143.31</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14.5px">运行时间：Alg. 1 约 20 min，BTP 约 5–20 min（可预计算 swept volume 加速）。说明方法可扩展到高维系统、能<b>检测约束表示不足</b>、并利用复杂接触测量。</p>
+
+    <h3>场景三：Quadrotor maze（Prob. MEC）</h3>
+    <p>杂乱迷宫中的四旋翼，配 2 m 半径 LiDAR。棕色障碍已知；<b>5 条演示</b>揭示 5 个障碍（θ∈R³⁰）但对尺寸信息很少。解 Prob. 6-R（直接在连续 b(θ) 上优化、避开 inevitable collision states、用双积分轨迹热启动非线性优化）。Plan 1（粉色）智能权衡风险与性能：右移并升高绕开所有可能障碍以保持高速、低代价，并对可能通道被部分/完全堵塞的情形网格化地预计算 contingencies。</p>
+    <figure>
+      <img src="img/maze.webp" alt="quadrotor maze">
+      <figcaption>Fig. 8：四旋翼迷宫。A 演示与初始约束不确定性；B–D 初始计划（粉色 Plan 1）及针对不同传感可能（对传感测量网格化得到）的 contingencies 的三个视角。</figcaption>
+    </figure>
+    <table>
+      <tr><th>策略（任务代价，越低越好）</th><th>cost</th></tr>
+      <tr><td class="good">Ours（Prob. 6-R，连续信念）</td><td class="good">1.28 ± 0.27</td></tr>
+      <tr><td>[1] guaranteed-safe（保守）</td><td>6.29</td></tr>
+      <tr><td>[27] optimistic over frontier subgoals</td><td>5.51 ± 1.65</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14.5px">运行时间：Alg. 1 约 1 s，Prob. 6 约 1 min。[27] 因探索棕色障碍间可能的死胡同而代价更高。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 原文<b>没有单独的 Limitations 章节</b>。以下第 1 条来自作者在 Conclusion 中明确点出的 future work（<i>stated</i>），其余为根据方法设计与实验描述<b>推断</b>（<i>inferred</i>）。</div>
+    <details class="lim" open><summary>计算开销大、整数规划慢（stated + inferred）</summary><p>作者在结语中明确表示未来要「用并行提取和快速整数规划 [40] 加速」。实验中 7-DOF 臂的 Alg. 1 + BTP 需 20 min 与 5–20 min；MISOCP / MIBLP 在 N<sub>box</sub> 较大时可能很慢——难以直接实时。</p></details>
+    <details class="lim"><summary>对约束参数化 (union-of-boxes) 的依赖（inferred）</summary><p>F<sub>θ</sub> 的可解提取建立在「约束可表示为 box 的并」之上。若真实约束需大量 box 逼近会低效；实验中也出现「单 box 无法解释数据、需自动升级为多 box」的情形——表示能力与效率之间存在张力。</p></details>
+    <details class="lim"><summary>先验分布假设受限（stated in text）</summary><p>Prob. 6 的精确 chance constraint 只对「能在 box 上闭式积分、且积分的单调变换为凹」的先验成立；本文正文只处理 <b>uniform</b> p(θ)（其它分布的扩展放在附录）。</p></details>
+    <details class="lim"><summary>采样近似 (MCR / BTP) 无可行性保证（stated）</summary><p>原文指出：当问题无法写成 MICP 而改用采样近似时，「they are not guaranteed to return a feasible solution to Prob. 5, as it depends on the constraints that are sampled.」</p></details>
+    <details class="lim"><summary>实时性依赖较强假设（stated）</summary><p>离线预计算 contingency 以支持实时执行，需假设「运行时不出现未建模障碍」、离散化连续传感测量、并在有限树深处终止分支；若假设不成立则只能在线重新规划，「it can be slow」。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    根据论文原文与图表整理 · Uncertainty-Aware Constraint Learning for Adaptive Safe Motion Planning from Demonstrations · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2011.04141">https://arxiv.org/abs/2011.04141</a> · <a href="https://proceedings.mlr.press/v155/chou21a.html">PMLR v155 (CoRL 2020)</a>
+  </div>
+</footer>
+
+</body>
+</html>

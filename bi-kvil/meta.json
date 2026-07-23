@@ -1,0 +1,11 @@
+{
+  "slug": "bi-kvil",
+  "title": "Bi-KVIL：面向双臂操作的关键点视觉模仿学习",
+  "arxiv_id": "2403.03270",
+  "url": "https://arxiv.org/abs/2403.03270",
+  "category": "机器人 · Robotics",
+  "keywords": ["visual imitation learning", "bimanual manipulation", "keypoints", "master-slave relationship", "object-centric representation", "category-level generalization", "模仿学习", "双臂操作", "Dense Object Net", "movement primitives"],
+  "summary_zh": "把关键点视觉模仿学习 K-VIL 扩展到双臂操作，从不到 10 段人类演示视频中联合抽取混合主从关系 HMSR、双臂协同策略与亚符号任务表示，可在杂乱新场景对同类物体做 category-level 泛化并由 ARMAR-6 复现。",
+  "date": "2026-07-23",
+  "source": "arxiv-pdf"
+}

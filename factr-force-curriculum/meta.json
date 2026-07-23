@@ -1,0 +1,11 @@
+{
+  "slug": "factr-force-curriculum",
+  "title": "FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning",
+  "arxiv_id": "2502.17432",
+  "url": "https://arxiv.org/abs/2502.17432",
+  "category": "机器人 · Robotics",
+  "keywords": ["contact-rich manipulation", "force feedback", "curriculum learning", "imitation learning", "bilateral teleoperation", "action chunking transformer", "external joint torque", "object generalization", "力觉反馈", "接触密集操作"],
+  "summary_zh": "FACTR 用随训练逐渐减弱的视觉模糊课程，迫使 transformer 策略先学会利用外部关节力矩、不再过拟合视觉；配合低成本双边力反馈遥操作系统，将对未见物体的泛化成功率从无课程基线的 61.2% 提升到 87.5%（相对提升 43%）。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

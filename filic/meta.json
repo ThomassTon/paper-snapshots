@@ -1,0 +1,11 @@
+{
+  "slug": "filic",
+  "title": "FILIC: Dual-Loop Force-Guided Imitation Learning with Impedance Torque Control for Contact-Rich Manipulation Tasks",
+  "arxiv_id": "2509.17053",
+  "url": "https://arxiv.org/abs/2509.17053",
+  "category": "机器人 · Robotics",
+  "keywords": ["imitation learning", "contact-rich manipulation", "impedance control", "阻抗力矩控制", "force estimation", "sensorless force", "ACT Transformer", "digital twin", "力引导策略"],
+  "summary_zh": "FILIC 用双环结构把 Transformer 模仿学习策略（外环 25 Hz）与阻抗力矩控制（内环 2 kHz）结合，并用关节力矩加 MuJoCo 数字孪生做无传感器末端力估计，实现柔顺的力感知接触操作；估计末端力输入使仿真插孔成功率达 90%，真机四任务较关节力矩输入提升 10 至 23 个百分点。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

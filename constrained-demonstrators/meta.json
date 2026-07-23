@@ -1,0 +1,11 @@
+{
+  "slug": "constrained-demonstrators",
+  "title": "When a Robot is More Capable than a Human: Learning from Constrained Demonstrators",
+  "arxiv_id": "2510.09096",
+  "url": "https://arxiv.org/abs/2510.09096",
+  "category": "机器人 · Robotics",
+  "keywords": ["learning from demonstration", "inverse reinforcement learning", "goal-proximity reward", "受限专家 constrained demonstrator", "temporal interpolation", "Monte Carlo Dropout", "PPO", "WidowX sim-to-real", "robot manipulation"],
+  "summary_zh": "受限接口（如 mode-switching joystick）采集的专家演示往往次优；LfCD-GRIP 从演示推断只依赖状态的 goal-proximity 奖励，用 MC-Dropout 置信度筛 anchor 并以时序插值为未知状态自标注奖励，再用 PPO 训练，让机器人走出演示之外的更短轨迹——真机 WidowX 抓取仅 12 秒完成，比 behavioral cloning 快 10 倍。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

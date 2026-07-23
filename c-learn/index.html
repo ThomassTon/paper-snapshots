@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C-LEARN：从示范中学习几何约束以完成共享自主下的多步操作</title>
+<meta name="keywords" content="learning from demonstration, geometric constraints, shared autonomy, keyframes, task space regions, CAD constraints, multi-step manipulation, dual-arm robot, 运动规划, 技能迁移">
+<meta name="description" content="C-LEARN（ICRA 2017）把多步操作任务表示为关键帧序列 + 每帧一组几何约束，从示范中学习并交给优化式运动规划器执行，在共享自主框架下用双臂 Optimus 机器人达到 100% 成功率。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:38px;line-height:1.18;margin:0 0 10px;font-weight:800;letter-spacing:.3px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:30px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ICRA 2017 · Robotics</span>
+    <h1>C-LEARN：从示范中学习几何约束<br>以完成共享自主下的多步操作</h1>
+    <div class="sub">Learning Geometric Constraints from Demonstrations for Multi-Step Manipulation in Shared Autonomy</div>
+    <div class="authors">Claudia Pérez-D'Arpino, Julie A. Shah · MIT CSAIL</div>
+    <p class="lead">把一个多步操作任务表示为<b>关键帧序列（keyframes）</b>＋每个关键帧上的<b>一组几何约束（geometric constraints）</b>。系统先从多次示范中构建一个"抓取/够取"的知识库（knowledge base, KB），再据此仅凭<b>一次示范</b>学会完整多步任务，并把约束灌入优化式运动规划器求解，最终嵌入共享自主（shared autonomy）流程执行。</p>
+    <div class="meta">
+      <span>双臂 Optimus 机器人（16-DoF）</span>
+      <span>四个功能性任务</span>
+      <span>迁移到 Atlas（28-DoF）仿真</span>
+      <span><a href="https://ai.stanford.edu/~cdarpino/CLEARN/ICRA17_DArpino_CLEARN.pdf">📄 论文 PDF（ICRA 2017）</a></span>
+      <span><a href="https://ieeexplore.ieee.org/document/7989466/">IEEE Xplore</a></span>
+    </div>
+    <div class="kw"><span>learning from demonstration</span><span>geometric constraints</span><span>shared autonomy</span><span>keyframes</span><span>task space regions (TSR)</span><span>CAD constraints</span><span>multi-step manipulation</span><span>dual-arm robot</span><span>运动规划</span><span>技能迁移</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">从示范中学习（learning from demonstration）让非专家也能教机器人做操作任务，但主流做法通常是从示范里建<b>生成模型</b>（如 GMM）再用<b>回归</b>（如 GMR）复现动作——这类方法难以表示、更无法保证满足任务中的<b>硬几何约束</b>。另一边，基于采样/优化的运动规划器能推理几何约束，却依赖专家<b>手工精心编写</b>约束。C-LEARN 要填补的正是这道鸿沟。</p>
+    <blockquote>"However, this approach has limitations to capture hard geometric constraints imposed by the task ... while sampling and optimization-based motion planners exist that reason about geometric constraints, these are typically carefully hand-crafted by an expert."</blockquote>
+    <p>论文关注的是<b>功能性任务（functional tasks）</b>：需要多个末端执行器、按既定步骤操纵环境中物体的准静态（quasi-static）操作，例如从同轴大圆柱里抽出小圆柱——此时"两轴保持平行/同心"这样的硬约束必须被严格满足。应用场景包括拆弹（EOD）的排险流程与灾难响应（DARPA Robotics Challenge 一类）中对高自由度机器人的远程受控操作。</p>
+    <figure>
+      <img src="img/teaser-tasks.webp" alt="四个测试任务">
+      <figcaption><b>Fig. 1：</b>Optimus 机器人执行的四个测试任务。(a) 抓取并搬运圆柱；(b) 固定盒子并抽出圆柱；(c) 在狭小空间开门并按下按钮；(d) 搬运托盘（需双臂同步保持托盘水平）。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>1</b><small>仅需一次示范即可学会多步任务</small></div>
+      <div><b>7</b><small>每个物体每种模式的够取/抓取示范次数</small></div>
+      <div><b>87.5%</b><small>四任务自主执行平均成功率</small></div>
+      <div><b>100%</b><small>共享自主模式下的整体成功率</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">学习分两阶段：<b>阶段一</b>用多次示范为"够取 + 抓取"各物体的不同<b>模式（mode，如从侧面 vs 从顶部抓圆柱）</b>构建知识库 KB，KB 按 (object, mode) 索引，每个条目存一段<b>关键帧序列</b>及每帧的<b>几何约束</b>；<b>阶段二</b>用<b>单次示范</b>学一个完整多步任务——够取/抓取部分靠距离度量匹配 KB 条目取回关键帧与约束，其余步骤（搬运、定位、释放）则从这次示范里学，并顺带识别哪些约束仍然"活跃"。学好的关键帧+约束序列逐段交给优化式规划器求解运动。</p>
+    <figure>
+      <img src="img/knowledge-base.webp" alt="知识库内容示意">
+      <figcaption><b>Fig. 3：</b>知识库（KB）内容示意。左到右：已知物体列表 → 每个物体的模式列表 → 每个模式的关键帧集合（KF1、KF2……）→ 每个关键帧的约束集合（如 TSR、Parallel、Move in line；下一帧可能是 "TSR reduced tolerance"、Parallel）。</figcaption>
+    </figure>
+
+    <h3>关键帧 + 每帧一组几何约束</h3>
+    <p>任务被定义为<b>有序关键帧序列</b>，每个关键帧携带一组需被规划器同时满足的几何约束。示范通过 <b>Director</b>（MIT 为 DARPA Robotics Challenge 开发的 3D 共享自主界面）以<b>末端执行器遥操作（teleoperation）</b>提供——好处是不需要能反向驱动（back-drivable）的机器人，任何相关机器人都能用；代价是数据噪声大、非均匀，因此依赖时间对齐（如 DTW）来在时间上找约束的做法在此不可行。IK 由 <b>Drake</b> 计算。</p>
+
+    <h3>约束目录：TSR（体积约束）+ CAD 约束</h3>
+    <p>C-LEARN 用一份参数化约束模型的<b>目录</b>，按预设判据（主要看示范数据在笛卡尔/旋转空间的<b>方差</b>）为每个聚类出的关键帧选约束：</p>
+    <ul>
+      <li><b>Task Space Regions (TSR)</b> — 借用 Berenson 等人的表示，把约束定义为 SE(3) 中的一个<b>体积</b>（目标位姿 + 位置/朝向容差）。当某关键帧在笛卡尔空间的方差<b>大于</b>阈值 T<sub>TSR</sub> 时标记为 TSR（即"体积约束 volumetric constraint"）。</li>
+      <li><b>CAD 姿态约束（CAD Posture Constraints）</b> — 本文新引入的硬朝向约束：当末端执行器某轴相对物体某轴的相对旋转方差<b>小于</b>阈值 T<sub>CAD</sub> 时，把该朝向"锁定"为平行/垂直，类似 CAD 软件的对齐辅助。</li>
+      <li><b>CAD 轨迹约束（Move-in-line）</b> — 当相邻两关键帧 (dKF<sub>i</sub>, dKF<sub>i+1</sub>) 都激活了 CAD 姿态约束时，在两者目标帧之间加一条<b>直线运动</b>约束，且沿线保持朝向不变（如抽同轴圆柱时"保持同心"）。</li>
+    </ul>
+    <p>KB 条目通过对多次示范的关键帧做 <b>k-means 聚类</b>得到（聚类数取每次示范关键帧数的四舍五入均值）；对多末端执行器任务，则在拼接了所有末端执行器特征的<b>高维空间</b>里聚类，从而支持 Task 4 那样的双臂同步约束。作者也坦言此法可能产出"过约束或欠约束"的表示。</p>
+
+    <h3>规划求解与共享自主执行</h3>
+    <p>运动规划被写成 Drake 里的<b>轨迹优化问题</b>（用 SNOPT 的 SQP 求解）：代价项让关节角尽量贴近名义构型 q<sub>nom</sub>（可选加速度/速度平滑项），约束项 f<sub>i</sub>(q<sub>1</sub>,…,q<sub>k</sub>) ≤ b<sub>i</sub> 里塞入关节限位、质心/准静态约束（腿式机器人）以及各关键帧学到的几何约束。执行时按<b>共享自主</b>逐段预览：系统对每对相邻关键帧给出运动计划，操作员可直接批准执行，也可用遥操作做微调。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在四个含几何约束的功能性任务上评估：物体用 April Tags + 板载相机（Multisense SL）跟踪并渲染为界面里的虚拟物体；KB 用<b>每物体每模式 7 次</b>够取/抓取示范学得（约束目录含 TSR + CAD 姿态 + CAD 轨迹），每个多步任务只用<b>一次</b>示范学。每个任务在 10 次不同初始位置的试验中统计成功次数。</p>
+    <figure>
+      <img src="img/optimus-execution.webp" alt="Optimus 自主执行四个任务">
+      <figcaption><b>Fig. 4：</b>Optimus 机器人自主执行四个测试任务。每个关键帧的运动计划以静帧叠加显示，颜色从灰（初始位）渐变到浅蓝（终止位）；第 1–4 行分别对应 Task 1–4。</figcaption>
+    </figure>
+
+    <h3>成功率（Optimus，每任务 10 次试验）</h3>
+    <table>
+      <tr><th>Task ID</th><th>Autonomous 自主执行</th><th>Shared Autonomy 共享自主（干预次数）</th></tr>
+      <tr><td>1</td><td>9</td><td class="good">10 (1)</td></tr>
+      <tr><td>2</td><td>8</td><td class="good">10 (3)</td></tr>
+      <tr><td>3</td><td>8</td><td class="good">10 (2)</td></tr>
+      <tr><td>4</td><td>10</td><td class="good">10 (0)</td></tr>
+    </table>
+    <p>自主执行四任务平均成功率 <b>87.5%</b>，共享自主模式整体 <b>100%</b>。作者强调：C-LEARN 在<b>每次试验</b>都为规划器产出了正确的查询（关键帧信息）——执行失败并非来自学习/规划，而是 Optimus 位控精度在工作空间不同区域波动所致，靠共享自主下的少量遥操作微调即可补偿。</p>
+
+    <h3>跨机器人技能迁移（Optimus → Atlas 仿真）</h3>
+    <p>把 Optimus 学到的任务表示（关键帧序列 + 约束集）直接喂给 Eq.1 规划器，换上目标机器人的运动学，即可迁移。由于优化式表述天然支持叠加新约束，腿式的 <b>Atlas（28-DoF, Boston Dynamics）</b>只需额外加入"质心须落在支撑多边形内"等平衡约束。结果：Atlas 在运动学仿真中，对 Task 1–4 每个任务的 10 个场景<b>全部</b>成功规划，且计划保证可在真实硬件上稳定执行。</p>
+
+    <h3>Ablations：不同约束类型的贡献</h3>
+    <figure>
+      <img src="img/constraint-ablation.webp" alt="不同约束类型消融">
+      <figcaption><b>Fig. 6：</b>用不同约束类型规划的对比。(a–d) 去掉 CAD 姿态约束；(e,f) 去掉 CAD 轨迹约束；(g,h) 只保留 TSR 关键帧。</figcaption>
+    </figure>
+    <p>消融在 Atlas 上复用 Optimus 的 KB 与任务进行：</p>
+    <ul>
+      <li><b>去掉 CAD 姿态约束</b>：够取/抓取阶段手相对物体的朝向出现更大角度偏差（不再严格垂直于圆柱主轴）——这种偏差被 TSR 允许，导致关键帧无法"锁"进严格垂直。</li>
+      <li><b>有 CAD 姿态、去掉 CAD 轨迹约束</b>：规划器产出的轨迹<b>无法完成任务</b>（Fig. 6 e,f）。</li>
+      <li><b>只用 TSR 关键帧</b>：规划器同样<b>无法完成任务</b>（Fig. 6 g,h）。</li>
+    </ul>
+    <p>结论：CAD 姿态约束负责"锁朝向"、CAD 轨迹约束负责"直线/同心"运动，二者对完成这类硬约束功能任务不可或缺，单靠 TSR 体积约束不够。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>说明：</b>以下各点均由作者在结论（Sec. VII）中<b>明确陈述（stated）</b>，非本文推断。</div>
+    <details class="lim" open><summary>不显式推理关节/铰接约束（articulated constraints）</summary><p>"Functional tasks often involve articulated constraints, such as opening a door, but our method does not explicitly reason about articulation." 开门这类带铰接的约束未被显式建模。</p></details>
+    <details class="lim"><summary>所用运动规划器不做避障（no collision avoidance）</summary><p>"The motion planner we used in this implementation does not handle collision avoidance." 作者把探索其它优化式/采样式规划器列为下一步。</p></details>
+    <details class="lim"><summary>缺少与真实用户的用户研究</summary><p>"Finally, we will conduct a user study to further evaluate the performance of C-LEARN with end users in shared autonomy mode." 论文的评估以任务成功率为主，尚未做端到端的人因/可用性评估。</p></details>
+    <details class="lim"><summary>范围限定：准静态、非移动</summary><p>方法明确只考虑<b>准静态（quasi-static）</b>操作，不涉及动态操作；每次试验的物体初始位都被摆在机器人运动学可达的位置，需要移动底盘才能完成的情形被排除在本文范围外。约束选择基于方差阈值，作者亦指出可能产生"过约束或欠约束"的表示。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    根据论文原文与图表整理 · C-LEARN (Pérez-D'Arpino & Shah, ICRA 2017) · 仅供学习参考<br>
+    原文 / Paper PDF：<a href="https://ai.stanford.edu/~cdarpino/CLEARN/ICRA17_DArpino_CLEARN.pdf">ai.stanford.edu/~cdarpino/CLEARN</a> · IEEE Xplore：<a href="https://ieeexplore.ieee.org/document/7989466/">doc/7989466</a> · 视频：<a href="https://goo.gl/fAVm3z">goo.gl/fAVm3z</a>
+  </div>
+</footer>
+
+</body>
+</html>

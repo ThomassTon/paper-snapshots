@@ -1,0 +1,11 @@
+{
+  "slug": "safe-bimanual",
+  "title": "SafeBimanual: Diffusion-based Trajectory Optimization for Safe Bimanual Manipulation",
+  "arxiv_id": "2508.18268",
+  "url": "https://arxiv.org/abs/2508.18268",
+  "category": "机器人 · Robotics",
+  "keywords": ["bimanual manipulation", "diffusion policy", "test-time trajectory optimization", "cost-guided sampling", "safety constraints", "VLM scheduler", "RoboTwin", "dual-arm cooperation", "安全约束", "扩散去噪引导"],
+  "summary_zh": "给任意预训练双臂扩散策略加的即插即用测试期框架：把撕扯、碰撞等危险行为写成可微代价函数，在扩散去噪的最后若干步做梯度引导采样，并由 GPT-4o VLM 按任务阶段动态调度约束；RoboTwin 仿真成功率 +13.7%、不安全交互 −18.8%，真实任务成功率 +32.5%。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdmitDiff Policy：面向通用接触密集操作的导纳视觉运动策略学习</title>
+<meta name="keywords" content="admittance control, contact-rich manipulation, visuomotor policy, diffusion policy, consistency model, force control, teleoperation, imitation learning, 力控, 模仿学习">
+<meta name="description" content="用导纳控制器 + 力/视觉/本体多模态扩散策略实现通用接触密集操作：平均接触力降低 48.8%，成功率提升 15.3%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">IEEE T-IE 2025 · Robotics</span>
+    <h1>AdmitDiff Policy：面向通用接触密集操作的导纳视觉运动策略学习</h1>
+    <div class="sub">Admittance Visuomotor Policy Learning for General-Purpose Contact-Rich Manipulations</div>
+    <div class="authors">Zhou, Jiao, Li, Yuan, Fang, Li · IEEE Transactions on Industrial Electronics, 2025</div>
+    <p class="lead">把 <b>contact force</b> 当作与视觉、本体同等重要的一路观测：用一套低成本带触觉反馈的遥操作系统采集"柔顺"示范，用 diffusion 模型同时规划动作轨迹与期望接触力，再交给 <b>admittance controller</b> 柔顺执行。五个接触密集任务上，平均接触力降低 <b>48.8%</b>、成功率提升 <b>15.3%</b>。</p>
+    <div class="meta">
+      <span>UR 机械臂 + 多指灵巧手</span>
+      <span>Consistency Distillation · 单步去噪 ~7ms</span>
+      <span><a href="https://arxiv.org/abs/2409.14440">📄 arXiv:2409.14440</a></span>
+      <span><a href="https://ieeexplore.ieee.org/document/10980422/">IEEE Xplore (DOI)</a></span>
+    </div>
+    <div class="kw"><span>admittance control</span><span>contact-rich manipulation</span><span>visuomotor policy</span><span>diffusion policy</span><span>consistency model</span><span>force control 力控</span><span>teleoperation 遥操作</span><span>imitation learning</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">接触密集环境里，机器人光靠视觉与本体感知远远不够：碰撞感知、高精度抓取、高效操作都要靠<b>接触力</b>来补足信息。但现有 vision-based 遥操作难以给操作者交互反馈、也难以精确捕捉手部与手指动作；而现有 diffusion 策略对<b>力控阶段切换与控制精度</b>关注不足。</p>
+    <blockquote>"Contact force in contact-rich environments is an essential modality for robots to perform general-purpose manipulation tasks, as it provides information to compensate for the deficiencies of visual and proprioceptive data in collision perception, high-precision grasping, and efficient manipulation."</blockquote>
+    <p>作者指出瓶颈有二：其一，<b>数据采集难</b> —— 缺少能给操作者力反馈、又能精确检测手指关节的低成本遥操作方案；其二，<b>持续力控缺位</b> —— "there is limited work addressing continuous force control within general-purpose multi-stages manipulations",尤其是多指手在多阶段任务里的力规划与控制。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser: human demonstration to robot autonomy on drawer task">
+      <figcaption>以 Dragging(开抽屉)为例:上方为遥操作人类示范,下方为机器人自主执行的 Reaching → Stable Pulling → Detaching 三阶段。底部曲线对比有/无力控(FC)时的 X 轴接触力:蓝线(AdmitDiff Policy,带力控)全程平稳贴近期望力,红线(w/o FC)在拉动阶段冲到约 −13 N,力波动剧烈。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>−48.8%</b><small>平均接触力(mean)</small></div>
+      <div><b>−52.0%</b><small>接触力标准差(std)</small></div>
+      <div><b>+15.3%</b><small>平均成功率</small></div>
+      <div><b>~7ms</b><small>单步去噪推理耗时</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">整体框架称为 <b>AdmitDiff Policy</b>,由三块组成:(1) 低成本带触觉反馈的<b>遥操作系统</b>采数据;(2) 以 force / vision / proprioception 为输入的 <b>diffusion 模型</b>,同时输出动作轨迹与期望接触力;(3) <b>导纳控制器 (admittance controller)</b> 把力-位轨迹转成柔顺执行的目标位姿。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="AdmitDiff Policy framework: inference, training, teleoperation">
+      <figcaption>AdmitDiff Policy 框架。<b>左(Inference):</b> 取前两步观测(Contact Force / Hand Joint Angle / Arm Pose / RGB Image),经 MLP + CNN Encoder 编码,以 FiLM 条件化;student diffusion model(K=2)一次输出未来 8 步的动作及期望力 (𝓕, p, q),交给 Interpolator 与 admittance controller,以 125Hz 控制机械臂、10Hz 更新。<b>中(Training):</b> teacher 模型按 100 步去噪训练后冻结,用 consistency loss 蒸馏出单步去噪的 student(Policy Distill for One-Step Denoising)。<b>右(Teleoperation):</b> 1) Arm Control、2) Hand Joint Angle Control、3) Vibration Feedback 三路组成的遥操作系统采集含接触力的示范。</figcaption>
+    </figure>
+
+    <h3>低成本遥操作系统(&lt; $400)</h3>
+    <p>三个功能模块:<b>Wrist Pose Module</b> 用 Intel RealSense T265 跑 Visual-Inertial Odometry 提供腕部空间位姿;<b>Gesture Detection Module</b> 用 Ultraleap Leap Motion Controller 估计手部关键点,再 kinematic retargeting 到机器人手;<b>Force Feedback Module</b> 在操作者掌心贴 ERM 振动马达,把 0–20N 接触力线性映射为振动强度,让人"感到"接触。</p>
+
+    <h3>多模态 diffusion 策略与力规划</h3>
+    <p>策略函数把全局/局部图像、本体状态与腕部 F/T 传感器读数映射到 (末端位姿 p_ee、手指关节角 q_finger、期望接触力 F_desired)。网络用 ResNet-18 编码视觉、3 层 MLP 编码低维量,再由 <b>multi-head Conv-Blocks</b> 分别预测不同动作相关量,并以 FiLM 条件化 —— 让接触力从一个被动读数升级为策略<b>主动规划</b>的输出目标。</p>
+
+    <h3>Consistency Distillation 提速</h3>
+    <p>在 EDM 框架下先训一个 100 步去噪的 teacher,冻结后用 consistency loss 蒸馏出单步去噪的 student。推理耗时从 Diffusion Policy 的约 100 ms 压到 Consistency Model 的约 <b>7 ms</b>,满足实时闭环力控。</p>
+
+    <h3>导纳控制器柔顺执行</h3>
+    <p>用二阶导纳模型 M_d(p̈−p̈_d)+B_d(ṗ−ṗ_d)+K_d(p−p_d)=F−F_d 把"期望力与期望位姿"融合成实际目标位姿;M_d/B_d/K_d 按任务调。目标位置与力用一维线性插值 (Interp1d)、旋转用球面线性插值 (Slerp) 平滑,输出到 125Hz 底层控制。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在真实机器人上设计五个针对不同 action primitive 的接触密集任务,每个任务采 50 条示范轨迹,训练 400 epochs(约 8 小时)。对比 Diffusion Policy (DP)、Consistency Policy (CP) 两个 SOTA,以及去掉力控模块的消融 AdmitDiff Policy w/o FC。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="five contact-rich tasks: insertion, dragging, door opening, wiping, drawing">
+      <figcaption>五个任务(对应不同 action primitive):(a) Insertion 插拔/拧转 —— 抓充电插头对准 2cm 孔位;(b) Dragging 拉动 —— 拉开随机位置抽屉;(c) Door Opening 推 —— 施加 20–30N 转动把手再推门;(d) Wiping 擦拭 —— 抓橡皮沿 Z/X 轴擦;(e) Drawing 划写 —— 抓记号笔沿轨迹保持 Z 轴恒力。</figcaption>
+    </figure>
+
+    <h3>成功率(TABLE II,真实实验,越高越好)</h3>
+    <table>
+      <tr><th>Task</th><th>Diffusion Policy</th><th>Consistency Policy</th><th>AdmitDiff w/o FC</th><th>AdmitDiff Policy (Ours)</th></tr>
+      <tr><td>Insertion</td><td>60%</td><td>70%</td><td>75%</td><td class="good">90%</td></tr>
+      <tr><td>Door Opening</td><td>70%</td><td>75%</td><td>80%</td><td class="good">95%</td></tr>
+      <tr><td>Dragging</td><td>80%</td><td>80%</td><td>85%</td><td class="good">95%</td></tr>
+      <tr><td>Wiping</td><td>70%</td><td>75%</td><td>85%</td><td class="good">90%</td></tr>
+      <tr><td>Drawing</td><td>20%</td><td>25%</td><td>40%</td><td class="good">45%</td></tr>
+      <tr><td><b>Average</b></td><td>60%</td><td>70%</td><td>73%</td><td class="good">83%</td></tr>
+    </table>
+    <p>相对其它方法,平均成功率提升约 <b>15.3%</b>。带力控(Ours)在每个任务上都是最高。</p>
+
+    <h3>接触力对比(越低/越集中越好)</h3>
+    <figure>
+      <img src="img/force-comparison.webp" alt="box plot of contact force mean and std across five tasks and four methods">
+      <figcaption>五任务、四方法接触力箱线图(单位 N)。蓝色 AdmitDiff Policy 在几乎所有任务上力最低且分布最窄:Door Opening 从约 15–18N 压到约 10N,Wiping、Draw 压到约 2.5–3N。作者报告:相比其它方法,平均接触力(mean)降低约 <b>48.8%</b>、标准差(std)降低约 <b>52.0%</b>;Door Opening 上 mean 最多降 <b>53.92%</b>、力波动降 <b>76.51%</b>。</figcaption>
+    </figure>
+
+    <h3>消融与遥操作评测</h3>
+    <p>去掉力控 (w/o FC) 后成功率与接触力平稳性都明显下降,说明<b>把期望力纳入规划 + 导纳执行</b>是主要增益来源,而非单纯换扩散/一致性骨干。作者还在 Telekinesis Benchmark(TABLE I)上评测了本文遥操作系统的采集性能。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文正文没有独立的 Limitations 章节;以下第 1 条转述自 Conclusions 的 future work,其余为依据方法/结果<i>推断(inferred)</i>。</div>
+    <details class="lim" open><summary>力控粒度停留在末端,未到手指级(stated / future work)</summary><p>作者在结论中表示未来将"探索 finger-level admittance control 以实现更精确的力控操作",并把方法推广到"更复杂的任务以进一步验证泛化能力"。当前导纳控制主要作用于末端位姿层面。</p></details>
+    <details class="lim"><summary>高精度纯轨迹任务仍是短板(inferred)</summary><p>Drawing(划写)任务四种方法成功率都很低(20%→45%),即便 Ours 也仅 45%。这类以视觉引导、空间轨迹精度为主、触觉约束弱的任务,收益有限。</p></details>
+    <details class="lim"><summary>每任务单独调参与训练(inferred)</summary><p>导纳矩阵 M_d/B_d/K_d 需"tuned per task",且每个任务单独采 50 条示范、训练约 8 小时。尚未展示跨任务/零样本的统一策略。</p></details>
+    <details class="lim"><summary>依赖专用力/触觉硬件(inferred)</summary><p>方案依赖腕部 F/T 传感器与掌心 ERM 振动反馈遥操作套件;虽总成本 &lt;$400,但相比纯视觉方案仍引入额外硬件与标定环节。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    依据论文原文与图表整理 · AdmitDiff Policy (Admittance Visuomotor Policy Learning) · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2409.14440">https://arxiv.org/abs/2409.14440</a> · <a href="https://ieeexplore.ieee.org/document/10980422/">IEEE T-IE 2025</a>
+  </div>
+</footer>
+
+</body>
+</html>

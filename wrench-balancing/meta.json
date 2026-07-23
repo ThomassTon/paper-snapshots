@@ -1,0 +1,11 @@
+{
+  "slug": "wrench-balancing",
+  "title": "Discrete Bimanual Manipulation for Wrench Balancing",
+  "arxiv_id": "",
+  "url": "https://portal.research.lu.se/en/publications/discrete-bimanual-manipulation-for-wrench-balancing/",
+  "category": "机器人 · Robotics",
+  "keywords": ["bimanual manipulation", "dual-arm robot", "wrench balancing", "in-hand manipulation", "Dexterous Manipulation Graph", "extrinsic dexterity", "force-torque sensing", "grasp point sliding", "ABB YuMi", "双臂协调"],
+  "summary_zh": "双臂机器人共抓一块刚性托盘时，若质量分布不均，两臂承受的 wrench 会失衡并可能超出 payload。本文把平衡 wrench 建模成几何优化问题，用 Kalman filter 在线估计 COM，并把 Dexterous Manipulation Graph 扩展到双抓取，通过离散的手内滑动（一次只动一只手）重新分配抓取点；在 ABB YuMi 上实验，力矩误差从均值 0.15 降到 0.025 N·m。",
+  "date": "2026-07-23",
+  "source": "publisher-pdf"
+}

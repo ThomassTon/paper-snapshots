@@ -1,0 +1,11 @@
+{
+  "slug": "vlmimic",
+  "title": "VLMimic: Vision Language Models are Visual Imitation Learner for Fine-grained Actions",
+  "arxiv_id": "2410.20927",
+  "url": "https://arxiv.org/abs/2410.20927",
+  "category": "机器人 · Robotics",
+  "keywords": ["visual imitation learning", "Vision Language Model", "human video", "object-centric interaction", "hierarchical constraints", "fine-grained action", "robotic manipulation", "RLBench", "skill adaptation", "long-horizon"],
+  "summary_zh": "VLMimic 让 VLM 不再只当高层 planner，而是仅用 5 段人类视频直接学出细粒度动作层级的 skill：先 ground 出 object-centric 运动，用 semantic + geometric 两级分层约束表示 skill，再靠迭代对比策略适应未见环境；在 RLBench、真实世界与长程任务上分别超 baseline 27%、21% 与 37%。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

@@ -1,0 +1,11 @@
+{
+  "slug": "foar-policy",
+  "title": "FoAR: Force-Aware Reactive Policy for Contact-Rich Robotic Manipulation",
+  "arxiv_id": "2411.15753",
+  "url": "https://arxiv.org/abs/2411.15753",
+  "category": "机器人 · Robotics",
+  "keywords": ["force-aware policy", "contact-rich manipulation", "force/torque sensing", "RISE", "diffusion policy", "future contact prediction", "reactive control", "多模态特征融合", "imitation learning", "机器人操作"],
+  "summary_zh": "FoAR 在 RISE 视觉模仿策略上并联高频 force/torque 分支，用 future contact predictor 输出的接触概率 φ 动态调节力信息使用，并以简单位置控制的 reactive control 完成擦写、削皮、切菜等接触密集型任务，全面超越 baseline。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

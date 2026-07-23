@@ -1,0 +1,11 @@
+{
+  "slug": "tacdiffusion",
+  "title": "TacDiffusion: Force-domain Diffusion Policy for Precise Tactile Manipulation",
+  "arxiv_id": "2409.11047",
+  "url": "https://arxiv.org/abs/2409.11047",
+  "category": "机器人 · Robotics",
+  "keywords": ["diffusion policy", "force-domain control", "tactile manipulation", "高精度装配 insertion", "6D wrench", "zero-shot transfer", "behavior tree", "dynamical system filter", "impedance control", "DDPM"],
+  "summary_zh": "TacDiffusion 让 diffusion model 在力域直接生成 6D wrench 作为阻抗控制的前馈力，仅用单个零件示教即可 zero-shot 迁移到多种高精度插装任务，平均成功率 95.7%；并用 dynamical-system 滤波器解决扩散策略与 1000 Hz 控制回路的频率不匹配，使成功率再提升 9.15%。",
+  "date": "2026-07-23",
+  "source": "arxiv-html"
+}

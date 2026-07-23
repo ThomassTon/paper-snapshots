@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bi-KVIL：面向双臂操作的关键点视觉模仿学习</title>
+<meta name="keywords" content="visual imitation learning, bimanual manipulation, keypoints, master-slave relationship, object-centric representation, category-level generalization, 模仿学习, 双臂操作, Dense Object Net, movement primitives">
+<meta name="description" content="Bi-KVIL 将关键点视觉模仿学习 K-VIL 扩展到双臂操作，从不到 10 段人类演示视频中联合抽取混合主从关系 HMSR、双臂协同策略与亚符号任务表示。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ICRA 2024 · Robotics</span>
+    <h1>Bi-KVIL：面向双臂操作的关键点视觉模仿学习</h1>
+    <div class="sub">Keypoints-based Visual Imitation Learning of Bimanual Manipulation Tasks</div>
+    <div class="authors">Jianfeng Gao, Xiaoshu Jin, Franziska Krebs, Noémie Jaquier, Tamim Asfour · Institute for Anthropomatics and Robotics, Karlsruhe Institute of Technology (KIT)</div>
+    <p class="lead">把只能处理单臂的 K-VIL 扩展到<strong>双臂操作</strong>：从<strong>不到 10 段</strong>人类演示视频里，联合抽取物体/手之间的 <strong>Hybrid Master-Slave Relationship (HMSR)</strong>、双臂协同策略，以及基于关键点的亚符号 (sub-symbolic) 任务表示。该表示 object-centric、embodiment-independent、viewpoint-invariant，可在杂乱新场景中对同类物体做 category-level 泛化，并由 ARMAR-6 人形机器人复现。</p>
+    <div class="meta">
+      <span>📄 <a href="https://arxiv.org/abs/2403.03270">arXiv:2403.03270</a></span>
+      <span><a href="https://sites.google.com/view/bi-kvil">🔗 Project page</a></span>
+      <span>ICRA 2024, pp. 16850–16857</span>
+    </div>
+    <div class="kw"><span>visual imitation learning</span><span>bimanual manipulation</span><span>keypoints</span><span>master-slave relationship</span><span>object-centric representation</span><span>category-level generalization</span><span>模仿学习</span><span>双臂操作</span><span>Dense Object Net</span><span>movement primitives</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation 动机</h2>
+    <p class="lead">视觉模仿学习在<strong>单臂</strong>操作上已能从很少的视觉观测中学到任务，但双臂操作远不止「两个单臂任务相加」：它需要理解手与物体之间更复杂的角色与关系（一个 master 物体本身可能又是另一个 master 的运动显著 slave），并把协同策略与物体关系泛化到杂乱新场景中的同类物体。作者早前的 K-VIL 只能处理<strong>单一 master-slave 对 + 静态 master</strong> 的单臂任务，无法覆盖这些情况。</p>
+    <blockquote>“learning bimanual coordination strategies and complex object relations from bimanual visual demonstrations, as well as generalizing them to categorical objects in novel cluttered scenes remain unsolved challenges.”</blockquote>
+    <p>Bi-KVIL 的核心洞见沿用 K-VIL：双臂任务同样由「跨多次演示保持不变的任务特征」刻画——例如倒水任务的不变量是<strong>容器口对准杯沿</strong>。据此可从少量演示中自动抽取稀疏、object-centric、与实体无关的表示。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="Bi-KVIL 总览">
+      <figcaption><strong>Fig. 1 · Bi-KVIL 总览。</strong>(a) 采集带风格/位姿变化的同类物体倒水/倒啤酒人类演示视频；(b) 将手/物体关系抽象为符号级的 <strong>HMSR</strong>；(c) 为每个 master-slave 对配上亚符号几何约束（p2p、p2c、pose 等）以刻画运动风格；(d) 学到的任务在杂乱场景中由 ARMAR-6 以 category-level 泛化复现。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>&lt;10</b><small>所需人类演示视频<br>（RGB-D，无额外设备）</small></div>
+      <div><b>8</b><small>真实双臂操作任务<br>倒水/倒啤酒/摆放等</small></div>
+      <div><b>5</b><small>MSR 关系类型<br>覆盖双臂操作 taxonomy</small></div>
+      <div><b>4</b><small>双臂协同策略<br>从抽取的 MSR 导出</small></div>
+    </div>
+    <p style="color:var(--muted);font-size:14.5px">对比：其它双臂模仿学习方法通常需要大量演示——[40][41] 需 20–50 次、[44] 需 2500–4700 次、[45][46] 需 256–4000 次，部分还额外需要 teleoperation 数据或动作捕捉系统。</p>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method 方法</h2>
+    <p class="lead">Bi-KVIL 分两个层级刻画任务：<strong>符号层</strong>用 HMSR + 协同策略描述「谁跟随谁」，<strong>亚符号层</strong>用关键点几何约束 + 局部坐标系 + movement primitives 描述「如何精细运动」。感知端先建立数据集，再抽取 HMSR，最后用 Bi-KAC 控制器在机器人上复现。</p>
+
+    <h3>感知流水线（Perception pipeline）</h3>
+    <p>把手视作带 <strong>21 个关键点</strong>的特殊物体（MANO 模型）。物体关键点由 <strong>Dense Object Net (DON)</strong> 按物体类别以自监督、任务无关方式训练得到；用 <strong>RAFT</strong> 光流跟踪点的运动，用 <strong>RTMPose</strong>（2D）与 <strong>MeshGraphormer</strong>（3D）估计人手位姿，再以 Savitzky-Golay 滤波平滑轨迹，为 VIL 提供高质量数据集。</p>
+
+    <h3>HMSR：混合主从关系</h3>
+    <p>HMSR 是一个<strong>有向无环图 (DAG)</strong>，统一表示物体与手的角色、关系与任务约束——一个 slave 物体可以在不同层级拥有多个 master。论文归纳出五种 MSR 类型：single、multiple、multi-level、hierarchical、hybrid（M<sup>i</sup><sub>j</sub> 表示第 i 层的第 j 个 master，slave 物体位于最底层）。</p>
+    <figure>
+      <img src="img/msr-types.webp" alt="MSR 五种类型">
+      <figcaption><strong>Fig. 3 · MSR 图示。</strong>从 (a) Single、(b) Multiple、(c) Multi-level、(d) Hierarchical 到 (e) Hybrid，逐步刻画双臂任务中越来越复杂的多物体主从层级；对 i&gt;0 的 master，其本身又是上一层 i−1 的 slave。</figcaption>
+    </figure>
+
+    <h3>HMSR 抽取的四步</h3>
+    <ul>
+      <li><strong>Absolute motion saliency detection：</strong>依据全局相机系下的平均点速度区分静态/运动物体；顶层 master 必须静态。若无静态物体，则以运动物体的<strong>初始状态</strong>定义局部帧，并把首帧点云记作特殊的 <strong>virtual object</strong>。</li>
+      <li><strong>Grasp detection（relative motion saliency）：</strong>基于所有候选点对的空间距离检测接触；计算手局部帧下周围 <strong>Q=50</strong> 个邻近点绝对距离的平均变化率，低于阈值即判定 firm grasp，并把手设为所抓 master 物体的 slave。</li>
+      <li><strong>Pose invariance detection：</strong>由于 A 相对 B 的运动等价于 B 相对 A，会产生双向 MSR。作者提出 invariance criterion（式 1）：以归一化平移/旋转空间可变性比率 r<sup>p</sup><sub>s,l</sub>, r<sup>o</sup><sub>s,l</sub> 取 argmin 选出 master，既纠正了 [9] 仅按「移动更少」判定的偏差（如倒水中 cup 是 master 却移动更多），又保证 HMSR 为 DAG。</li>
+      <li><strong>Truncation：</strong>对每个候选 master-slave 对施加 K-VIL，剔除两者间不存在几何约束的对，得到紧凑的 HMSR 图。洞见：演示稀少时任一有效几何约束都视作任务知识；随更多演示到来，冗余约束再被截断。</li>
+    </ul>
+
+    <h3>双臂协同策略（4 种）与亚符号约束</h3>
+    <p>由 grasp 关系与 HMSR 导出四种协同策略：<strong>Uncoordinated unimanual</strong>（单一 grasp，即 K-VIL 情形）、<strong>Uncoordinated bimanual</strong>（两手各抓不同 slave 且 master 不同、互不协同）、<strong>Loosely-coupled</strong> 与 <strong>Tightly-coupled symmetric</strong>（两手抓同一物体且绝对距离变化率低于阈值）。亚符号层则以关键点几何约束表达运动风格：point-to-point (p2p)、point-to-line、point-to-plane (p2P)、point-to-curve (p2c)、point-to-surface，以及新增的 <strong>pose constraint</strong>（配合 via-point movement primitives / VMP 建模末端位姿分布并采样目标）。</p>
+
+    <h3>Bi-KAC：双臂关键点导纳控制器</h3>
+    <p>作者把 KAC 扩展为 <strong>Bimanual Keypoint-based Admittance Controller (Bi-KAC)</strong>，可处理一组<strong>带优先级</strong>的双臂几何约束，从而在阻抗控制的 TCP 上复现双臂操作 taxonomy [9] 中的各类协同，统一支持单臂与双臂任务。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments 实验</h2>
+    <p class="lead">在多个真实世界应用上评估，演示由 stereo RGB 或 monocular RGB-D 相机采集，复现平台为 <strong>ARMAR-6 人形机器人</strong>。评估以定性为主：验证 HMSR 抽取是否合理收敛、约束是否随演示增减而正确变化，以及 Bi-KAC 能否在杂乱场景 + out-of-distribution 物体上正确复现（Bi-KAC 的定量评估作者引用其单臂前作 [1]）。</p>
+
+    <table>
+      <tr><th>任务（记号）</th><th>协同策略 / 特点</th></tr>
+      <tr><td>Pour water (Po<sub>w</sub>) / Pour beer (Po<sub>b</sub>)</td><td>倒水/倒啤酒，共享同一 HMSR 结构，仅 p2p/p2c/pose 约束不同</td></tr>
+      <tr><td>Place spoon (Pl<sub>sp</sub>, 5 种风格 Pl<sup>1–5</sup><sub>sp</sub>)</td><td>把勺子放到盘子上；loosely-coupled，右手组为非主导</td></tr>
+      <tr><td>Place serving tray (Pl<sub>st</sub>)</td><td>tightly-coupled symmetric，两手对称抬放托盘至桌垫中心</td></tr>
+      <tr><td>Pl<sub>cb,pa</sub> / Pl<sub>sp,pt</sub> / Pl<sub>sp,ba</sub></td><td>涉及 &gt;2 个物体（cutboard/potmat、plate、banana 等）的 loosely-coupled 任务</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/results.webp" alt="HMSR 抽取与 ARMAR-6 复现">
+      <figcaption><strong>Table II（上）</strong>：Pl<sub>st</sub>、Pl<sub>cb,pa</sub>、Pl<sub>sp,pt</sub>、Pl<sub>sp,ba</sub> 抽取出的 HMSR 图（tm/sp/pm/cb/pt/ba = tablemat/spoon/potmat/cutboard/plate/banana）。<strong>Table III（下）</strong>：Pl<sup>2–5</sup><sub>sp</sub> 四种风格在 ARMAR-6 上的复现，每行依次为机器人视角 RGB、任务表示 (TR)、执行起点与终点。</figcaption>
+    </figure>
+
+    <h3>关键观察（定性）</h3>
+    <ul>
+      <li>不同倒水/摆放风格在<strong>符号层共享相同 HMSR 结构</strong>，仅在亚符号约束上因运动风格不同而有别。</li>
+      <li>随演示数量增加，<strong>HMSR 图更紧凑并收敛</strong>：如 Pl<sup>2</sup><sub>sp</sub> 中盘子从桌面上方开始时，Bi-KVIL 学会剔除与 virtual plate 相关的冗余 master-slave 对及 p2P 约束。</li>
+      <li>Pose invariance criterion 能正确判定 <strong>cup 为 master</strong>（尽管其比 kettle 移动更多），修正了 [9] 中基于规则的误判。</li>
+      <li>所有任务均可用 <strong>out-of-distribution 物体</strong>复现——不同形状/颜色的勺子、不同尺寸的盘子、以及用炒锅代替盘子等。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations 局限性</h2>
+    <div class="note"><b>Note:</b> 以下均为作者在 Conclusion 中<strong>明确陈述</strong>的局限，非本文推断。</div>
+    <details class="lim" open><summary>不处理物体（自）遮挡 — 关键点被遮挡即失败</summary><p>“Although our perception pipeline includes hand shape completion [59], it does not handle object (self-)occlusion, leading to failures if keypoints are occluded.” 感知流水线虽含手部形状补全，但对物体自遮挡无能为力。</p></details>
+    <details class="lim"><summary>特定位姿下 correspondence 检测不准 → 目标位姿偏差</summary><p>“Failures may also occur due to inaccurate correspondence detection in specific objects poses, which lead to imprecise local frames on master objects and inaccurate target positions” —— 例如 kettle 的壶嘴落到 cup 杯沿之外。</p></details>
+    <details class="lim"><summary>Bi-KAC 忽略双臂同步 → 搬运类任务可能掉落物体</summary><p>“Bi-KAC, as a naive extension of KAC, relies entirely on the HMSR for coordination and disregards dual-arm synchronization [32],[63],[64]. Therefore, it may drop the object in bimanual transport tasks.”</p></details>
+    <details class="lim"><summary>假设演示已按时间分段；缺乏统一评测基准</summary><p>方法聚焦于对每个运动段抽取 HMSR 与任务表示，假设人类演示已完成 temporal segmentation。作者将「解决上述局限」与「建立面向双臂模仿学习的综合评测 benchmark」列为 future work。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Bi-KVIL (ICRA 2024) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2403.03270">https://arxiv.org/abs/2403.03270</a> · <a href="https://sites.google.com/view/bi-kvil">Project page</a>
+  </div>
+</footer>
+
+</body>
+</html>

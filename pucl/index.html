@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUCL：从专家演示中推断非线性连续约束</title>
+<meta name="keywords" content="constraint learning, positive-unlabeled learning, learning from demonstration, inverse constrained RL, safe policy, obstacle avoidance, 约束推断, dynamical system modulation">
+<meta name="description" content="PUCL 把约束推断建模为 positive-unlabeled 学习：演示为 positive，策略轨迹为 unlabeled，两步法先用距离度量挑出可靠 infeasible 数据，再训练二分类可行性网络。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px} @media(max-width:760px){.grid3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">RA-L 2025 · Constraint Learning</span>
+    <h1>PUCL：从专家演示中推断非线性连续约束</h1>
+    <div class="sub">Positive-Unlabeled Constraint Learning for Inferring Nonlinear Continuous Constraints Functions from Expert Demonstrations</div>
+    <div class="authors">Baiyu Peng, Aude Billard（EPFL LASA）· IEEE Robotics and Automation Letters, vol. 10, no. 2, pp. 1593–1600, Feb. 2025</div>
+    <p class="lead">很多机器人任务的约束（避障、限速）事先未知、也难以精确写出。PUCL 把「从演示中推断约束」重新表述为 <b>positive-unlabeled (PU) learning</b>：演示轨迹是可靠的 positive（feasible）样本，当前策略采到的高回报轨迹是 unlabeled 混合样本。两步法先用距离度量从 unlabeled 中挑出可靠 infeasible 数据，再训练一个二分类可行性网络当作连续约束函数——无需已知约束参数化，也无需可微环境模型。</p>
+    <div class="meta">
+      <span>4 个约束环境</span><span>无需约束参数化 / 环境模型</span><span>near-zero unsafe rate</span>
+      <span><a href="https://arxiv.org/abs/2408.01622">📄 arXiv:2408.01622</a></span>
+      <span><a href="https://github.com/epfl-lasa/PUCL_learning_constraint">💻 Code (GitHub)</a></span>
+    </div>
+    <div class="kw"><span>constraint learning</span><span>positive-unlabeled learning</span><span>learning from demonstration</span><span>inverse constrained RL</span><span>safe policy</span><span>obstacle avoidance</span><span>约束推断</span><span>dynamical system modulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">规划机器人任务通常要求显式知道所有约束（哪些状态/轨迹被允许、哪些必须避开）。但这些约束常常「未知或难以精确写出」——尤其当它们是<b>非线性、边界形状未知，或源于用户偏好与经验</b>时。例如人类会依据障碍物材质、形状、密度以及个人偏好，隐式地决定机器人应保持的最小间距；机器人需要能从已有的人类演示中把这种隐含约束<b>推断成一个显式的约束函数</b>。</p>
+    <blockquote>“Sometimes these constraints are initially unknown or hard to specify mathematically, especially when they are nonlinear, possess unknown shape of boundary or are inherent to user's preference and experience.”</blockquote>
+    <p>本文聚焦「不去访问某些不期望的 state(-action)」这类约束（如不撞上未知障碍、不超过未知最大速度）。现有约束推断方法大致分为 <b>IRL-based</b> 与 <b>mixed-integer-programming (MIP)-based</b> 两类；它们往往需要已知的约束参数化（如圆柱的高与半径）、只学习单维度的简单约束（如 x ≥ −3），或依赖可微的环境模型。PUCL 想在<b>不做这些假设</b>的前提下，恢复出任意的、可能非线性的连续约束。</p>
+    <div class="grid3">
+      <figure><img src="img/task-expert.webp" alt="expert demonstrations"><figcaption><b>(a) 专家演示</b>：机器人到达目标同时避开 4 个杯子构成的复杂形状（绿色为演示轨迹）。</figcaption></figure>
+      <figure><img src="img/task-constraint.webp" alt="learned constraint"><figcaption><b>(b) 学到的约束</b>：红色区域为推断出的 infeasible region，对应杯子占据的不可行空间。</figcaption></figure>
+      <figure><img src="img/task-policy.webp" alt="transferred policy"><figcaption><b>(c) 迁移后的策略</b>：把学到的约束迁移到起点/目标变化的新任务，策略仍能避开杯子。</figcaption></figure>
+    </div>
+    <p style="color:var(--muted);font-size:14px">Fig. 1（改绘）：从演示中学习一个避障约束。上例演示了约束一旦学到即可作为可迁移的模块，用于同一约束、但目标与奖励不同的任务变体。</p>
+    <div class="kpi">
+      <div><b>4</b><small>验证环境（2D/3D 位置、3D 控制量、18D cheetah）</small></div>
+      <div><b>PU</b><small>约束推断 = positive-unlabeled 学习</small></div>
+      <div><b>&lt;1%</b><small>学到策略的 unsafe rate</small></div>
+      <div><b>0</b><small>无需约束参数化 / 可微环境模型</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">核心洞见：与许多 IRL/MIP 方法一样，通过「对比（安全）演示与某个策略生成的潜在不安全轨迹」来推断约束。演示轨迹上的每个 state 由假设可确定为 <b>feasible（labeled positive）</b>；而一条比演示获得<b>更高回报</b>的策略轨迹「潜在不安全、靠访问某些禁止状态作弊」，但具体是轨迹里哪些 state 不安全并不清楚——即它同时含真 feasible 与真 infeasible 的 state，却全部 <b>unlabeled</b>。于是问题被自然地表述为：从一批全 labeled 的 feasible state 与一批 unlabeled 混合 state 中，学一个逐 state 的可行性分类器。</p>
+    <figure>
+      <img src="img/framework.webp" alt="PUCL framework">
+      <figcaption><b>Fig. 2（改绘）：PUCL 迭代框架。</b>算法在两件事之间交替：(上) 用当前约束网络 ζθ，通过 <b>Constrained RL 或 DSM</b> 更新策略 πφ；(下) 用两步 PU learning 从演示与当前策略中推断约束。<b>Step 1</b>：把当前策略采样的轨迹 𝒫 视为 unlabeled、演示 𝒟 视为 labeled feasible，用基于距离的度量识别可靠 infeasible 数据 ℛ（存入 memory ℳ）。<b>Step 2</b>：用 ℛ∪ℳ 作为 infeasible、演示 𝒟 作为 feasible，以标准二分类损失训练约束网络 ζθ。</figcaption>
+    </figure>
+
+    <h3>Step 1 — 用距离度量识别「可靠 infeasible 数据」ℛ</h3>
+    <p>直觉：unlabeled 集 𝒫 中<b>与演示集 𝒟 里所有数据都很不一样</b>的点，极可能真的是 infeasible。论文提出一个 <b>kNN 式的距离方法</b>：对每个 unlabeled 点 s̄，计算它到 𝒟 中 k 个最近 feasible 点的平均距离 S_𝒟(s̄) 作为排序分数；分数越大越可能 infeasible。由于 𝒟 里是轨迹上连续的点，建议取较小的 <b>k（约 1–3）</b>。超过距离阈值 <b>d_r</b> 的点被选入可靠 infeasible 集 ℛ。（论文另提出一个基于 GMM 生成模型的变体 <b>GPUCL</b>，用专家分布的最低似然来选 infeasible 数据，但因表现较弱未展开。）</p>
+
+    <h3>Step 2 — 二分类学习约束网络 ζθ</h3>
+    <p>用识别出的可靠 infeasible 数据 ℛ 与 feasible 演示 𝒟，以标准二分类损失训练一个神经网络约束 ζθ(s̄)。约束网络输出经 sigmoid，ζ=0 表示 infeasible、ζ=1 表示 feasible，以 0.5 为决策阈值。</p>
+
+    <h3>迭代框架：policy filter + memory buffer</h3>
+    <p>PUCL 采用<b>迭代式</b>而非一次性生成 𝒫——因为策略始终对当前约束更新，新采样轨迹大多分布在当前约束边界附近，能高效精化边界。两项设计：</p>
+    <ul>
+      <li><b>Policy filter</b>：每轮只保留回报<b>显著高于演示</b>的轨迹（(1−δ)·r(τ) ≥ r(τ_𝒟)）——依据 Assumption 1，这些才是真正违反未知约束的轨迹，从而避免劣质策略带来的错误更新。</li>
+      <li><b>Memory buffer ℳ</b>：累积历史各轮识别出的可靠 infeasible 数据，稳定并增量地学习约束。</li>
+    </ul>
+
+    <h3>策略表征：Constrained RL 或 DSM</h3>
+    <p>更新策略时可用两种方式：<b>Constrained RL (CRL)</b>，适合动力学与奖励更复杂的通用任务；或 <b>Dynamical System Modulation (DSM)</b>，以有原则的方式调制策略、带安全保证，尤其适合控制量为各维速度/加速度的机器人任务。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在四个仿真环境上学习：<b>2D 位置约束</b>、<b>3D 位置约束</b>、<b>3D 控制量（速度）约束</b>，以及 <b>18 维 half-cheetah</b> 机器人的约束。任务为随机初始化、奖励为到达目标的负 Cartesian 路径距离的 goal-reaching。2D / 3D 任务分别用 <b>4 / 10 条</b>安全演示；末端速度上限 0.58 m/s。<b>Baselines</b>：MECL（max-entropy constraint learning，IRL-based）、BC（binary classifier，把 𝒫 全当 infeasible）、GPUCL（生成式变体）。<b>Metrics</b>：IoU（约束正确性，越高越好）与 unsafe rate（策略的逐步真实约束违反率，越低越好）。</p>
+
+    <blockquote>“The proposed method PUCL exhibits superior performance compared to the baseline across both environments and metrics. It achieves a near-zero unsafe rate at the convergence of the training in both environments and outperforms baseline MECL.”</blockquote>
+
+    <figure>
+      <div class="grid2">
+        <img src="img/constraint-pucl.webp" alt="PUCL learned constraint" style="border:1px solid var(--line)">
+        <img src="img/constraint-mecl.webp" alt="MECL learned constraint" style="border:1px solid var(--line)">
+      </div>
+      <figcaption><b>Fig. 4（改绘）：2D reaching 任务中学到的约束。左 PUCL（ours）/ 右 MECL。</b>两个白色椭圆是真实约束边界；热图红色区域（ζ=0）为学到的 infeasible。绿色为演示轨迹、黄色为策略轨迹、红点是 PUCL 识别出的可靠 infeasible 数据 ℛ∪ℳ。PUCL 学到的红色区域与真实椭圆吻合良好；<b>MECL 的约束不够准确，甚至把演示访问过的一些 state 误判为 infeasible</b>。</figcaption>
+    </figure>
+
+    <h3>两种策略表征的对比（3D reaching, Table II）</h3>
+    <p>以 PUCL 为约束学习方法，比较 CRL-PUCL 与 DSM-PUCL（15 次独立运行取平均；PC: i9-12900K + RTX 3070）。两者分类性能（IoU / recall / precision）相近，<b>DSM-PUCL 方差更低</b>；两者 unsafe rate 均低于 1%，DSM-PUCL 略低——因其以有原则的方式调制策略并带安全保证，且训练时间更短。</p>
+    <table>
+      <tr><th>Methods (3D reaching)</th><th>CRL-PUCL</th><th>DSM-PUCL</th></tr>
+      <tr><td>IoU</td><td>0.46 ± 0.09</td><td>0.42 ± 0.01</td></tr>
+      <tr><td>Recall rate</td><td>(94.2 ± 4.5)%</td><td class="good">(99.9 ± 0.1)%</td></tr>
+      <tr><td>Precision</td><td>(47.6 ± 10.0)%</td><td>(42.1 ± 1.3)%</td></tr>
+      <tr><td>Unsafe rate（越低越好）</td><td>(0.47 ± 0.82)%</td><td class="good">(0.15 ± 0.56)%</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">数值逐字摘自 Table II。结论：两种方法都有效；对以速度/加速度为控制量的任务，DSM 在训练时间与策略性能上更有优势；CRL 更适合动力学与奖励更复杂的通用任务。</p>
+
+    <h3>控制量约束与约束迁移</h3>
+    <p>把 3D reaching 改成施加更严格的最大速度约束，验证 PUCL 也能学习<b>控制量（velocity）约束</b>。下图为学到策略的速度分布，红色虚线为真实约束阈值——策略基本落在阈值之内。此外，学到的约束可<b>迁移</b>到「同一约束、但目标/奖励不同」的任务变体（如 Fig. 1 中避开 4 个杯子的复杂形状），无需重新学习约束。</p>
+    <figure>
+      <img src="img/velocity.webp" alt="velocity distribution">
+      <figcaption><b>Fig. 6（改绘）：</b>PUCL 学到策略的速度分布（左 v_x，右 v_z）。横轴为速度，红线为真实约束阈值；分布主要落在阈值以内，说明控制量约束被有效满足。</figcaption>
+    </figure>
+
+    <h3>Ablation — 距离阈值 d_r 的敏感性</h3>
+    <figure>
+      <img src="img/sensitivity.webp" alt="sensitivity to d_r">
+      <figcaption><b>Fig. 3（改绘）：</b>3D 任务中改变距离阈值 d_r 的敏感性分析（5 个随机种子平均）。蓝线为 unsafe rate（左轴，越低越好），橙色虚线为 IoU（右轴，越高越好）。d_r 过小或过大都会变差，存在一个中间的良好区间（约 0.08–0.16），说明<b>性能对 d_r 有一定依赖</b>。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 第 1 条为作者在 “Conclusions and Limitations” 中<b>明确陈述</b>的局限；第 2、3 条为依据方法设计与实验设置<b>推断</b>的局限（标注为 inferred）。</div>
+    <details class="lim" open><summary>依赖距离阈值 d_r 与距离度量的选择（作者明确陈述）</summary><p>“its performance depends on the choice of an appropriate distance threshold and the specific distance metric.” 敏感性分析（Fig. 3）也显示 d_r 过小/过大都会损害 unsafe rate 与 IoU。作者提出未来方向：联合学习一个能对不同任务自动适配的距离表征。</p></details>
+    <details class="lim"><summary>依赖「更高回报即潜在不安全」的假设（inferred）</summary><p>方法把回报显著高于演示的策略轨迹当作 unlabeled/潜在 infeasible（policy filter 用 (1−δ)·r(τ) ≥ r(τ_𝒟)），并假设演示是 feasible 且次优（Assumption 1）。当奖励设计与该假设不吻合、或演示本身并非严格 feasible 时，识别出的 infeasible 数据可能失真。</p></details>
+    <details class="lim"><summary>验证局限于仿真、约束为「状态/控制量避免」型（inferred）</summary><p>论文的四个环境均为仿真（2D/3D reaching、控制量、half-cheetah），未报告真实机器人硬件实验；且聚焦于「不访问某些 state(-action)」这一类约束，对更一般的时序/逻辑约束未做探讨。此外 IoU 绝对值并不高（如 3D 任务 ≈0.42–0.46），反映连续非线性约束边界的精确恢复仍有难度。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · PUCL: Positive-Unlabeled Constraint Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2408.01622">https://arxiv.org/abs/2408.01622</a> · Code: <a href="https://github.com/epfl-lasa/PUCL_learning_constraint">github.com/epfl-lasa/PUCL_learning_constraint</a>
+  </div>
+</footer>
+
+</body>
+</html>

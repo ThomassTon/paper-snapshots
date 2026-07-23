@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diffusion Policy 能学到运动学约束流形吗？</title>
+<meta name="keywords" content="diffusion policy, kinematic constraint, bimanual manipulation, imitation learning, constraint manifold, manifold hypothesis, teleoperation, 数据质量, manifold curvature, Kretschmann scalar">
+<meta name="description" content="通过双臂抓取-放置案例研究，量化 diffusion policy 对训练数据中运动学等式约束流形的学习程度：只能学到粗略近似，数据量与质量是关键，流形曲率影响不明确。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · Imitation Learning</span>
+    <h1>Diffusion Policy 能学到运动学约束流形吗？</h1>
+    <div class="sub">How Well do Diffusion Policies Learn Kinematic Constraint Manifolds?</div>
+    <div class="authors">Lexi Foland, Thomas Cohn, Adam Wei, Nicholas Pfaff, Boyuan Chen, Russ Tedrake · MIT CSAIL</div>
+    <p class="lead">通过一个双臂 pick-and-place 案例研究，作者把「diffusion policy 到底有没有学到数据里的运动学约束」这件事从整套控制栈里剥离出来单独度量。结论是：即使用完全满足约束的数据训练，policy 也只能学到约束流形的<b>粗略近似</b>；数据量与数据质量都很关键，而约束流形的曲率与表现的相关性并不明确。任务成功率高，很大程度靠夹爪柔顺与底层控制器兜底。</p>
+    <div class="meta">
+      <span>2 × KUKA iiwa 14 双臂</span>
+      <span>16 个 policy · 每个 200 trials</span>
+      <span>sim + 真机验证</span>
+      <span><a href="https://arxiv.org/abs/2510.01404">📄 arXiv:2510.01404</a></span>
+      <span><a href="https://diffusion-learns-kinematic.github.io/">🔗 Project page</a></span>
+    </div>
+    <div class="kw">
+      <span>diffusion policy</span><span>kinematic constraint</span><span>bimanual manipulation</span>
+      <span>imitation learning</span><span>constraint manifold</span><span>manifold hypothesis</span>
+      <span>teleoperation</span><span>数据质量</span><span>manifold curvature</span><span>Kretschmann scalar</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Diffusion / flow-based policy 在机器人 imitation learning 上表现亮眼，甚至能完成需要满足运动学等式约束的任务。但作者指出：<b>任务成功率本身并不能可靠地说明 policy 真的精确学到了训练数据中的约束</b>。因为部署时通常还有 constraint-enforcing 的底层控制器、夹爪柔顺、接触力等因素在兜底，policy 自身对约束的遵守程度长期以来是「poorly understood」的。</p>
+    <blockquote>“there is value in quantifying the extent to which diffusion policies adhere to the constraint manifold in robot data (independent of the lower-level control stack).”</blockquote>
+    <p>理论动机来自 <b>manifold hypothesis</b>：高维真实数据集中在低维流形附近；若接受这一假设，diffusion 近似等价于向数据流形做 Euclidean projection，于是 Diffusion Policy 可以被理解为「从机器人轨迹流形上采样」。机器人轨迹常沿由运动学约束定义的 configuration space 子流形运动——这些约束隐含在数据里，训练时却几乎从不显式编码，因此没有任何保证 policy 会遵守它们。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="method overview teaser">
+      <figcaption><b>方法总览。</b>左：用「transform-locking」遥操作采集满足约束的 on-manifold 数据（双臂间相对位姿锁定），并对其加扰动生成三份仍能完成任务、但约束违反逐级增大的 off-manifold 数据集；中：在每份数据上训练一个 diffusion policy；右：在 sim 中评估任务成功与约束遵守，并在真机上复现同一任务验证结论。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>1.22cm</b><small>200 条 clean 数据训练后仍有的平均位置误差</small></div>
+      <div><b>1.80°</b><small>同一 policy 的平均姿态误差</small></div>
+      <div><b>4×</b><small>1.4cm/2° 误差数据要达到 clean 数据同等成功率所需的 demo 倍数</small></div>
+      <div><b>73%</b><small>真机 100 demos policy 的二元任务成功率</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">任务是双臂协作把桌上的箱子搬到货架上：两个 end-effector 必须保持恒定的相对 transform，否则箱子会被拉扯或掉落。这一「保持恒定相对位姿」的要求，在 configuration space 中是一个<b>非线性运动学等式约束</b>（在 end-effector 空间中是 affine，但在关节空间中高度非线性）。作者刻意选择输出关节角动作，以便研究曲率等更丰富的约束几何问题，并在障碍物间利用冗余度避障。</p>
+
+    <h3>Transform-locking 遥操作与数据采集</h3>
+    <p>遥操作者用 VR 头显 + 手柄在 end-effector 空间控制机器人，通过 <b>stereographic shoulder-elbow-wrist (SSEW) angle</b> 参数化解析 IK 来控制 7-DoF 冗余臂的「肘部」以避障（该参数化避开了其他解法中会出问题的表征奇异点）。按下手柄摇杆即进入「transform-locking」模式：选一只臂为控制臂，系统固定两 end-effector 的相对位姿，从属臂自动求解并跟踪 IK 以维持初始相对 transform。开启锁定后位置误差 &lt; 10⁻¹⁰ m、姿态误差 &lt; 10⁻⁶ rad，被视为「无约束违反」。观测含 4 路 RGB（2 场景 + 2 腕部）+ 双臂关节角与上一时刻夹爪指令；动作为 16 维（双臂关节角 + 夹爪）。</p>
+
+    <h3>三个受控因素</h3>
+    <ul>
+      <li><b>数据量（quantity）：</b>用 50 / 100 / 150 / 200 条 demo 分别训练。</li>
+      <li><b>数据质量（quality）：</b>用一个 <b>SDE 相关噪声过程</b> dZ<sub>t</sub> = −αZ<sub>t</sub>dt + η dW<sub>t</sub>（α=0.01，Euler–Maruyama 采样）对 end-effector 指令注入时间相关的约束违反，重新生成仍能完成任务但质量下降的数据；通过 η 控制 4 个 perturbation level。用相关噪声而非 i.i.d. 噪声，是为了更真实地模拟低质量数据。</li>
+      <li><b>约束难度（curvature）：</b>把约束流形定义为 𝓜 = {q : ᴸX_ᴿ(q) = ᴸX_ᴿ(q₀)}，用 JAX 算 Riemannian curvature tensor 𝓡，取其 Frobenius 范数平方（即 <b>Kretschmann scalar</b>）来用单个标量刻画流形偏离欧氏空间的程度（比常用的 scalar curvature 更好，避免正负抵消）。</li>
+    </ul>
+
+    <h3>评估指标</h3>
+    <p>任务层面粗分四类结局：<b>I. Full Success</b>（双爪成功搬运）、<b>II. Single-Gripper Success</b>（途中一只爪脱落但仍搬到）、<b>III. Box Drop Failure</b>（抓到但搬运中掉落）、<b>IV. Full Failure</b>（没抓起来）；I+II 记为「成功」。约束层面则度量搬运过程中两 end-effector 相对 transform 的<b>相对</b>位置/姿态误差——只在 policy 预测动作的 knot-points 上评估（一阶保持插值出的中间点即使原预测满足约束也可能违反），且用预测动作而非实测位置，以剥离底层控制器与接触力的混淆。位置误差为欧氏距离，姿态误差为 SO(3) geodesic distance。</p>
+    <figure>
+      <img src="img/four-cases.webp" alt="four outcome categories">
+      <figcaption><b>四类结局的可视化</b>（从左到右）：绿=Full Success、黄=Single-Gripper Success、橙=Box Drop、红=Push/Full Fail。每个 policy 在 200 次 trial 上按此分类统计成功率。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">仿真中共采集 200 条 transform-locking demo，交叉「4 种数据量 × 4 个 perturbation level」训练 16 个 policy，每个 policy 跑 200 次评估。真机上另采集 100 条 demo 训练一个 policy 验证。下表为各 perturbation level 对应数据集在 end-effector 空间的约束违反幅度（由 η 控制）。</p>
+
+    <h3>数据集扰动水平（tab:noise_description）</h3>
+    <table>
+      <tr><th>Perturbation Level</th><th>η</th><th>Avg. Position Error (cm)</th><th>Avg. Orientation Error (deg)</th></tr>
+      <tr><td>0</td><td>0.0</td><td>0.00</td><td>0.00</td></tr>
+      <tr><td>1</td><td>0.001</td><td>0.40</td><td>0.29</td></tr>
+      <tr><td>2</td><td>0.0025</td><td>1.01</td><td>0.71</td></tr>
+      <tr><td>3</td><td>0.005</td><td>2.02</td><td>1.43</td></tr>
+    </table>
+
+    <h3>成功率：质量比数量更能预测成败</h3>
+    <p>任务成功率整体符合对数据量与质量的「scaling laws」——数据越多、越干净越好。但作者强调在单任务设定下 <b>数据质量比数据量更能预测任务完成</b>：值得注意的是，<b>仅用 50 条 clean demo 训练的 policy，其 Full Success 率就高于用 200 条 level-3 数据训练的 policy</b>。一个有趣的例外是 perturbation level 1 的 policy 与完全干净数据训练的 policy 表现相当甚至略好——作者推测轻微加噪扩大了数据支撑集，带来的多样性收益盖过了微小约束违反的代价（与 <i>block et&nbsp;al.</i> 的理论一致）。</p>
+
+    <h3>约束满足：只学到粗略结构（tab:all_results）</h3>
+    <p>约束满足随数据变多、变干净而改善，且<b>对数据量比对噪声更敏感</b>。下表为各 policy 预测动作中相对 transform 的平均位置误差（cm，均值±标准差）：</p>
+    <table>
+      <tr><th>Perturbation</th><th>50 Demos</th><th>100 Demos</th><th>150 Demos</th><th>200 Demos</th></tr>
+      <tr><td>Level 0</td><td>1.38 ± 0.83</td><td>1.32 ± 0.71</td><td>1.24 ± 0.61</td><td class="good">1.22 ± 0.58</td></tr>
+      <tr><td>Level 1</td><td>1.44 ± 0.86</td><td>1.35 ± 0.72</td><td>1.28 ± 0.62</td><td>1.22 ± 0.57</td></tr>
+      <tr><td>Level 2</td><td>1.61 ± 0.92</td><td>1.36 ± 0.70</td><td>1.27 ± 0.61</td><td>1.27 ± 0.59</td></tr>
+      <tr><td>Level 3</td><td>1.74 ± 1.02</td><td>1.48 ± 0.74</td><td>1.44 ± 0.68</td><td>1.30 ± 0.60</td></tr>
+    </table>
+    <blockquote>“even the policy trained with 200 clean demonstrations exhibits 1.22cm and 1.80° of average error in the relative transform constraint.”</blockquote>
+    <p>两点核心观察：(1) diffusion policy <b>无法精确</b>从约束流形上采样——即便 200 条 clean 数据仍有 1.22cm / 1.80° 误差；(2) 但只要数据足够，它<b>能学到流形的粗结构</b>，哪怕数据只是近似满足约束。例如把 clean 动作加噪到最高扰动级，200 条 demo 的 policy 位置误差仅上升 <b>6.6%</b>，而 50 条 demo 的却上升 <b>26%</b>。作者据此推测：数据足够时 diffusion 可能在「平均掉」违反约束的样本，从而恢复出数据流形的近似结构（呼应 <i>Belkin et&nbsp;al.</i> 关于插值估计器仍可最优泛化的经典结论）。这意味着在机器人常处的低数据区，数据质量尤为关键。</p>
+    <figure>
+      <img src="img/kde-dataset-size.webp" alt="error distribution by dataset size">
+      <figcaption><b>误差分布随数据量的变化</b>（level 0，KDE）。左为位置误差、右为姿态误差。数据越多，分布越向左、越尖锐（200 demos 峰值最高、误差最小），50 demos 则明显右移且更宽。</figcaption>
+    </figure>
+
+    <h3>曲率：与表现几乎无相关</h3>
+    <p>作者几乎没有发现 Kretschmann scalar 与误差的相关性：16 个 policy 上 Pearson 相关系数平均 <b>−0.098 ± 0.033</b>（范围 −0.165 ~ −0.036），Spearman 平均 <b>−0.110 ± 0.036</b>——均为可忽略量级。进一步用 rollout 级曲率统计（mean / max）预测结局：以三类结局条件分布间的 <b>Jensen–Shannon divergence</b> 衡量，mean 与 max 曲率的最高散度仅 0.08 / 0.06 nats、平均 0.04 / 0.03 nats，而完全不相交时上限为 ln(3)=1.099 nats。结论是曲率几乎不携带预测信息。作者给出两种可能解释：Kretschmann scalar 未能揭示真正起作用的曲率；或<b>数据流形本身的几何</b>影响更大（但其曲率难以估计）。</p>
+
+    <h3>真机验证（tab:hardware_success）</h3>
+    <p>真机 100 demos policy 二元成功率 <b>73%</b>（I=60%、II=13%、III=8%、IV=19%），约束误差 0.81±0.42cm / 1.04±0.55°。真机上「推箱子摆正」比仿真难得多（占近 1/5 rollout，因所用箱子又薄又轻易被碰倒），而 box drop 反而比仿真少。sim 与真机 policy 的约束违反都在 <b>1–3cm、2–2.5°</b> 量级，却仍能可靠完成任务——说明<b>柔顺夹爪 + 强抓握力</b>缓解了微小约束违反，底层控制/柔顺与 imitation learning 算法进步同样重要。</p>
+    <figure>
+      <img src="img/hardware-overlay.webp" alt="hardware evaluation initial conditions overlay">
+      <figcaption>真机双臂评估的初始条件叠加图：多次评估中箱子初始位姿分布的可视化。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 本文无独立「Limitations」章节；以下各点整理自 Conclusion 与 Future Work，标注为作者明确<i>陈述（stated）</i>或由实验设计<i>推断（inferred）</i>。</div>
+    <details class="lim" open><summary>只学到粗略近似，依赖柔顺兜底（stated）</summary><p>即便用完全满足约束的数据训练，diffusion policy 也只学到约束流形的粗略近似；任务仍能成功，很大程度归因于鲁棒底层控制器或物理柔顺夹爪，而非 policy 自身精确满足约束。</p></details>
+    <details class="lim"><summary>曲率结论不明确，未能定位真正起作用的几何（stated）</summary><p>Kretschmann scalar 与约束满足/任务成功的相关性可忽略。作者自陈两种可能：真正起作用的曲率未被该标量揭示（rollout 只探索了配置空间的一小部分）；或数据流形几何影响更大，但因只有粗略近似而难以测量其曲率。</p></details>
+    <details class="lim"><summary>单任务、单约束的案例研究（inferred）</summary><p>全部结论基于一个双臂 pick-and-place 任务与一类相对 transform 约束。作者明确指出未来需验证结论是否能推广到更广泛的运动学约束任务。</p></details>
+    <details class="lim"><summary>动作空间受限于关节角（stated future work）</summary><p>实验只用了 configuration-space 关节角动作；换成 end-effector pose 或 relative action 等其他动作空间时结论是否成立仍是开放问题。</p></details>
+    <details class="lim"><summary>是否为 diffusion policy 独有尚不清楚（stated）</summary><p>这些倾向究竟是 diffusion policy 特有，还是更普遍地适用于 imitation learning，作者称仍是 open question。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · How Well do Diffusion Policies Learn Kinematic Constraint Manifolds? · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2510.01404">https://arxiv.org/abs/2510.01404</a> · <a href="https://diffusion-learns-kinematic.github.io/">Project page</a>
+  </div>
+</footer>
+
+</body>
+</html>

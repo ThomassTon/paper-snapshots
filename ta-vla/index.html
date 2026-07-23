@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TA-VLA：Torque-Aware Vision-Language-Action Models 的设计空间</title>
+<meta name="keywords" content="VLA, torque-aware, force feedback, contact-rich manipulation, action-torque diffusion, joint torque, π0, RDT, 力反馈, 接触密集操作">
+<meta name="description" content="TA-VLA 系统性研究如何把关节力矩 (torque) 信号注入 VLA 模型：力矩放在 decoder、历史聚合成单 token、并把预测未来力矩作为辅助目标，显著提升接触密集操作成功率。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">CoRL 2025 · Robotics (cs.RO)</span>
+    <h1>TA-VLA：厘清 Torque-Aware VLA 的设计空间</h1>
+    <div class="sub">让 VLA 模型学会"感知力矩"——把 joint torque 信号系统性地接入现有 VLA 架构</div>
+    <div class="authors">Zongzheng Zhang, Haobo Xu, Zhuo Yang, Chenghao Yue, Zehao Lin, Huan-ang Gao, Ziwei Wang, Hao Zhao</div>
+    <p class="lead">现有 VLA 模型只看图像与语言，缺乏对力反馈的感知，难以判断"插头到底插进去没有"这类接触密集任务。本文以 π<sub>0</sub> 为主体，系统性地搜索把 torque 注入 VLA 的设计空间，得到三条结论：力矩适配器应放在 <b>decoder</b>；历史力矩应聚合成 <b>单个 token</b>；把预测未来力矩当作 <b>辅助目标</b> 能进一步提升表现。</p>
+    <div class="meta">
+      <span>硬件：Cobot Magic ALOHA 双臂 · 每臂 7-DoF</span>
+      <span>基线：ACT · RDT · π<sub>0</sub></span>
+      <span>10 个真机任务 · 每任务 20 次</span>
+      <span><a href="https://arxiv.org/abs/2509.07962">📄 arXiv:2509.07962</a></span>
+      <span><a href="https://arxiv.org/pdf/2509.07962">PDF</a></span>
+    </div>
+    <div class="kw"><span>VLA</span><span>torque-aware</span><span>force feedback</span><span>contact-rich manipulation</span><span>action-torque diffusion</span><span>joint torque</span><span>π0 / RDT</span><span>力反馈</span><span>接触密集操作</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">很多操作任务需要"感知并响应力信号"才能判断任务是否完成、才能做闭环控制。但当前 VLA 模型无法整合这类细微的物理反馈。关键洞察是：<b>joint torque（关节力矩）</b>无需外部力传感器，就能反映末端执行器接触动力学的细微变化——机械臂受到外部接触时，力沿整条运动链产生可观测的力矩变化。</p>
+    <blockquote>"current Vision-Language-Action (VLA) models lack the ability to integrate such subtle physical feedback." —— 本文以此为出发点，系统性研究把 torque 接入 VLA 的设计空间。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>Figure 1：(a) 7-DoF 机械臂在充电头插入任务中的力矩响应——灰色区域为无接触段（力矩几乎平坦）；橙色段是<b>失败</b>的插入尝试（有接触但没插进去，只有小幅力矩波动）；绿色段是<b>成功</b>插入，出现大而独特的力矩尖峰。(b) 7-DoF 机械臂各关节力矩映射示意。(c) 本文探索的力矩特征设计空间，涵盖<b>当前 / 历史 / 未来</b>三类信号。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>0→17</b><small>Charger Plugging（/20）π<sub>0</sub> vs +obs+obj</small></div>
+      <div><b>0→17</b><small>USB Plugging（/20）π<sub>0</sub> vs +obs+obj</small></div>
+      <div><b>5→18</b><small>Button Pushing（/20）π<sub>0</sub> vs +obs+obj</small></div>
+      <div><b>3</b><small>关键设计结论（decoder / 单token / 辅助目标）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">大多数 VLA 由两部分组成：<b>conditioning encoder</b>（感知环境，把图像 <i>I</i> 与语言指令 <i>L</i> 融合成条件表征）和 <b>denoising decoder</b>（在低维本体状态 + 加噪动作块上逐步去噪，生成动作序列）。本文以 π<sub>0</sub> 为代表，沿三个问题展开设计空间搜索：力矩<b>放哪</b>、历史<b>怎么编码</b>、要不要<b>预测未来</b>。</p>
+
+    <h3>① 放哪？Encoder vs. Decoder（Torques as Observations）</h3>
+    <p>把当前力矩 τ<sub>t</sub> 用一个 adapter 编码成 token，可以拼进 encoder 的条件输入（Enc），也可以和本体状态 q<sub>t</sub> 一起送进 decoder（DePre / DePost 两种插入位置）。结论是 <b>DePost（放在 decoder）最好</b>——因为力矩信号与 decoder 的输入模式更对齐，且 decoder 对输入变化更敏感。作者还用 <b>Normalized HSIC</b> 度量各模态 token 与隐状态的统计相关性，佐证力矩与状态 token 高度对齐。</p>
+    <figure>
+      <img src="img/where-to-embed.webp" alt="architectures for embedding torque signals">
+      <figcaption>Figure 2：三种力矩嵌入架构。Enc = 把 τ<sub>t</sub> 作为额外条件 token 拼进 encoder；DePre / DePost = 把 τ<sub>t</sub> 与状态 token 一起放进 denoising decoder 的前 / 后位置。effort（力矩）维度为 14，MLP adapter 把它投影到模型内部维度（encoder 2048 / decoder 1024）。</figcaption>
+    </figure>
+
+    <h3>② 历史怎么编码？单帧不够，聚合成单 token（Torque History）</h3>
+    <p>接触后语言与视觉几乎不变（视觉还常被遮挡），但力矩会剧烈变化，<b>单帧力矩不足以刻画动态模式</b>。作者从过去 2 秒均匀采样 10 帧力矩，比较两种编码：<b>frame-wise（每帧一个 token，H Tokens）</b> vs. <b>aggregate（把全部历史拼成单个 140 维 token，1 Token）</b>。结论是 <b>把整段历史聚合进单个 token 最有效</b>——因为它保留了 decoder 原有的输入模式（pattern completeness）；实验中在输入序列里插入额外随机噪声 token 会破坏这一模式并降低表现（Table 4）。</p>
+    <figure>
+      <img src="img/torque-history.webp" alt="architectures for embedding torque history">
+      <figcaption>Figure 4：编码力矩历史的架构选择——历史力矩既可放 encoder 也可放 decoder，既可逐帧成 token 也可聚合成单 token。最优组合是"decoder + 单 token"。</figcaption>
+    </figure>
+
+    <h3>③ 预测未来力矩作为辅助目标（Torques as Objectives）</h3>
+    <p>受自动驾驶中"联合预测与规划"范式启发，作者提出<b>同时预测未来动作与未来力矩</b>。把动作块 <b>A</b><sub>t</sub> ∈ ℝ<sup>H×d<sub>a</sub></sup> 与力矩块 <b>T</b><sub>t</sub> ∈ ℝ<sup>H×d<sub>τ</sub></sup> 拼成联合 token <b>Z</b><sub>t</sub>=[<b>A</b><sub>t</sub>; <b>T</b><sub>t</sub>]，共享同一套 diffusion 权重去噪，但保留各自的 loss（权重 β 平衡二者）。这个辅助任务促使模型建立"物理落地"的交互动力学隐表征，从而更可靠地完成接触密集操作。</p>
+    <blockquote>"This strategy encourages the model to build a physically grounded internal representation of interaction dynamics."</blockquote>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">硬件为 Cobot Magic ALOHA 双臂机器人（每臂 7-DoF，3 个 D435 深度相机），关节力矩由电机电流经 τ = k<sub>t</sub>·i 实时估计，无需外部力传感器。基线为 ACT、RDT、π<sub>0</sub>，均从公开预训练权重在自采数据上微调。共 10 个真机任务（5 个接触密集 + 5 个常规），每任务 20 次试验，每任务 400 条遥操作演示。三种变体：<b>+obs</b>（DePost 单 token 力矩观测）、<b>+obj</b>（联合动作-力矩目标）、<b>+obs+obj</b>（二者结合）。</p>
+
+    <h3>主结果：接触密集任务（成功次数 / 20）</h3>
+    <table>
+      <tr><th>Method</th><th>Button Pushing</th><th>Charger Plugging</th><th>USB Plugging</th><th>Socket Unplugging</th><th>Door Handle Turning</th></tr>
+      <tr><td>ACT</td><td>2</td><td>0</td><td>0</td><td>12</td><td>0</td></tr>
+      <tr><td>RDT</td><td>4</td><td>1</td><td>0</td><td>10</td><td>0</td></tr>
+      <tr><td>π<sub>0</sub></td><td>5</td><td>0</td><td>0</td><td>16</td><td>2</td></tr>
+      <tr><td>π<sub>0</sub> + obs</td><td>15</td><td>16</td><td>15</td><td>19</td><td>13</td></tr>
+      <tr><td>π<sub>0</sub> + obj</td><td>11</td><td>10</td><td>12</td><td>19</td><td>12</td></tr>
+      <tr><td>π<sub>0</sub> + obs + obj</td><td class="good">18</td><td class="good">17</td><td class="good">17</td><td class="good">19</td><td class="good">15</td></tr>
+    </table>
+    <p>常规任务上力矩同样不掉分甚至略有提升——例如 Bottle Pick and Place 从 17 提到 19、Push-to-Position 从 16 提到 18（π<sub>0</sub> → +obs+obj），说明力矩信号"即使在看似无关的任务上也有用"。</p>
+
+    <h3>设计空间消融</h3>
+    <table>
+      <tr><th>Table 1 · 力矩放哪（/20）</th><th>π<sub>0</sub></th><th>Enc</th><th>DePre</th><th>DePost</th></tr>
+      <tr><td>Button Pushing</td><td>5</td><td>7</td><td>8</td><td class="good">10</td></tr>
+      <tr><td>Charger Plugging</td><td>0</td><td>8</td><td>11</td><td class="good">12</td></tr>
+    </table>
+    <table>
+      <tr><th>Table 3 · 历史编码（/20）</th><th>π<sub>0</sub></th><th>Enc-1</th><th>Enc-H</th><th>Dec-1</th><th>Dec-H</th></tr>
+      <tr><td>Button Pushing</td><td>5</td><td>1</td><td>4</td><td class="good">15</td><td>9</td></tr>
+      <tr><td>Charger Plugging</td><td>0</td><td>3</td><td>6</td><td class="good">16</td><td>7</td></tr>
+    </table>
+    <p>Table 1 印证"放 decoder（DePost）最优"；Table 3 印证"decoder + 单 token（Dec-1）最优"，明显优于把每帧拆成 token（Dec-H）或放进 encoder。</p>
+
+    <h3>跨模型 & 跨本体泛化</h3>
+    <p>把同一套策略迁到 <b>RDT</b>：Button Pushing 4→16、Charger Plugging 1→15、Bottle Pick and Place 17→19（RDT → RDT+obs+obj），说明结论不局限于 π<sub>0</sub>。在 <b>ROKAE SR</b> 机械臂上做电动车充电头插入的跨本体实验（200 条演示、训练 50K 步），无需改架构即可从快充口迁移到慢充口。</p>
+
+    <figure><img src="img/contact-rich.webp" alt="contact-rich tasks visualization"><figcaption>Figure 9：接触密集任务可视化。最后一列展示任务过程中若干关节的力矩响应；每个任务的第一次失败尝试用红箭头标记、最终成功尝试用绿箭头标记——力矩尖峰清晰对应接触成败。</figcaption></figure>
+    <figure><img src="img/qualitative.webp" alt="qualitative rollouts"><figcaption>Figure 7：策略执行可视化。(a) Button Pushing：第一次因未对准失败，第二次成功；(b) Door Handle Turning：第一次转动失败，第二次打开门；(c) 5 个常规任务。</figcaption></figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文 Section 8 (Limitations) 明确<b>作者陈述 (stated)</b>，非本文推断。</div>
+    <details class="lim" open><summary>力矩估计依赖电机电流，易受标定 / 噪声 / 热漂移影响</summary><p>力矩由内部电机电流估计而非外部力传感器，"can be affected by motor calibration, sensor noise, or thermal drift"，在长时间或高负载任务中可能退化性能。</p></details>
+    <details class="lim"><summary>扩展到其它物理模态的可扩展性尚不清楚</summary><p>力矩虽有效，但在 transformer 的共享 token 预算下，能否扩展到 tactile sensing、temperature 等更丰富的物理模态仍是未知数（"it remains unclear how scalable the framework is"）。</p></details>
+    <details class="lim"><summary>更多样真实场景下的鲁棒性有待验证</summary><p>需进一步评估在更多样、更真实场景下的鲁棒性，并探索更丰富多模态信号的对齐与融合。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · TA-VLA: Elucidating the Design Space of Torque-Aware VLA Models · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2509.07962">https://arxiv.org/abs/2509.07962</a>
+  </div>
+</footer>
+
+</body>
+</html>

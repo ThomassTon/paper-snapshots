@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reactive Diffusion Policy：慢-快视触觉策略学习</title>
+<meta name="keywords" content="visual-tactile imitation learning, reactive policy, slow-fast policy, latent diffusion policy, asymmetric tokenizer, action chunking, tactile feedback, teleoperation, AR, contact-rich manipulation">
+<meta name="description" content="RDP 用慢-快双层策略把 latent diffusion 的复杂轨迹建模与高频触觉闭环控制统一起来，在三项接触密集任务上比视觉模仿学习基线提升 >35%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · Visual-Tactile Imitation Learning</span>
+    <h1>Reactive Diffusion Policy</h1>
+    <div class="sub">面向接触密集操作的慢-快视触觉模仿学习 · Slow-Fast Visual-Tactile Policy Learning</div>
+    <div class="authors">Han Xue, Jieji Ren, Wendi Chen, Gu Zhang, Yuan Fang, Guoying Gu, Huazhe Xu, Cewu Lu — Shanghai Jiao Tong University · Tsinghua University (IIIS)</div>
+    <p class="lead">人靠视觉 + 触觉完成接触密集任务，能对外界变化<strong>即时反应</strong>并<strong>自适应控制接触力</strong>；而机器人做不到。RDP 用<strong>慢-快两级层次</strong>把 latent diffusion 的复杂轨迹建模与高频触觉闭环控制统一到一个框架中，并配套一套用 AR 提供实时力反馈的低成本遥操作系统 TactAR。在三项接触密集任务上，RDP 相比 SOTA 视觉模仿学习基线整体得分提升 <strong>&gt;35%</strong>。</p>
+    <div class="meta">
+      <span>arXiv 2503.02881</span><span>RSS 2025</span><span>三项接触密集任务 · 双臂</span>
+      <span><a href="https://arxiv.org/abs/2503.02881">📄 arXiv:2503.02881</a></span>
+      <span><a href="https://arxiv.org/pdf/2503.02881">PDF</a></span>
+    </div>
+    <div class="kw"><span>visual-tactile imitation learning</span><span>reactive policy</span><span>slow-fast policy</span><span>latent diffusion policy</span><span>asymmetric tokenizer</span><span>action chunking</span><span>tactile feedback</span><span>AR teleoperation</span><span>contact-rich manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <figure>
+      <img src="img/teaser.webp" alt="TactAR + RDP 总览">
+      <figcaption>Figure 1：TactAR 是低成本、通用的遥操作系统，通过 AR 提供实时触觉/力反馈（支持双臂机器人、多种触觉/力传感器如 GelSight Mini、MCTac、Force）；RDP 是 slow-fast 模仿学习算法——慢策略（Slow Policy @ 1–2 Hz）建模复杂动作轨迹，快策略（Fast Policy @ &gt;20 Hz）基于高频触觉/力反馈做闭环修正。</figcaption>
+    </figure>
+    <p class="lead">现有视觉模仿学习（visual IL）普遍依赖 <strong>action chunking</strong> 来建模复杂行为——一次预测一段动作块并开环执行。这带来两个瓶颈：一是在动作块执行期间<strong>无法即时响应</strong>实时的触觉反馈；二是大多数遥操作系统难以提供细粒度的触觉/力反馈，限制了能采集、能完成的任务范围。</p>
+    <blockquote>“Existing visual imitation learning approaches rely on action chunking to model complex behaviors, which lacks the ability to respond instantly to real-time tactile feedback during the chunk execution.”</blockquote>
+    <p>论文的设计灵感来自人类的<strong>慢-快双系统</strong>：慢系统开环预测粗略动作（伸手去够杯子），快系统再依据触觉反馈做闭环微调（接触后调整抓握力）。RDP 正是要在一个统一框架里同时具备“复杂轨迹建模”与“快速反应”。</p>
+    <figure>
+      <img src="img/pipeline-comparison.webp" alt="不同推理管线对比">
+      <figcaption>Figure 5：各类推理管线对比。(a) Vanilla action chunking，块执行期间开环；(b) 加温度集成 temporal ensembling 的半闭环；(c) 本文 slow-fast 管线，具备快速响应的闭环能力；(d) 人类在接触密集任务中的控制模式——慢系统开环预测粗动作，快系统凭触觉反馈闭环微调。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>&gt;35%</b><small>三项任务整体得分较基线提升</small></div>
+      <div><b>1–2 Hz</b><small>慢策略（latent diffusion）频率</small></div>
+      <div><b>&gt;20 Hz</b><small>快策略触觉闭环频率</small></div>
+      <div><b>&lt;1 ms</b><small>快策略单次推理，理论支持 &gt;300 Hz</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">RDP 采用两级层次：<strong>(1) 慢策略</strong>——low-frequency 的 Latent Diffusion Policy (LDP)，在 latent 空间里以低频（1–2 Hz）预测高层动作块；<strong>(2) 快策略</strong>——high-frequency 的 Asymmetric Tokenizer (AT)，以高频（&gt;20 Hz）依据触觉/力反馈做闭环控制。数据侧则由 TactAR 遥操作系统采集：它把触觉信号表示为<strong>3D deformation field</strong>（一种可跨多种触觉/力传感器通用的表示），并通过 AR “贴附”到机器人末端，让操作者在 3D 空间中感知丰富的接触信息。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="RDP 框架">
+      <figcaption>Figure 6：RDP 框架。(a) 训练分两阶段——先训练快策略 Asymmetric Tokenizer（1D CNN encoder 把动作块 A 编码成 latent action chunk Z，GRU decoder 结合高频触觉/力 F 以 L1 loss 重建动作，附 KL 惩罚）；再训练慢策略 Latent Diffusion Policy（1D U-Net 在 latent 空间去噪，MSE loss）。(b) 推理时慢策略用低频观测建模复杂行为，快策略用高频触觉/力输入、以自回归方式微调慢策略给出的 latent action chunk，实现闭环。</figcaption>
+    </figure>
+    <h3>慢策略：Latent Diffusion Policy (LDP)</h3>
+    <p>把动作块先压缩进 latent 空间，diffusion（1D U-Net）在 latent 空间对随机噪声去噪、条件于低频观测，充当“神经规划器（neural planner）”。在 latent 空间做 diffusion 让它能理解复杂视觉线索、建模多模态、并对非马尔可夫行为更鲁棒，同时把慢策略的推理频率压到 1–2 Hz。</p>
+    <h3>快策略：Asymmetric Tokenizer (AT)</h3>
+    <p>“非对称”体现在编码器与解码器的输入不同：encoder 只看动作块，decoder 在重建时额外接入<strong>高频触觉/力反馈 F</strong>。推理时它以自回归方式，围绕慢策略预测的 latent action chunk 做<strong>亚毫米级（sub-millimeter）</strong>的反应式修正——修正量看似微小，却对接触密集任务的整体表现影响显著。单次推理 &lt;1 ms，理论上可支持 &gt;300 Hz。</p>
+    <h3>Latency matching</h3>
+    <p>为对齐真机的执行延迟，RDP “discard the first few action steps predicted by the model” —— 丢弃模型预测的前几步，只把与实际延迟精确匹配的动作发给机器人。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在三项接触密集任务（<strong>Peeling 削黄瓜、Wiping 擦花瓶、Bimanual Lifting 双臂夹起纸杯</strong>）上评测。基线为 Diffusion Policy (DP) 及其加触觉 embedding 的变体（DP w. tactile emb.）；RDP 分别配 GelSight Mini、MCTac、Force 等不同传感器验证通用性。评测含无扰动 / 接触前扰动 / 接触后扰动等条件（得分 0–1）。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="三项实验任务">
+      <figcaption>Figure 7：三项任务的执行阶段。Peeling（抓削皮器→接近黄瓜→开削→可选扰动）、Wiping（抓橡皮→接近花瓶→擦拭曲面→可选扰动）、Bimanual Lifting（双臂抓手柄→接近→夹住→抬起→送到目标位）。</figcaption>
+    </figure>
+
+    <h3>Peeling（TABLE II，得分 0–1）</h3>
+    <table>
+      <tr><th>Method</th><th>No Perturb.</th><th>Perturb. Before</th><th>Perturb. After</th><th>All</th></tr>
+      <tr><td>DP</td><td>0.56</td><td>0.58</td><td>0.19</td><td>0.44</td></tr>
+      <tr><td>DP w. tactile emb.</td><td>0.48</td><td>0.55</td><td>0.15</td><td>0.39</td></tr>
+      <tr><td>RDP (GelSight)</td><td>0.98</td><td>0.93</td><td>0.80</td><td class="good">0.90</td></tr>
+      <tr><td>RDP (MCTac)</td><td>1.00</td><td>0.84</td><td>0.79</td><td class="good">0.88</td></tr>
+      <tr><td>RDP (Force)</td><td>0.99</td><td>0.98</td><td>0.88</td><td class="good">0.95</td></tr>
+    </table>
+
+    <h3>Wiping（TABLE III，得分 0–1）</h3>
+    <table>
+      <tr><th>Method</th><th>No Perturb.</th><th>Perturb. Before</th><th>Perturb. After</th><th>All</th></tr>
+      <tr><td>DP</td><td>0.75</td><td>0.70</td><td>0.25</td><td>0.57</td></tr>
+      <tr><td>DP w. tactile emb.</td><td>0.60</td><td>0.75</td><td>0.15</td><td>0.50</td></tr>
+      <tr><td>RDP (GelSight)</td><td>0.85</td><td>0.95</td><td>0.50</td><td class="good">0.77</td></tr>
+      <tr><td>RDP (Force)</td><td>0.95</td><td>0.85</td><td>0.80</td><td class="good">0.87</td></tr>
+    </table>
+
+    <h3>Bimanual Lifting（TABLE IV）</h3>
+    <table>
+      <tr><th>Method</th><th>Clamp</th><th>Lift</th><th>Score</th></tr>
+      <tr><td>DP</td><td>0%</td><td>0%</td><td>0.00</td></tr>
+      <tr><td>DP w. tactile emb.</td><td>10%</td><td>10%</td><td>0.08</td></tr>
+      <tr><td>RDP (GelSight + MCTac)</td><td>100%</td><td>100%</td><td class="good">0.55</td></tr>
+      <tr><td>RDP (Force)</td><td>100%</td><td>90%</td><td class="good">0.80</td></tr>
+    </table>
+    <blockquote>“As shown in Tab. II, Tab. III and Tab. IV, RDP improves the overall score by a large margin (&gt;35%) compared to various Diffusion Policy baselines.”</blockquote>
+    <p>差距在<strong>接触后扰动（Perturb. After）</strong>一栏最为悬殊：基线 DP / DP w. tactile emb. 掉到 0.15–0.25，而 RDP 仍能维持 0.50–0.88——正对应其“动作块执行中仍可闭环反应”的设计目标。RDP 在不同触觉/力传感器（GelSight、MCTac、Force）下都成立，验证了通用性。</p>
+
+    <h3>Ablations</h3>
+    <figure>
+      <img src="img/ablation.webp" alt="消融：Peeling 接触后扰动">
+      <figcaption>Figure 10：Peeling 任务（接触后扰动）消融。相比 RDP (MCTac)，用 Absolute Action 会下降 59.5%，去掉 Latency Matching 会下降 50.6%——两个设计对反应式性能都关键。</figcaption>
+    </figure>
+    <p>另一组消融（TABLE V，Wiping / 接触后扰动）说明：单纯给 DP 缩短 chunk 换取响应速度会崩坏——DP 8 帧块 grasp 成功率 100%、得分 0.15，缩到 2 帧块后 grasp 掉到 20%、得分仅 0.10；temporal ensemble（τ=0.2）grasp 30%、得分 0.05。RDP 则 grasp 100%、得分 0.50。论文指出 temporal ensemble 的表现对平滑系数“very sensitive”，难以实用。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文正文/讨论中<strong>作者明确陈述（stated）</strong>的局限。</div>
+    <details class="lim" open><summary>快策略只处理高频触觉/力，不能处理高频图像</summary><p>“The fast policy in the RDP algorithm is currently limited to responding to high-frequency tactile / force input signals but cannot swiftly process high-frequency image inputs.” —— 高频视觉闭环仍是未解问题。</p></details>
+    <details class="lim"><summary>TactAR 仅面向两指夹爪</summary><p>“TactAR system is designed for two-finger grippers.” 作者把扩展到灵巧手（dexterous hands）列为有前景的方向。</p></details>
+    <details class="lim"><summary>遥操作仍不如人手直接操作直观高效</summary><p>作者指出人通过该系统的遥操作 “not as intuitive or efficient as direct human-hand operations”。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Reactive Diffusion Policy · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2503.02881">https://arxiv.org/abs/2503.02881</a>
+  </div>
+</footer>
+
+</body>
+</html>

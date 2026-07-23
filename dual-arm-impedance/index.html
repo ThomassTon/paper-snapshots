@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Projected Inverse Dynamics Approach for Dual-arm Cartesian Impedance Control</title>
+<meta name="keywords" content="dual-arm manipulation, Cartesian impedance control, projected inverse dynamics, 力闭合抓取, internal force, friction cone, contact wrench optimisation, force-sensorless, 操作空间控制, KUKA LWR">
+<meta name="description" content="用投影逆动力学框架把双臂协同操作分解为约束/非约束子空间：非约束控制器实现 6-DOF 笛卡尔阻抗，约束控制器在摩擦锥内以最小力矩维持抓取——全程不测接触力。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .photos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0} @media(max-width:760px){.photos{grid-template-columns:repeat(2,1fr)}}
+  .photos figure{margin:0;padding:8px}
+  .photos figcaption{text-align:center;font-size:13px;margin-top:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ROBOTICS · IROS 2018 · IMPEDANCE CONTROL</span>
+    <h1>A Projected Inverse Dynamics Approach for Dual-arm Cartesian Impedance Control</h1>
+    <div class="sub">用投影逆动力学把双臂操作拆成两个正交子空间：一个做任务与阻抗，一个只维持抓取</div>
+    <div class="authors">Hsiu-Chin Lin, Joshua Smith, Keyhan Kouhkiloui Babarahmati, Niels Dehio, Michael Mistry · University of Edinburgh / University of Birmingham / TU Braunschweig</div>
+    <p class="lead">面向刚性物体的双臂协同操作，本文在 <b>projected inverse dynamics</b> 框架下把控制力矩正交分解：<b>非约束（unconstrained）</b> 分量实现物体上的 6-DOF 笛卡尔阻抗行为，<b>约束（constrained）</b> 分量在摩擦锥等约束内以<b>最小力矩</b>维持接触。关键在于——无需在接触点安装力/力矩传感器，外部扰动力可由物体相对期望位姿的位移直接估计。</p>
+    <div class="meta">
+      <span>平台：dual KUKA LWR "Boris"</span>
+      <span>求解器：GUROBI（实时 QP）</span>
+      <span><a href="https://arxiv.org/abs/1707.00484">📄 arXiv:1707.00484</a></span>
+      <span><a href="https://arxiv.org/pdf/1707.00484">PDF</a></span>
+    </div>
+    <div class="kw">
+      <span>dual-arm manipulation</span><span>Cartesian impedance control</span><span>projected inverse dynamics</span>
+      <span>力闭合抓取 / internal force</span><span>friction cone</span><span>contact wrench optimisation</span>
+      <span>force-sensorless</span><span>操作空间控制</span><span>KUKA LWR</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">很多机器人任务都可以描述为：在<b>约束（constraints）</b>下完成一个期望任务，同时应对<b>外部扰动（disturbances）</b>。例如双臂夹持一个刚性盒子或在桌面上滑动它（约束），与此同时人推动物体或往上加未知重量（扰动）。两类力的区分是关键——<i>约束力不产生运动，而扰动力会</i>。控制器必须同时"意识到"两类力，才能既以期望的阻抗响应去抵抗扰动，又只施加维持接触所必需的挤压力。</p>
+    <blockquote>"The distinction between the two forces is critical as constraint forces do not induce motion, while disturbance forces can. A controller must be aware of contributions from both types of forces in order to achieve its task in an optimal manner."</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="conceptual figure">
+      <figcaption>Fig. 1（概念图）：双臂机器人夹持并操作一个物体，人通过推/拉物体进行交互。机器人需要在维持力闭合抓取的同时，对人施加的未知外力做出符合期望阻抗的响应——且不知道物体的质量。</figcaption>
+    </figure>
+    <p>本文的做法是把问题放进 <b>projected inverse dynamics</b> 框架（源自 Aghili 2005，并沿用 Mistry 2011 把约束纳入操作空间的思路），把单臂"接触刚性环境"的表述扩展到<b>多臂协同操作单一刚体</b>，并在此之上叠加物体处的 6-DOF 笛卡尔阻抗控制与接触力优化。</p>
+    <div class="kpi">
+      <div><b>6-DOF</b><small>物体处期望笛卡尔阻抗</small></div>
+      <div><b>0</b><small>接触点力/力矩传感器数量</small></div>
+      <div><b>2</b><small>正交子空间：任务 / 抓取</small></div>
+      <div><b>QP</b><small>线性化摩擦锥的实时凸优化</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">核心是把约束下的刚体动力学 <b>Mq̈ + h = τ + J<sub>c</sub><sup>T</sup>λ<sub>c</sub></b> 用正交投影矩阵 <b>P = I − J<sub>c</sub><sup>+</sup>J<sub>c</sub></b> 拆成两项：<b>Pτ</b>（落在约束 Jacobian 零空间，产生运动/负责任务与阻抗）和 <b>(I−P)τ</b>（负责施加约束/接触力而不产生关节运动）。两项彼此正交，因此任务控制与抓取维持互不干扰。</p>
+    <figure>
+      <img src="img/framework.webp" alt="framework overview">
+      <figcaption>Fig. 3：控制框架总览。上支路是非约束（motion / impedance）控制器，下支路是约束（contact）控制器；二者相加得到关节力矩。这一分解让"完成任务 + 期望阻抗"与"维持力闭合抓取"在两个正交子空间里并行运行。</figcaption>
+    </figure>
+
+    <h3>阻抗控制器（unconstrained 分量）</h3>
+    <p>目标是让操作点 x ∈ SE(3) 在外部扰动 F<sub>x</sub> 下呈现期望的二阶阻抗行为 <b>Λ<sub>d</sub>ẍ̃ + D<sub>d</sub>ẋ̃ + K<sub>d</sub>x̃ = F<sub>x</sub></b>。把动力学两边乘以 P 消去接触力后，在操作空间得到 <b>F + F<sub>x</sub> = h<sub>c</sub> + Λ<sub>c</sub>ẍ</b>。一个关键简化：</p>
+    <blockquote>"If the desired inertia Λ<sub>d</sub> is identical to the robot inertia Λ<sub>c</sub>, the feedback of the external force F<sub>x</sub> can be avoided."</blockquote>
+    <p>即当放弃惯量整形（inertia shaping）时，控制律简化为 <b>F = h<sub>c</sub> + Λ<sub>c</sub>ẍ<sub>d</sub> − D<sub>d</sub>ẋ̃ − K<sub>d</sub>x̃</b>，无需测量外力即可实现期望阻抗响应。</p>
+
+    <h3>多臂约束：只允许 internal force</h3>
+    <p>对多臂夹持单一刚体，约束被设计成<b>只允许内力（internal wrenches）</b>——即作用在 grasp map 零空间、对物体不产生净力矩的手爪力。基于 analytical dynamics（Udwadia 2001）与 Hirche 2015 的结论，内力与约束力具有同一性质（对任意虚位移不做虚功）。定义第 i 只手的 grasp matrix G<sub>i</sub>，双臂系统 G = [G<sub>L</sub> G<sub>R</sub>] ∈ ℝ<sup>6×12</sup>；用零空间投影 <b>I − G<sup>+</sup>G</b> 构造约束 Jacobian，使 <b>Gλ<sub>c</sub> = 0</b>，从而只贡献内力、对物体无净 wrench。</p>
+
+    <h3>最优接触力（constrained 分量）</h3>
+    <p>维持接触需应对作用在物体上的未知力/力矩（机器人运动惯性、重力等）。手爪施加的接触 wrench 必须满足三类约束（z 轴取接触面法向）：</p>
+    <ul>
+      <li><b>单边约束（unilateral）</b>：法向力 λ<sub>f,z</sub> ≥ 0——只能推、不能拉。</li>
+      <li><b>摩擦锥约束（friction cone）</b>：μ·λ<sub>f,z</sub> ≥ √(λ<sub>f,x</sub>² + λ<sub>f,y</sub>²)，切向力不超过 μ 倍法向力以防滑移。</li>
+      <li><b>力矩约束（moment）</b>：对扭转力矩与剪切力矩加约束（γ·λ<sub>f,z</sub> ≥ |λ<sub>m,z</sub>| 等），保证压心留在手爪接触面内、手不打滚。</li>
+    </ul>
+    <figure>
+      <img src="img/contact-wrench.webp" alt="contact wrench and friction cone">
+      <figcaption>Fig. 2：双臂操作问题示意。F<sub>x</sub> 是作用在操作点 x 的外部 wrench，物体还受惯性与重力（mg）。两个接触 wrench λ<sub>c1</sub>、λ<sub>c2</sub> 及其摩擦锥用绿色表示（为便于可视化，接触力与摩擦锥画成了反方向）。</figcaption>
+    </figure>
+    <p>"最优接触力"= 在满足上述三类约束、并平衡所有外力的前提下，<b>维持全部接触所需的最小力矩</b>。若接触位置固定，这是关于接触 wrench 的<b>凸优化问题</b>。作者把它重写为关于命令 wrench λ<sub>u</sub> 的形式 <b>min λ<sub>u</sub><sup>T</sup>J<sub>c</sub>J<sub>c</sub><sup>T</sup>λ<sub>u</sub></b>，其中所需的外部扰动 F<sub>x</sub> 由阻抗关系式（物体相对期望位姿的位移）估计得到——无需直接测量接触力。二次的摩擦锥用 <b>8 条边的线性化摩擦锥</b>近似，最终在实时控制回路内以 <b>GUROBI</b>（带线性约束的 QP）求解。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">全部实验在 dual KUKA LWR 平台 "Boris" 上完成。虽然末端装有力/力矩传感器，但它们<b>仅用于记录、不进入控制器</b>。共三组实验：单臂桌面擦拭（概念验证）、双臂静态夹持（抗扰动）、双臂轨迹跟踪（带人为干扰）。</p>
+
+    <h3>单臂桌面擦拭（proof of concept）</h3>
+    <p>单臂末端与刚性平面接触，约束施加在竖直位置 z 与两个滚转方向 x、y 上（J<sub>c</sub> ∈ ℝ<sup>3×7</sup>）。任务是在 x,y 平面沿圆形轨迹运动、并维持法向姿态。观察到：命令力随机器人构型变化——当手爪沿较短边加速时更易打滚（δy < δx），因此机器人会<b>推得更用力</b>。与力/力矩传感器读数对比（sanity check），<b>期望接触力与实测接触力高度吻合</b>。</p>
+
+    <h3>双臂静态夹持：抗未知外力与未知质量</h3>
+    <div class="photos">
+      <figure><img src="img/dual-static.webp" alt="dual static"><figcaption>(a) 静态夹持于躯干前</figcaption></figure>
+      <figure><img src="img/dual-push.webp" alt="dual push"><figcaption>(b) 人向下推 ~40cm</figcaption></figure>
+      <figure><img src="img/dual-up.webp" alt="dual release"><figcaption>(c) 松手回弹</figcaption></figure>
+      <figure><img src="img/dual-weight.webp" alt="dual add weight"><figcaption>(d) 顶部加配重</figcaption></figure>
+    </div>
+    <p>盒子尺寸约 <b>20cm×30cm×40cm</b>（控制器已知），重 <b>700 克</b>（控制器<b>未知</b>）。机器人先静态夹持，人把盒子下推约 40cm 停留数秒再松开；随后每次加 <b>500 克</b>配重，直到累计 <b>2500 克</b>。</p>
+    <div class="grid2">
+      <figure><img src="img/dual-push-force.webp" alt="push force"><figcaption>下推实验：接触力范数。蓝=期望接触力，红=实测接触力。</figcaption></figure>
+      <figure><img src="img/dual-weight-force.webp" alt="weight force"><figcaption>加配重实验：接触力随物体总重增加而单调上升。</figcaption></figure>
+    </div>
+    <p>大部分力来自两个末端<b>相互挤压</b>。静态时双臂各以约 <b>70 N</b> 挤压盒子；当人向下推时，为防止盒子滑落，挤压力升到约 <b>110 N</b>。</p>
+    <blockquote>"Note that the robot does not need to measure the external forces in order to know to push harder. The external force is estimated using the displacement of the box relative to its desired position."</blockquote>
+
+    <h3>双臂轨迹跟踪 + 人为干扰</h3>
+    <p>机器人让盒子在 y,z 平面沿圆形轨迹周期运动，期间人试图抓住盒子打断轨迹。跟踪结果显示：人在中段抓住盒子时 y、z 两轴都出现大偏差，一旦松手机器人即恢复跟踪圆形轨迹。所需力也随运动方向变化——<b>向下运动（顺重力）时维持抓取所需的力更小</b>。一个诚实的观察：由于盒子质量对控制器未知、不补偿其重力，<b>真实位置始终略低于期望位置</b>。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 前两条为作者在 Conclusion 中<b>明确陈述（stated）</b>并列为 future work；第三条由实验现象直接推得；第四条由方法设计<b>推断（inferred）</b>。</div>
+    <details class="lim" open><summary>被操作物体被当作"无质量"处理（stated）</summary><p>"the manipulated object is always assumed to be massless. As a consequence, any inertial or gravity forces due to mass of the object are treated as external disturbances by the impedance controller." 作者计划在未来工作中引入对物体质量/惯量的估计，以便在操作中加以补偿。</p></details>
+    <details class="lim"><summary>不做惯量整形（inertia shaping），需引入 F/T 接触传感（stated）</summary><p>无需测量外力这一优点，是以令期望惯量 Λ<sub>d</sub> = 机器人惯量 Λ<sub>c</sub> 为代价换来的（放弃了任意塑造末端惯量的自由度）。作者表示未来计划加入 F/T 接触传感器，以在阻抗控制器中实现 inertia shaping。</p></details>
+    <details class="lim"><summary>不补偿物体重力导致稳态位置偏低</summary><p>轨迹实验中"box positions are consistently lower than desired"——因为物体质量对控制器未知、未补偿重力，真实位置始终低于期望位置。</p></details>
+    <details class="lim"><summary>依赖若干建模假设与实时 QP（inferred）</summary><p>方法假设力闭合抓取、接触位置固定、接触面/接触斑足够大以产生摩擦力与摩擦力矩，并已知摩擦系数 μ、γ 等参数；二次摩擦锥用 8 边线性化近似，且每个控制周期需在实时回路内求解 GUROBI QP。评估仅在单一 dual KUKA LWR 平台上进行，未做跨平台或大规模定量基准对比。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's LaTeX source and figures · A Projected Inverse Dynamics Approach for Dual-arm Cartesian Impedance Control · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/1707.00484">https://arxiv.org/abs/1707.00484</a>
+  </div>
+</footer>
+
+</body>
+</html>

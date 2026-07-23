@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>跨夹爪零样本泛化：Learning-optimization Diffusion Policy</title>
+<meta name="keywords" content="diffusion policy, cross-gripper generalization, zero-shot, constrained denoising, safety projection, quadratic programming, pick-and-place, imitation learning, DP3, 机器人操作">
+<meta name="description" content="免重训的扩散策略：在推理阶段用约束去噪把轨迹投影到新夹爪几何，跨 6 种夹爪零样本泛化，成功率 93.3%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics · Diffusion Policy</span>
+    <h1>免重训的跨夹爪抓放：Learning-optimization Diffusion Policy</h1>
+    <div class="sub">Pick-and-place Manipulation Across Grippers Without Retraining: A Learning-optimization Diffusion Policy Approach</div>
+    <div class="authors">Xiangtong Yao, Yirui Zhou, Yuan Meng, Liangyu Dong, Lin Hong, Zitao Zhang, Zhenshan Bing, Kai Huang, Fuchun Sun, Alois Knoll · TUM / HKUST / Nanjing Univ. / SYSU / Tsinghua</div>
+    <p class="lead">换一个末端夹爪就得重训 diffusion policy？本文把「学习」和「优化」拆开：策略照常用 base gripper 的示范离线训练，而在<strong>推理阶段</strong>用一次 <em>constrained denoising</em> 把生成轨迹投影到新夹爪的几何与安全约束上。无需为新夹爪采集任何数据或微调，在 Franka Panda 上跨 6 种夹爪零样本泛化，抓放成功率从 baseline 的 23–27% 提升到 <strong>93.3%</strong>。</p>
+    <div class="meta">
+      <span>Franka Panda · 6 grippers</span>
+      <span>backbone: Simple DP3</span>
+      <span>2025 · cs.RO</span>
+      <span><a href="https://arxiv.org/abs/2502.15613">📄 arXiv:2502.15613</a></span>
+      <span><a href="https://github.com/yaoxt3/GADP">💻 Code (GADP)</a></span>
+    </div>
+    <div class="kw"><span>diffusion policy</span><span>cross-gripper generalization</span><span>zero-shot</span><span>constrained denoising</span><span>safety projection</span><span>quadratic programming</span><span>pick-and-place</span><span>DP3</span><span>imitation learning</span><span>机器人操作</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">当前的机器人抓放策略「typically require consistent gripper configurations across training and inference」——训练和部署必须用同一个夹爪。一旦换成新末端执行器，尤其对 imitation learning / diffusion policy 这类行为克隆方法，往往要付出高昂的重训或微调代价。换夹爪会改变末端的 <strong>tool-center-point (TCP)</strong> 位置：直接把预训练策略套到新夹爪上，生成的轨迹要么撞桌（更长的夹爪），要么抓空（更短的夹爪）。</p>
+    <blockquote>「objects cannot be grasped with shorter grippers, and collisions can result from using longer grippers.」——换夹爪造成的轨迹偏移 ‖τ<sup>G_i</sup> − τ<sup>G_0</sup>‖ 超过成功阈值 δ<sub>tol</sub>，任务随之失败。</blockquote>
+    <p>已有的 multi-embodiment 方案（如 HPT、跨本体 latent 对齐）虽然能泛化，但需要大量 embodiment-specific 数据或策略微调，部署灵活性受限。本文的目标是：<strong>不采集新数据、不重训、不微调</strong>，仅在推理时引入夹爪配置，就让训练好的策略适配未见夹爪并完成任务。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption><strong>Fig. 1</strong>（原文）：(a) vanilla diffusion policy 换夹爪时的两类失败——collision（撞桌）与 ungrasped（抓空）。(b) 本文流程：(i) 用 base gripper 的示范离线训练策略 π<sub>θ</sub>；(ii) gripper-aware mapping 把新夹爪的尺寸偏移编码进观测；(iii) 在线优化适配，把生成轨迹约束到不同未见夹爪（robotiq-2f、long finger、short finger…）的几何上。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>93.3%</b><small>seen 物体(block)跨 6 夹爪平均成功率</small></div>
+      <div><b>70.0%</b><small>unseen 物体(banana)平均成功率</small></div>
+      <div><b>6</b><small>零样本适配的夹爪种类</small></div>
+      <div><b>0</b><small>为新夹爪重训 / 采数的成本</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">框架把问题拆成两半：(1) <strong>gripper-invariant knowledge learning</strong> —— 学习与夹爪几何无关的抓取知识；(2) <strong>morphology-aware trajectory optimization</strong> —— 推理时按夹爪形态优化轨迹。策略主干沿用 <em>Simple DP3</em>（3D Diffusion Policy），训练与 DDPM 一致；推理用 DDIM，10 步去噪。关键在于把最后几步去噪改造成一个带约束的优化过程。</p>
+    <figure>
+      <img src="img/framework.webp" alt="framework">
+      <figcaption><strong>Fig. 3</strong>（原文）：策略总览。(a) 多模态观测 = 机器人位姿 S′<sub>rob</sub> + 场景点云 S<sub>sce</sub> + 抓取概率图 G*<sub>prob</sub>，夹爪形态差异经 gripper mapping 编码进 S′<sub>rob</sub>。(b) trajectory inference 得到 {a<sub>t</sub>, a<sub>t+1</sub>, …}，再由 online optimization 逐步求解修正量 ν*，做 safety projection，得到满足约束的可执行轨迹 a*。</figcaption>
+    </figure>
+
+    <h3>① Gripper-agnostic grasping probability map G*<sub>prob</sub></h3>
+    <p>换夹爪会改变 RGB / 点云的视觉观测，让策略陷入 out-of-distribution。作者引入一个与末端几何无关的 <em>grasping probability map</em> 作为额外观测通道，让策略聚焦物体本身的抓取 affordance 而非夹爪外观。该图用在 Cornell Grasping Dataset（885 张 RGB-D、240 物体）上预训练的 <strong>GG-CNN</strong> 从深度图生成。为抵抗手眼相机移动带来的尺度变化与光照噪声，再做三步稳定化：threshold filtering（丢弃概率 &lt;0.7 的像素）、centroid 计算、以质心为中心 r=30 px 的 circular masking，得到稳定的 G*<sub>prob</sub>。</p>
+    <figure>
+      <img src="img/gmap.webp" alt="grasping probability map">
+      <figcaption><strong>Fig. 4</strong>（原文）：不同夹爪 / 高度 / 物体下，原始 GG-CNN 输出 G<sub>prob</sub>（多峰、随场景漂移）vs. 处理后的 G*<sub>prob</sub>（单峰、稳定）。稳定的抓取线索让策略在感知扰动下仍生成一致的接近轨迹。</figcaption>
+    </figure>
+
+    <h3>② Gripper mapping：把新夹爪映射回 base 基准</h3>
+    <p>夹爪形态差异主要沿两个维度：竖直轴 z 上的 <strong>TCP offset</strong>，以及夹爪开合 g 上的 <strong>抓取宽度差异</strong>。定义两个可微映射把新夹爪 G<sub>(i)</sub> 的参数投影回训练用的 base gripper G<sub>(0)</sub>：</p>
+    <blockquote>z′<sub>(i)</sub> = z<sub>(i)</sub> + Δh<sub>(i)</sub>，  g′<sub>(i)</sub> = α<sub>(i)</sub> · g<sub>(i)</sub>；其中 Δh<sub>(i)</sub> = z<sub>(0)</sub> − z<sub>(i)</sub> 为高度偏移，α<sub>(i)</sub> = g<sup>max</sup><sub>(0)</sub> / g<sup>max</sup><sub>(i)</sub> 为宽度缩放。</blockquote>
+    <p>映射参数 {Δh, α} 通过对夹爪尺寸的<strong>离线机械测量</strong>标定。变换后的位姿 S′<sub>rob</sub> = (x, y, z′, g′) 喂给 π<sub>θ</sub>，保持观测空间跨夹爪一致。当前实现只做<strong>平移补偿</strong>，旋转补偿留作 future work。</p>
+
+    <h3>③ Safety-constrained trajectory projection</h3>
+    <p>光有映射还不够，视觉差异仍可能诱发不安全轨迹。作者在 DDIM 去噪步骤里插入一个投影层 <em>Proj<sub>C</sub></em>：为效率考虑，投影只在最后几步（k ≤ 2）激活。每步求解一个 <strong>quadratic program</strong>，找最小修正量 ν*，使 TCP 高度满足安全裕度 ε<sub>safe</sub> = 0.01 m：</p>
+    <blockquote>min ‖ν<sup>k</sup><sub>t</sub>‖²  s.t.  S′<sub>rob</sub>(z)<sub>t</sub> + Φ(a<sup>k</sup><sub>t</sub>) + ν<sup>k</sup><sub>t</sub> ≥ ε<sub>safe</sub>；Φ(·) 把 latent action 反归一化到 Cartesian 位移。</blockquote>
+    <p>为在整个 T<sub>a</sub> 步动作序列上维持安全，进一步引入<strong>累积约束（temporal consistency）</strong>：把 ν 约束作用在前缀和 Σ<sub>r=0..j</sub> Φ(a<sub>t+r</sub>) 上，保证「cumulative trajectory is always safe」（P = 1）。投影后动作 a* = Φ⁻[Φ(a) + ν*] 即为可执行的安全轨迹。整个过程不改动网络权重，因此对新夹爪是零样本的。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">平台为 Franka Emika Panda，末端可换：native 平行夹爪 + 定制 3D-printed / flexible fingertips，以及 Robotiq 2F-85。感知用 egocentric Azure Kinect DK + 固定 Intel RealSense D455，ROS noetic 同步。训练数据仅 <strong>59 条</strong>专家示范，且只用 base gripper G<sub>0</sub> + 一个 pink block；backbone 为改造后的 Simple DP3 MM（把 G*<sub>prob</sub> 经 ResNet-18 编码后拼接），训练 8,000 epochs。评测覆盖 6 种不同形态夹爪（TCP 高度 16–23.5 cm、开口宽度 7.5–11.5 cm），每种夹爪重复 5 次。</p>
+
+    <h3>跨夹爪抓放成功率（Table II，单位 %）</h3>
+    <p>Baseline 为 Diffusion Policy (DP) 与 Diffusion Policy 3D (DP 3D)；消融含 Ours w/o Projection 与 Ours w/o G*<sub>prob</sub>。μ 为跨 6 夹爪平均。</p>
+    <table>
+      <tr><th>Method</th><th>G₀</th><th>G₁</th><th>G₂</th><th>G₃</th><th>G₄</th><th>G₅</th><th>μ</th></tr>
+      <tr><td colspan="8" style="background:var(--chip);text-align:center;font-weight:600">Seen object：Block</td></tr>
+      <tr><td>Diffusion Policy</td><td>20.0</td><td>0.0</td><td>60.0</td><td>40.0</td><td>0</td><td>40.0</td><td>26.7</td></tr>
+      <tr><td>Diffusion Policy 3D</td><td>20.0</td><td>0.0</td><td>60.0</td><td>60.0</td><td>0.0</td><td>0.0</td><td>23.3</td></tr>
+      <tr><td>Ours w/o Projection</td><td>100.0</td><td>0.0</td><td>60.0</td><td>40.0</td><td>0.0</td><td>0.0</td><td>33.3</td></tr>
+      <tr><td>Ours w/o G*<sub>prob</sub></td><td>80.0</td><td>20.0</td><td>40.0</td><td>80.0</td><td>100.0</td><td>0.0</td><td>53.3</td></tr>
+      <tr><td><strong>Ours</strong></td><td class="good">100.0</td><td class="good">80.0</td><td class="good">100.0</td><td class="good">80.0</td><td class="good">100.0</td><td class="good">100.0</td><td class="good">93.3</td></tr>
+      <tr><td colspan="8" style="background:var(--chip);text-align:center;font-weight:600">Unseen object：Banana</td></tr>
+      <tr><td>Diffusion Policy</td><td>20.0</td><td>0.0</td><td>40.0</td><td>60.0</td><td>40.0</td><td>20.0</td><td>30.0</td></tr>
+      <tr><td>Diffusion Policy 3D</td><td>20.0</td><td>0.0</td><td>40.0</td><td>40.0</td><td>20.0</td><td>0.0</td><td>20.0</td></tr>
+      <tr><td>Ours w/o Projection</td><td>80.0</td><td>0.0</td><td>40.0</td><td>40.0</td><td>0.0</td><td>20.0</td><td>30.0</td></tr>
+      <tr><td>Ours w/o G*<sub>prob</sub></td><td>60.0</td><td>0.0</td><td>40.0</td><td>60.0</td><td>40.0</td><td>0.0</td><td>33.3</td></tr>
+      <tr><td><strong>Ours</strong></td><td class="good">80.0</td><td class="good">60.0</td><td class="good">100.0</td><td class="good">60.0</td><td class="good">60.0</td><td class="good">60.0</td><td class="good">70.0</td></tr>
+    </table>
+    <p>另有一个有意思的即插即用结果：把本文的 safety projection 直接接到 baseline 推理端，<strong>DP + Projection</strong> 在 G₀ 上从 20.0% 升到 <strong>100.0%</strong>、<strong>DP 3D + Projection</strong> 升到 <strong>80.0%</strong>，说明约束投影模块可迁移。当物体位置被随机化时，DP 与 DP 3D「collapse entirely（success rate is 0）」，凸显它们对位置先验的依赖。</p>
+
+    <figure>
+      <img src="img/grippers.webp" alt="gripper variants">
+      <figcaption><strong>Fig. 2</strong>（原文）：6 种不同形态的两指夹爪 G₀–G₅（单位 cm）。高度跨度 16–23.5 cm、开口宽度 7.5–11.5 cm，涵盖 3D-printed fingertips、flexible 硅胶指与 Robotiq 2F-85（G₅）。</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/rollout.webp" alt="rollout">
+      <figcaption><strong>Fig. 7</strong>（原文）：用未见夹爪 Robotiq 2F-85（G₅）执行抓放的 rollout。(a) 抓放 seen 的 block；(b) 抓放 unseen 的 banana——均为训练时从未出现过的夹爪 + 物体组合。</figcaption>
+    </figure>
+
+    <h3>Ablations & Safety Analysis</h3>
+    <p>消融显示 <strong>Projection</strong> 与 <strong>G*<sub>prob</sub></strong> 各司其职：去掉 Projection 时，策略在偏离 G₀ 较大的夹爪（G₁、G₄、G₅）上失败；去掉 G*<sub>prob</sub> 时，在 Kinect 视角下外观差异大的夹爪（G₁、G₅）成功率跌到 0–20%。安全分析（Fig. 6）进一步表明：对更长的 G₁（TCP +3.5 cm），DP / DP 3D / Ours-w/o-Projection 都撞桌，只有完整策略无碰撞完成；对更短的 G₄（TCP −4 cm），缺少 gripper mapping 会让抓取点悬在物体上方过高，而完整策略能正确下探。作者用 KL 散度（Table I）量化 G*<sub>prob</sub> 在不同条件下的分布稳定性，明显优于原始 G<sub>prob</sub>。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note：</b>原文没有独立的 Limitations 章节；以下各点中，标注 <b>stated</b> 者摘自作者在正文/脚注/结论中明确点出的 future work，标注 <b>inferred</b> 者为依据方法设计推断。</div>
+    <details class="lim" open><summary>仅限两指夹爪与 SE(3)（stated）</summary><p>脚注明确：「This paper forces on two-finger grippers problems in SE(3) space. SE(6)-space and three-finger grippers implementation is future work.」三指夹爪与 SE(6) 空间尚未支持。</p></details>
+    <details class="lim"><summary>只做平移补偿，无旋转补偿（stated）</summary><p>「Current implementation focuses on translational pose adaptation, and the rotational compensation remains future work.」gripper mapping 目前只处理 TCP 高度偏移与开口宽度缩放，不处理姿态旋转差异。</p></details>
+    <details class="lim"><summary>依赖离线机械标定（inferred）</summary><p>映射参数 {Δh<sub>(i)</sub>, α<sub>(i)</sub>}「obtained through offline calibration with mechanical measurement of gripper dimensions」——每个新夹爪仍需人工测量尺寸做标定，而非完全自动获取。</p></details>
+    <details class="lim"><summary>抓取知识受限于 parallel-jaw 先验（inferred）</summary><p>G*<sub>prob</sub> 来自在 Cornell Grasping Dataset 上预训练的 GG-CNN（parallel-jaw grasp 标注）；对超出该先验分布的物体/抓取模式，抓取概率图的质量可能成为瓶颈。unseen 物体（banana）成功率 70% 亦低于 seen 物体的 93.3%。</p></details>
+    <details class="lim"><summary>验证规模较小（inferred）</summary><p>训练仅 59 条示范、单一 base 夹爪 + 单一 block；每个夹爪评测 5 次（共 30 次/方法）。真实场景的物体多样性与统计置信度仍有待更大规模验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    图文摘自论文原文与其公开图表 · Pick-and-place Manipulation Across Grippers Without Retraining · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2502.15613">https://arxiv.org/abs/2502.15613</a> · 代码 / Code: <a href="https://github.com/yaoxt3/GADP">github.com/yaoxt3/GADP</a>
+  </div>
+</footer>
+
+</body>
+</html>

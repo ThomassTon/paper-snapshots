@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATK: 面向任务的自动关键点选择，用于鲁棒策略学习</title>
+<meta name="keywords" content="2D keypoints, task-driven keypoint selection, sim-to-real transfer, imitation learning, robust visuomotor policy, Gumbel-softmax, point tracking, robotic manipulation">
+<meta name="description" content="ATK 用可微分掩码 + Gumbel-softmax 自动选出一组最小且任务相关的 2D 关键点作为状态表示，让视觉运动策略在背景、干扰物、光照变化下保持鲁棒的 sim-to-real 与模仿学习性能。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">CoRL 2025 · Robotics</span>
+    <h1>ATK：面向任务的自动关键点选择</h1>
+    <div class="sub">Automatic Task-driven Keypoint Selection for Robust Policy Learning</div>
+    <div class="authors">Yunchu Zhang, Shubham Mittal, Zhengyu Zhang, Liyiming Ke, Siddhartha Srinivasa, Abhishek Gupta · University of Washington (Paul G. Allen School of CSE)</div>
+    <p class="lead">视觉运动策略在训练与部署环境的视觉差异下往往会失效。ATK 把一小组 <b>2D keypoints</b> 当作策略的状态表示，并用可微分掩码自动选出「对完成任务最必要、最少」的那几个点。由于关键点通过 web-scale 对应匹配与跟踪保持语义一致，策略得以在背景、干扰物、光照剧变以及透明 / 可变形物体上，从仿真或人类专家迁移到真实世界。</p>
+    <div class="meta">
+      <span>Sim-to-Real + Imitation Learning</span>
+      <span>7 项真实机器人任务</span>
+      <span>Sim-to-real 综合成功率 0.64</span>
+      <span><a href="https://arxiv.org/abs/2506.13867">📄 arXiv:2506.13867</a></span>
+      <span><a href="https://arxiv.org/pdf/2506.13867">PDF</a></span>
+    </div>
+    <div class="kw"><span>2D keypoints</span><span>task-driven keypoint selection</span><span>sim-to-real transfer</span><span>imitation learning</span><span>robust visuomotor policy</span><span>Gumbel-softmax</span><span>point tracking</span><span>robotic manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">机器人视觉运动策略面临一个两难：依赖状态估计（如 6D pose）的策略需要针对每个任务做专门跟踪，难以扩展；而直接吃原始传感器（RGB / depth / point cloud）的策略又对细微的视觉扰动缺乏鲁棒性——训练环境与部署环境之间的背景、光照、干扰物一变，性能就崩。作者主张用 <b>2D keypoints</b> 作为「既通用又可裁剪」的状态表示：它在图像空间保持空间一致，可借助预训练视觉模块跨场景迁移。但关键问题是——<b>该选哪些点？</b> 不同物体、不同任务需要的关键点并不一样。</p>
+    <blockquote>“How can we design general-purpose yet tailorable representations of visual input that make policies robust to environmental variations but still transferable across scenarios?”</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>ATK 选出的最小关键点集合（红点 = 被选中，绿点 = 候选）标注在同一厨房任务的多种变体上：随机物体位姿、不同桌面 / 背景纹理、加入干扰物、改变光照。策略只读取这几个跟踪到的关键点坐标，因而对这些视觉变化天然免疫。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>2D</b><small>keypoints 作为状态表示</small></div>
+      <div><b>Gumbel</b><small>-softmax 可微分选点</small></div>
+      <div><b>7</b><small>项真实机器人任务验证</small></div>
+      <div><b>0.64</b><small>sim-to-real 综合成功率</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">ATK 把「选哪些关键点」和「学策略」<b>联合优化</b>成一个稀疏掩码问题。先在一张 canonical 模板图上采样 C 个候选关键点，用鲁棒的对应 / 跟踪函数把它们传播到所有专家轨迹上；再训练一个掩码模型 <b>𝕄<sub>φ</sub></b> 为每个候选点输出保留概率（Bernoulli），通过 Gumbel-softmax 松弛做端到端梯度优化。目标是：在保证策略能预测专家动作的前提下，用 L1 稀疏惩罚逼出<b>最小的、聚焦任务相关部位</b>的关键点子集。</p>
+    <figure>
+      <img src="img/method-pipeline.webp" alt="ATK training pipeline">
+      <figcaption>训练流程：Canonical Image 上的候选关键点 → 沿 N 条专家轨迹随时间传播为坐标序列 → Masking Model 输出保留概率 → Gumbel-softmax / Bernoulli 采样得到稀疏子集 → 基于所选关键点的策略预测动作，蒸馏专家（仿真专家策略或人类专家）。</figcaption>
+    </figure>
+    <h3>任务驱动的稀疏选点目标</h3>
+    <p>核心优化目标同时施加「任务可实现性」（动作预测对数似然）与「稀疏性」（L1 惩罚，系数 α）：</p>
+    <blockquote>min −𝔼<sub>(k,a)∼𝒟</sub> log π<sub>θ</sub><sup>k</sup>(a<sub>t</sub>* | 𝕄<sub>φ</sub>({k<sub>i</sub><sup>t</sup>})) + α‖𝕄<sub>φ</sub>({k<sub>i</sub><sup>t</sup>})‖<sub>1</sub></blockquote>
+    <p>这样得到的关键点不是「视觉上显著」的点，而是「对完成该任务的最优行为最具预测性」的点——例如握把、开关、可形变物体的关键边缘。</p>
+    <h3>推理期：跨场景迁移关键点</h3>
+    <p>部署时，ATK 用 web-scale 的鲁棒对应匹配（diffusion features）把训练场景中选定的初始关键点迁移到真实世界的新场景，再用 <b>CoTracker</b> 跟踪后续帧。此后策略直接消费跟踪到的关键点坐标，<b>不再需要掩码模型</b>。正因为状态被压到几个语义一致的点，策略才能在透明物体、精细操作、可变形物体等感知难题上跨越巨大的场景差异。</p>
+    <figure>
+      <img src="img/inference-loop.webp" alt="keypoint transfer at inference">
+      <figcaption>推理循环：同一套被选中的关键点（绿点）经对应匹配迁移到不同真实场景（左：玩具厨房折毛巾；右：真实茶具场景），随后由策略 π 逐帧驱动动作。展示了关键点表示的跨场景可迁移性。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">评测覆盖两条线：<b>Sim-to-Real</b>（sushi 抓取、glass pot 提壶、clock 按钮 / 转针）与真实世界 <b>Imitation Learning</b>（葡萄入烤箱、挂毯、折毛巾、平底锅装物）。对比两类基线——输入模态（RGB / Depth / Point cloud）与选点方式（FullSet 全部 / RandomSelect 随机 / GPTSelect 用 GPT-4 选）。鲁棒性条件：<b>RP</b>（随机物体位姿）、<b>RB</b>（背景纹理变化）、<b>+RO</b>（加入干扰物）、<b>Light</b>（改变光照）。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="evaluation tasks">
+      <figcaption>评测任务概览：左侧为模仿学习 / sim-to-real 的厨房操作（折毛巾、提物），右侧为 clock 的按钮按压与指针转动等精细 / 关节物体任务。绿色箭头标出目标动作方向。</figcaption>
+    </figure>
+    <p>下表摘自真实世界成功率（Table 3 sim-to-real / Table 5 imitation），对比 ATK 与端到端 RGB 基线在四种条件下的表现——数字逐字摘自论文：</p>
+    <table>
+      <tr><th>任务 (RP / RB / +RO / +Light)</th><th>RGB 基线</th><th>ATK</th><th>线</th></tr>
+      <tr><td>Sushi Pick-n-Place</td><td>0.30 / 0.00 / 0.00 / 0.00</td><td class="good">0.85 / 0.80 / 0.55 / 0.45</td><td>sim2real</td></tr>
+      <tr><td>Glass Pot Lifting</td><td>0.10 / 0.00 / 0.00 / 0.00</td><td class="good">0.75 / 0.65 / 0.60 / 0.60</td><td>sim2real</td></tr>
+      <tr><td>Clock Button Press</td><td>0.25 / 0.00 / 0.00 / 0.00</td><td class="good">0.90 / 0.90 / 0.80 / 0.75</td><td>sim2real</td></tr>
+      <tr><td>Clock Hand Turning</td><td>0.05 / 0.00 / 0.00 / 0.00</td><td class="good">0.50 / 0.50 / 0.40 / 0.35</td><td>sim2real</td></tr>
+      <tr><td>Blanket Hanging</td><td>0.40 / 0.00 / 0.00 / 0.00</td><td class="good">0.85 / 0.85 / 0.80 / 0.60</td><td>IL</td></tr>
+      <tr><td>Towel Folding</td><td>0.60 / 0.00 / 0.00 / 0.00</td><td class="good">1.00 / 1.00 / 1.00 / 0.70</td><td>IL</td></tr>
+      <tr><td>Grape → Oven</td><td>0.45 / 0.15 / 0.00 / 0.00</td><td class="good">0.80 / 0.80 / 0.75 / 0.65</td><td>IL</td></tr>
+      <tr><td>Pan Filling</td><td>0.25 / 0.10 / 0.00 / 0.00</td><td class="good">0.60 / 0.55 / 0.40 / 0.25</td><td>IL</td></tr>
+    </table>
+    <p>关键对比：RGB 基线在 RP（仅随机位姿）已明显落后，一旦引入背景 / 干扰物 / 光照变化几乎<b>全部归零</b>；而 ATK 在同样扰动下仍保持大部分成功率。作者报告 sim-to-real 综合成功率约 <b>0.64</b>，并称最小关键点表示「significantly improve robustness to visual disturbances and environmental variations」。</p>
+    <figure>
+      <img src="img/results-sim2real.webp" alt="sim-to-real success rates bar chart">
+      <figcaption>Sim-to-real 真实世界成功率（Figure 5）：四个任务在 RP / RB / +RO / +Light 四种条件下的柱状图。可见 Clock Button Press 最稳（RP/RB≈0.90），Clock Hand Turning 最难（+Light≈0.35），性能随扰动叠加平滑下降而非崩溃。</figcaption>
+    </figure>
+    <h3>定性：选出的关键点确实聚焦任务相关部位</h3>
+    <figure>
+      <img src="img/keypoint-qualitative.webp" alt="qualitative keypoint selection and transfer">
+      <figcaption>任务相关关键点选择与迁移的定性可视化（Figure 7）：绿点集中落在与操作直接相关的物体部位（如 clock 表盘 / 按钮、抓取目标），并在仿真与真实场景间保持一致对应。</figcaption>
+    </figure>
+    <h3>Ablations</h3>
+    <p>消融对比不同选点策略（FullSet / RandomSelect / GPTSelect）与输入模态（RGB / Depth / Point cloud）。结论是：任务驱动地选出<b>最小</b>关键点集，比用全部点、随机点或让 GPT-4 选点都更鲁棒，也优于直接用 depth / point cloud 的表示——稀疏且任务相关的关键点，是把鲁棒性与可迁移性同时拿到手的关键。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下各点均为论文<b>明确陈述</b>的局限（stated by the authors），非本文推断。</div>
+    <details class="lim" open><summary>对相机视角变化敏感</summary><p>“The use of 2D keypoints makes the policy sensitive to camera perspective changes.” 由于状态是 2D 像素坐标，视角一变，关键点几何关系随之改变。</p></details>
+    <details class="lim"><summary>依赖现成跟踪模块，遇到非常规视觉数据可能不稳</summary><p>“off-the-shelf tracking modules may lack robustness for robotic applications with uncommon visual data.” 对应匹配 / 跟踪一旦失败，下游策略也会受影响。</p></details>
+    <details class="lim"><summary>超参数敏感、调参困难</summary><p>“the method is sensitive to hyperparameters due to the non-smooth nature of the optimization problem, making tuning difficult.” 稀疏选点的优化问题非光滑，调参不易。</p></details>
+    <details class="lim"><summary>每个任务需单独训练一个模型</summary><p>“Currently, the method trains different models for each individual task.” 尚未做到跨任务共享的单一策略。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · ATK: Automatic Task-driven Keypoint Selection for Robust Policy Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2506.13867">https://arxiv.org/abs/2506.13867</a>
+  </div>
+</footer>
+
+</body>
+</html>

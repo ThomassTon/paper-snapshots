@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When a Robot is More Capable than a Human: Learning from Constrained Demonstrators</title>
+<meta name="keywords" content="learning from demonstration, inverse reinforcement learning, goal-proximity reward, 受限专家, temporal interpolation, Monte Carlo Dropout, PPO, WidowX, sim-to-real, robot manipulation">
+<meta name="description" content="当机器人比人更强：从受限专家演示中学习——用状态奖励 + 时序插值超越演示，比 BC 快 10 倍完成真机抓取。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics / IRL</span>
+    <h1>当机器人比人更强：从受限专家演示中学习</h1>
+    <div class="sub">When a Robot is More Capable than a Human: Learning from Constrained Demonstrators</div>
+    <div class="authors">Xinhu Li, Ayush Jain, Zhaojing Yang, Yigit Korkmaz, Erdem Bıyık · University of Southern California (USC) · arXiv 2510.09096</div>
+    <p class="lead">人用手柄、动觉示教等受限接口采集的演示往往<strong>次优</strong>——受限于间接控制、硬件安全与自由度限制，只能给出缓慢、分段的轨迹。本文提出 <strong>LfCD-GRIP</strong>：不去直接模仿受限动作，而是从演示中推断一个<strong>只依赖状态</strong>的 goal-proximity 奖励，并用<strong>时序插值</strong>为未知状态自标注奖励，让 agent 在约束解除后探索更短更高效的轨迹。真机 WidowX 抓取任务上 <strong>12 秒</strong>完成，比 behavioral cloning <strong>快 10 倍</strong>。</p>
+    <div class="meta">
+      <span>cs.RO</span><span>USC · Liralab</span><span>PPO + IRL</span>
+      <span><a href="https://arxiv.org/abs/2510.09096">📄 arXiv:2510.09096</a></span>
+      <span><a href="https://sites.google.com/view/constrainedexpert">🌐 Project page</a></span>
+    </div>
+    <div class="kw"><span>learning from demonstration</span><span>inverse RL</span><span>goal-proximity reward</span><span>受限专家 constrained demonstrator</span><span>temporal interpolation</span><span>Monte Carlo Dropout</span><span>PPO</span><span>WidowX sim-to-real</span><span>robot manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">Learning from demonstration 让专家能通过 kinesthetic teaching、joystick、sim-to-real 等接口教机器人。但这些接口本身会<strong>约束专家</strong>：例如 mode-switching joystick 一次只能控制一个轴，即使机械臂本身能在更高维空间协同运动。结果是演示轨迹缓慢、分段，学出来的策略自然次优。既有 imitation learning（BC/GAIL）以模仿专家动作为目标，会把这些人为约束一起学进去，无法超越演示者。</p>
+    <blockquote>“Can an agent learn from constrained demonstrations and discover more efficient behaviors once those constraints are lifted?” —— 即，机器人能否学出比受限专家<strong>更好</strong>的策略。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption><b>Figure 1.</b> 上排：人类专家受 mode-switching joystick 约束（一次只能沿一个轴移动），产生分段轨迹；下排：采用 LfCD-GRIP 的机器人执行平滑高效的运动，走出一条超越演示的更短路径。原文："A human expert constrained by a mode-switching joystick produces segmented trajectories. A robot employing LfCD-GRIP executes smooth and efficient motions beyond the demonstrations."</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>12 s</b><small>真机 WidowX 完成时间</small></div>
+      <div><b>10×</b><small>比 BC（100 s）更快</small></div>
+      <div><b>100%</b><small>Maze2D 成功率（Table 1）</small></div>
+      <div><b>100%</b><small>OOC 越界动作占比</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead"><strong>LfCD-GRIP</strong>（Learning from Constrained Demonstrations with <strong>G</strong>oal-proximity <strong>R</strong>eward <strong>I</strong>nter<strong>P</strong>olation）是一个 IRL 框架：把奖励学习与专家的受限动作<strong>解耦</strong>，只从状态推断"离目标有多近"，再用 agent 在线探索到的数据把这种"任务进度"信号插值扩展到演示之外，最后用 <strong>PPO</strong> 在该奖励上训练策略。</p>
+
+    <h3>① Goal-proximity 作为 action-free 奖励</h3>
+    <p>训练一个只吃状态的 goal-proximity 函数 <em>f<sub>φ</sub>(s)</em>：越接近目标的状态被赋予越高的 proximity 值，通过对专家轨迹做<strong>指数时序衰减</strong>标注得到。奖励定义为相邻状态的 proximity 增量——<em>R̂<sub>prox</sub>(s<sub>t</sub>, s<sub>t+1</sub>) = f<sub>φ</sub>(s<sub>t+1</sub>) − f<sub>φ</sub>(s<sub>t</sub>)</em>。因为奖励不依赖动作，agent 不必复刻受限动作，只要朝目标推进就得到奖励，从而可以走演示里没出现过的捷径。</p>
+
+    <h3>② Confidence Estimation Module（置信度估计）</h3>
+    <p>Agent 在线采集的样本大多落在专家分布之外，直接外推 proximity 不可靠。论文用 <strong>Monte Carlo Dropout (MCD)</strong>：推理时开启 dropout、多次随机前向，用预测<strong>方差</strong>衡量不确定性——"lower variance indicating higher confidence"。置信阈值动态设为专家状态上观察到的最大 proximity 方差；低方差（高置信）的状态被当作 <strong>anchor</strong>。</p>
+
+    <h3>③ Goal-proximity Interpolation（时序插值自标注）</h3>
+    <p>对于两端都是高置信 anchor 的子轨迹，中间状态用<strong>对数尺度线性插值</strong>得到 proximity 目标：<em>ρ<sub>t</sub> = ρ<sub>start</sub> + (t/T<sub>sub</sub>)(ρ<sub>end</sub> − ρ<sub>start</sub>)</em>。这样就把"任务进度"的概念沿 agent 自己的轨迹传播到约束之外的未知状态。训练中用一个逐步退火的 masking 概率，慢慢增加对插值值的依赖。</p>
+    <figure>
+      <img src="img/interpolation.webp" alt="interpolation">
+      <figcaption><b>Figure 2.</b> Proximity 在两个高置信 anchor（ρ<sub>start</sub>、ρ<sub>end</sub>，蓝点）之间沿时间轴插值，为中间未知状态（橙点）自标注目标值。原文："Proximity is interpolated between high-confidence anchors."</figcaption>
+    </figure>
+    <p>总损失由三部分组成：<em>ℒ<sub>φ</sub><sup>GRIP</sup> = ℒ<sub>φ</sub><sup>e</sup> + ℒ<sub>φ</sub><sup>conf</sup> + ℒ<sub>φ</sub><sup>unconf</sup></em>（专家项 + 置信项 + 非置信/插值项）。为估计不确定性，proximity 网络维护一个 5 个成员的 ensemble。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead"><strong>环境：</strong>MiniGrid-LfCD（离散导航）、Maze2D（连续 2D 导航）、FetchPick / FetchPush（3D 操作）、WidowX-Pick（仿真 + 真机）。<strong>Baselines：</strong>Behavioral Cloning (BC)、GAIL、GAIfO、SSRR、Proximity-based IRL，以及去掉插值的消融 Proximity(-Drop)。除 BC 外均用 PPO 训练。</p>
+
+    <figure>
+      <img src="img/tasks.webp" alt="tasks">
+      <figcaption><b>Figure 3.</b> 覆盖导航与操作、不同种类与不同强度受限演示的任务集合：MiniGrid-LfCD、Maze2d、Fetch-Push、Fetch-Pick、WidowX-Pick。</figcaption>
+    </figure>
+
+    <h3>Out-of-Constraint (OOC) 动作分析 · Maze2D-Constrained</h3>
+    <p>衡量各方法选择"落在专家动作空间之外"动作的比例，检验是否真的超越了约束。LfCD-GRIP 在 100% 使用越界动作的同时达到 100% 成功率；GAIfO 虽然 100% 越界却学不出高成功率，说明<strong>关键在奖励泛化而非单纯动作多样性</strong>。</p>
+    <table>
+      <tr><th>Baseline</th><th>Success Rate</th><th>OOC Action Ratio</th></tr>
+      <tr><td>GAIL</td><td>69%</td><td>71%</td></tr>
+      <tr><td>BC</td><td>12%</td><td>69%</td></tr>
+      <tr><td>GAIfO</td><td>51%</td><td>100%</td></tr>
+      <tr><td>LfCD-GRIP (Ours)</td><td class="good">100%</td><td class="good">100%</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px;margin-top:-4px">Table 1：Success rate and OOC action ratio in Maze2D-Constrained（数值逐字摘自原文）。</p>
+
+    <h3>轨迹效率 · 走捷径</h3>
+    <p>在 MiniGrid-LfCD 中，LfCD-GRIP 发现了演示里没有的<strong>对角线捷径</strong>，而所有 baseline 都被限制在演示的横竖（cardinal-direction）路径上。在 Maze2D-Constrained 中，"LfCD-GRIP completes the task in 100 transitions on average—reducing episode length by over 10% compared to Proximity-based IRL, which requires 113 transitions."（100 vs 113 transitions，缩短 >10%）。</p>
+
+    <h3>约束强度加剧下的鲁棒性</h3>
+    <figure>
+      <img src="img/severity.webp" alt="severity">
+      <figcaption><b>Figure 6.</b> 随约束强度（Severity Level）增大，LfCD-GRIP 相对 baseline 的优势愈发明显。在更严重约束下（如动作被限制到 [−0.05, 0.05]），Expert 与 BC 的轨迹长度飙升到 ~380，而 LfCD-GRIP（橙）保持极短轨迹，Proximity 次之。原文："Varying constraint severity shows the increasing benefit of LfCD-GRIP over baselines."</figcaption>
+    </figure>
+
+    <h3>真机 WidowX-Pick</h3>
+    <p>用 ManiSkill 采集 550 条专家演示预训练，再 sim-to-real 迁移到真实 WidowX 250s。仿真中"Only BC and LfCD-GRIP succeed, with LfCD-GRIP being more efficient"。真机上：BC 能复现专家行为但<strong>无法利用完整动作空间、执行缓慢，每次需 100 秒</strong>；相比之下 LfCD-GRIP 生成高效轨迹，"completes the task 10x faster, in just 12 seconds."</p>
+    <figure>
+      <img src="img/real-rollout.webp" alt="real robot rollout">
+      <figcaption><b>Figure 7.</b> 真机 WidowX-Pick rollout（时间轴 t=0→100）。BC 在 t=100 才成功（100 秒），Others 中途失败，GRIP 在 t≈12 即成功。原文："Only BC learns meaningful policies, while LfCD-GRIP completes the task 10x faster than BC."</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 以下第 1、2 条为原文 "Conclusion &amp; Limitations" 中<strong>作者明确陈述</strong>（stated）；第 3 条为根据方法设计<strong>推断</strong>（inferred）。</div>
+    <details class="lim" open><summary>依赖明确的目标状态（stated）</summary><p>原文："Proximity-based reward assumes that task progress can be measured with respect to a specific goal state. While well suited for goal-reaching tasks, this limits applicability to settings without clearly defined terminal conditions." —— proximity 奖励假设任务进度可相对某个目标状态度量，因此适合 goal-reaching，但难以用于没有清晰终止条件的任务。</p></details>
+    <details class="lim"><summary>多任务 / 语义多样目标下受限（stated + future work）</summary><p>当前依赖为每条演示量身定制的 goal-conditioned proximity estimates，在多任务场景下泛化困难。作者提出未来借助 representation learning 让进度信号能跨语义各异的目标泛化。</p></details>
+    <details class="lim"><summary>置信/插值机制的假设（inferred）</summary><p>方法依赖 MC-Dropout 方差作为置信度、并以专家状态上的最大方差作动态阈值，同时用对数线性插值假定子轨迹内进度平滑单调。当在线探索质量差、anchor 稀疏或进度非单调时，插值的自标注奖励可能失真——此为据设计推断，非原文明述。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · When a Robot is More Capable than a Human: Learning from Constrained Demonstrators · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2510.09096">https://arxiv.org/abs/2510.09096</a> · 项目主页 <a href="https://sites.google.com/view/constrainedexpert">sites.google.com/view/constrainedexpert</a>
+  </div>
+</footer>
+
+</body>
+</html>

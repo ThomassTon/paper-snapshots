@@ -1,0 +1,11 @@
+{
+  "slug": "diffusion-kinematic",
+  "title": "How Well do Diffusion Policies Learn Kinematic Constraint Manifolds?",
+  "arxiv_id": "2510.01404",
+  "url": "https://arxiv.org/abs/2510.01404",
+  "category": "机器人 · Robotics",
+  "keywords": ["diffusion policy", "kinematic constraint", "bimanual manipulation", "imitation learning", "constraint manifold", "manifold hypothesis", "teleoperation", "数据质量", "manifold curvature", "Kretschmann scalar"],
+  "summary_zh": "以双臂 pick-and-place 为案例，量化 diffusion policy 对训练数据中运动学等式约束流形的学习程度：即便用完全满足约束的数据也只能学到粗略近似（200 条 clean 数据仍有 1.22cm/1.80° 误差），数据量与数据质量都是关键，而约束流形曲率与表现的相关性并不明确；真机成功率 73%，微小约束违反靠夹爪柔顺兜底。",
+  "date": "2026-07-23",
+  "source": "arxiv-latex"
+}

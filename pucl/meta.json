@@ -1,0 +1,11 @@
+{
+  "slug": "pucl",
+  "title": "PUCL: Positive-Unlabeled Constraint Learning for Inferring Nonlinear Continuous Constraints Functions from Expert Demonstrations",
+  "arxiv_id": "2408.01622",
+  "url": "https://arxiv.org/abs/2408.01622",
+  "category": "机器人 · Robotics",
+  "keywords": ["constraint learning", "positive-unlabeled learning", "learning from demonstration", "inverse constrained RL", "safe policy", "obstacle avoidance", "约束推断", "dynamical system modulation"],
+  "summary_zh": "PUCL 把约束推断建模为 positive-unlabeled 学习：专家演示为可靠 feasible（positive），当前策略的高回报轨迹为 unlabeled；两步法先用 kNN 式距离度量挑出可靠 infeasible 数据，再训练二分类可行性网络作为连续约束函数。无需已知约束参数化或可微环境模型，在 4 个环境上恢复非线性约束并取得 near-zero unsafe rate。",
+  "date": "2026-07-23",
+  "source": "arxiv-eprint"
+}

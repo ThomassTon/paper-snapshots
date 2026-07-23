@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inferring geometric constraints in human demonstrations</title>
+<meta name="keywords" content="learning by demonstration, geometric constraints, constraint inference, force/torque, virtual work, SE(3), rigid body, programming by demonstration, 力矩信息, 约束识别">
+<meta name="description" content="用运动学 + 力/力矩信息，从人类演示中同时推断几何约束的类型与参数，无需已知工具几何。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">CoRL 2018 · Robotics</span>
+    <h1>Inferring geometric constraints in human demonstrations</h1>
+    <div class="sub">从人类演示中推断几何约束——运动学 + 力/力矩，同时定类型与定参数</div>
+    <div class="authors">Guru Subramani, Michael Zinn, Michael Gleicher · University of Wisconsin – Madison · 2nd Conference on Robot Learning (CoRL 2018)</div>
+    <p class="lead">演示中蕴含大量几何约束（门的铰链、抽屉的滑轨、笔尖贴着纸面）。本文构建一个约束模型库，先用<b>运动学信息</b>拟合每种约束，再用<b>力/力矩信息</b>在运动学难以区分的歧义情形下做裁决，从而在<b>不知道工具接触几何</b>的前提下，同时判定约束类型并估计其几何参数。</p>
+    <div class="meta">
+      <span>Learning by Demonstration</span><span>Force/Torque 消歧</span><span>Instrumented Tongs / Constraint Sabre</span>
+      <span><a href="https://arxiv.org/abs/1810.00140">📄 arXiv:1810.00140</a></span>
+      <span><a href="https://proceedings.mlr.press/v87/subramani18a.html">PMLR v87</a></span>
+      <span><a href="https://github.com/uwgraphics/CoRL2018Constraint">Code (GitHub)</a></span>
+    </div>
+    <div class="kw"><span>learning by demonstration</span><span>geometric constraints</span><span>constraint inference</span><span>force/torque</span><span>virtual work</span><span>SE(3) rigid body</span><span>programming by demonstration</span><span>力矩消歧</span><span>约束识别</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">几何约束是物理任务的核心：它们限定了物体在环境中如何运动。知道约束的几何，交互就会容易得多——正如论文所举的例子：<i>"opening a door is easier if one knows that the door is attached to a hinge and where the axis of the hinge is."</i> 在 programming by demonstration 中，这类约束通常靠人工指定；若能从演示中自动推断，就能简化编程，并为 hybrid force-position control 自动提供参数。</p>
+    <p>但已有方法受限：C-Learn、CHAMP、null-space 学习等只能识别<b>线、面、弧</b>等简单约束，且大多不使用 reaction force/moment 信息，需要预先指定工具几何。本文指出三条关键洞见——(1) 受约束的运动可建模为刚体上的<b>几何约束方程</b>；(2) 仅凭 kinematic information（位置与朝向）<b>不足以</b>确定约束类型；(3) <b>force/moment 信息</b>可用来区分这些类型。</p>
+    <blockquote>"Our approach does not require information about the constraint type or contact geometry; it can determine both simultaneously."</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser: point-on-plane 约束推断">
+      <figcaption><b>Figure 1.</b> 演示者用 instrumented tongs 抓着一支钢尖 stylus 贴着平面移动（a）。算法从单次演示中同时估计出<b>平面在全局坐标系中的位置</b>和<b>笔尖相对刚体坐标系的位置</b>（b，绿色为轨迹）。(c) 估计平面与 ground truth 之差在动捕系统的容差内（sub-mm，图注标 0.0005 m），且全程不需要已知 stylus 的几何。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>6</b><small>约束模型库中的类型</small></div>
+      <div><b>sub-mm</b><small>平面估计 vs. ground truth 误差</small></div>
+      <div><b>98</b><small>Instrumented Tongs 试验次数（去掉 2 次损坏）</small></div>
+      <div><b>0 先验</b><small>无需已知接触几何/工具几何</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">输入是一段已分段的演示（每段只含单一约束，分段沿用 [11] 的 force action recognition），记录了位置、朝向、线速度、角速度、力、力矩。对每一段：先把库中<b>所有</b>约束模型都拟合一遍，再用运动学 + 力 + 力矩三重判据逐样本打分，最后通过<b>投票</b>选出符合样本最多的约束类型并输出其参数 α。</p>
+
+    <figure>
+      <img src="img/constraints.webp" alt="六种几何约束及其物理对应">
+      <figcaption><b>Figure 2.</b> 约束模型库中的六种几何约束及其物理对应：(1) Fixed Point（球窝关节）、(2) Point on Plane（笔尖贴纸）、(3) Concentric Cylinder（轴上滑套）、(4) Planar（黑板擦贴板）、(5) Prismatic（拉抽屉）、(6) Axial Rotation（门把手/铰链门）。可按需扩充其它约束。</figcaption>
+    </figure>
+
+    <h3>约束建模：从虚位移到许可力/力矩</h3>
+    <p>把受约束物体建模为 SE(3) 中的刚体，配置 <code>p = (r, q)</code>，受 <code>k</code> 个约束方程 <code>Φ(p) = 0</code>。许可的虚位移须满足 <code>δΦ = Φ_r δr + Φ_π δπ = 0</code>；再由<b>虚功原理</b>（约束反力/反力矩不做功）<code>δr·f + δπ·n = 0</code>，联立得到 <code>Φ_rᵀλ + f = 0</code> 与 <code>Φ_πᵀλ + n = 0</code>（λ 为 Lagrange 乘子）。这套推导是 multi-body dynamics 中的标准做法，把<b>几何约束方程直接联系到许可的 reaction force/moment</b>——正是后续用力信息消歧的理论基础。每种约束（如 point-on-plane 用两个 exponential coordinates 表示平面法向、Rodrigues 公式生成旋转）都有一组参数 α 刻画其几何。</p>
+
+    <h3>第 1 步：用运动学拟合各模型</h3>
+    <p>对每一种约束模型，把 <code>δp、δπ</code> 换成实测线速度 v、角速度 ω，在所有样本上做<b>非线性最小二乘</b>回归，最小化 <code>Σ ΦᵀΦ + δΦᵀδΦ</code>，用 <b>BFGS</b> 求解，得到该模型的参数 α。</p>
+
+    <h3>第 2 步：运动学判据（不能只看拟合误差）</h3>
+    <p>不能简单挑"拟合误差最小"的模型——不同约束方程量纲不同、不可比。改为<b>逐模型独立评估</b>：用运动学误差判据（Table 1，量纲为距离，如"prismatic 用估计直线到坐标原点的距离"、"axial rotation 用刚体上转点到转轴的距离"）对每个样本判断是否许可，设阈值得到布尔表 L_k。</p>
+
+    <h3>第 3 步：力/力矩判据来消歧</h3>
+    <p>很多情况下运动学之后仍有歧义（例如 fixed point 的运动同时很符合更一般的 point-on-plane 模型）。用实测力/力矩<b>反解 Lagrange 乘子 λ</b>（式 31，最小二乘），据此算出估计反力 <code>f_react = Φ_rᵀλ</code>、反力矩 <code>n_react = Φ_πᵀλ</code>；扣除反力/反力矩得残差，再<b>沿运动方向</b>扣除摩擦 <code>f_μ、n_μ</code>，最终得力误差 <code>f_error</code>、力矩误差 <code>n_error</code>（式 38–39），阈值化得到布尔表 L_f、L_n。论文强调：必须<b>先扣反力再扣摩擦</b>，因为虚功方程中力与力矩耦合，二者做的功可能相互抵消。此处未补偿惯性力与重力，前提是加速度小、或运动方向垂直于重力（如拉抽屉、擦黑板）。</p>
+
+    <h3>第 4 步：投票选型</h3>
+    <p>每个模型有 L_p、L_f、L_n 三张布尔表，取<b>交集</b>得到该约束的合格样本数；<b>合格样本最多的约束即为选中类型</b>，并输出其几何参数。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在一个自制 testbed 上评测，用两种手持工具采集人类演示：<b>Instrumented Tongs</b>（模拟机器人夹爪，Optitrack 动捕 + 两个 ATIMini40 力矩传感器，因夹爪与物体非刚接需在物体上另贴 marker）和 <b>Constraint Sabre</b>（用 hex key 刚性接到被约束物体，工具自身运动即可作为物体运动的代理）。每种约束由两名演示者（其中一人非作者）各做约 10 次试验，试验间重新摆放 testbed 以增加位置变化。</p>
+
+    <figure>
+      <img src="img/tools.webp" alt="Instrumented Tongs、Constraint Sabre 与推断出的约束运动">
+      <figcaption><b>Figure 3.</b> (a) Instrumented tongs（含 motion capture markers 与 force-torque sensors）；(b) Constraint Sabre（顶部为 hex key）；(c) 一段典型演示被正确<b>分段</b>为 free space motion（灰）与 constrained motion（彩色），并识别出 planar、rotation-about-axis、concentric cylinder、linear motion 等约束。</figcaption>
+    </figure>
+
+    <h3>Instrumented Tongs：分类与拟合精度（Table 3）</h3>
+    <p>用 tongs 交互 5 种约束，共 98 次试验（去掉 2 次动捕损坏）。分类准确率如下（fit error 为假设约束推断正确后、按运动学判据算出的拟合误差，单位 m）：</p>
+    <table>
+      <tr><th>Constraint</th><th>Classification Accuracy</th><th>Fit Error Mean</th><th>S.D.</th><th>Min</th><th>Max</th></tr>
+      <tr><td>Prismatic</td><td class="good">100%</td><td>0.000104</td><td>1.99e-05</td><td>6.58e-05</td><td>0.00014</td></tr>
+      <tr><td>Axial Rotation</td><td class="good">100%</td><td>0.00106</td><td>0.000247</td><td>0.000449</td><td>0.00148</td></tr>
+      <tr><td>Fixed Point</td><td>75%</td><td>0.000771</td><td>0.000177</td><td>0.000573</td><td>0.00135</td></tr>
+      <tr><td>Point on Plane</td><td class="good">100%</td><td>0.000166</td><td>4.26e-05</td><td>0.000110</td><td>0.000248</td></tr>
+      <tr><td>Planar Motion</td><td class="good">100%</td><td>0.000894</td><td>0.000445</td><td>0.000440</td><td>0.00249</td></tr>
+    </table>
+    <p>Fixed Point 只有 <b>75%</b>：它被误判为 rotational constraint（5%）和 point-on-plane constraint（20%），因为这三种约束的反力/反力矩彼此耦合（见式 40），且大力矩会使式 31 估计的 Lagrange 乘子出现偏差。关键对照：<b>若不做 force/moment 阈值化，整体准确率仅 57%</b>——证明力/力矩信息对区分歧义约束确实有用。</p>
+
+    <h3>Constraint Sabre：整段连续演示</h3>
+    <p>两名演示者（一人非作者）用 sabre 对 linear、axial rotation、concentric cylinder、planar motion 四种约束做 10 与 13 次交互，全部在<b>同一段</b>演示内完成（约束之间夹着 free space motion，见 Figure 3）。整体预测准确率分别为 <b>linear 87% / axial rotation 96% / concentric cylinder 91% / planar 100%</b>。误判多因 planar 是更一般的模型（linear、rotational 分别有 9%、4% 被误判为 planar，尤其当施加的力/力矩很小、力判据失效时）；concentric cylinder 偶尔（5%）被判为 axial rotation。sabre 整体拟合精度低于 tongs，主要来自 hex key 配合处的机械间隙——若能直接测量被约束物体的刚体运动，精度可望与 tongs 相当。</p>
+
+    <h3>为何需要力/力矩信息（Figure 4）</h3>
+    <figure>
+      <img src="img/force-disambig.webp" alt="力信息消歧：axial rotation vs planar">
+      <figcaption><b>Figure 4.</b> 一段与 axial rotation 约束交互的运动，planar 与 axial rotation 两种几何都能拟合。右图：两者的 <b>position error 相近</b>（上，Kinematic error），但 planar 的 <b>force error 显著</b>（下，绿色），据此可判定 axial rotation 才是正确模型。论文强调这不是启发式——它利用了交互的物理本质。</figcaption>
+    </figure>
+
+    <h3>信息质量的重要性（Figure 5）</h3>
+    <p>自由度多的约束（如 point on plane）需要足够多样、distinct 的样本才能可靠估参。论文示例：对 point-on-plane，用<b>连续时间样本</b>拟合时，直到累积约 1 秒运动 fit error 才降到可接受水平；而从整段演示中<b>随机采样</b>，样本更 distinct、信息更丰富，误差随样本数更快下降。启示：直线平移且不改变朝向的运动无法确定平面位置——演示需带足够的姿态/位置变化。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下前三条为论文 Conclusion 中作者<b>明确陈述（stated）</b>的局限与未来方向；后两条为依据方法设计<b>推断（inferred）</b>。</div>
+    <details class="lim" open><summary>不估计惯性力与重力（stated）</summary><p>方法不补偿被约束物体的惯性与重力效应，在某些情形下这些效应显著——作者举例"interacting with constrained exercise equipment"。当前假设加速度小、或运动方向垂直于重力（拉抽屉、擦轻质黑板擦）时可忽略。</p></details>
+    <details class="lim"><summary>拟合过程未纳入力/力矩信息（stated）</summary><p>力/力矩目前只用于第 3 步的<b>评估/消歧</b>，没有进入第 1 步的模型拟合；作者认为把它纳入拟合可能进一步提升性能。</p></details>
+    <details class="lim"><summary>尚未集成进完整的示教系统（stated）</summary><p>论文希望看到该方法嵌入一个完整的 teaching-by-demonstration 系统中，并将其列为有趣的未来工作。</p></details>
+    <details class="lim"><summary>依赖预先的单约束分段（inferred）</summary><p>方法假定输入已被分段为"每段单一约束"，分段由外部方法 [11] 完成；分段质量会直接影响后续识别。</p></details>
+    <details class="lim"><summary>力矩反解对大力矩敏感、模型库固定（inferred）</summary><p>式 31 在测到大力矩时不可靠（会使 Lagrange 乘子有偏，导致 Fixed Point 掉到 75%）；此外识别范围受限于预先构建的六类约束库，库外约束需另行加入。阈值也需按约束尺度与仪器精度调（Table 2 给出实验用值）。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Inferring geometric constraints in human demonstrations (CoRL 2018) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/1810.00140">https://arxiv.org/abs/1810.00140</a> · <a href="https://proceedings.mlr.press/v87/subramani18a.html">PMLR v87:223-236</a> · <a href="https://github.com/uwgraphics/CoRL2018Constraint">Code</a>
+  </div>
+</footer>
+
+</body>
+</html>

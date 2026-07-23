@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FACTR：力觉课程训练，让策略学会用力</title>
+<meta name="keywords" content="contact-rich manipulation, force feedback, curriculum learning, imitation learning, bilateral teleoperation, action chunking transformer, external joint torque, object generalization, 力觉反馈, 接触密集操作">
+<meta name="description" content="FACTR 用逐渐减弱的视觉模糊课程，迫使模仿学习策略先学会利用力觉信号，将对未见物体的泛化成功率从 61.2% 提升到 87.5%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · 接触密集操作 · 模仿学习</span>
+    <h1>FACTR：力觉课程训练，让策略学会用力</h1>
+    <div class="sub">Force-Attending Curriculum Training for Contact-Rich Policy Learning</div>
+    <div class="authors">Jason Jingzhou Liu*, Yulong Li*, Kenneth Shaw, Tony Tao, Ruslan Salakhutdinov, Deepak Pathak · Carnegie Mellon University（*Equal contribution）</div>
+    <p class="lead">很多接触密集任务（搬箱子、擀面团）都靠力觉反馈才能可靠完成，但这些力信息在遥操作与策略学习里几乎没被用起来。FACTR 提出一套<b>随训练逐渐减弱视觉模糊</b>的课程，逼迫 transformer 策略先学会利用力觉、不再一味过拟合视觉。配合一套低成本双边力反馈遥操作系统，方法把对未见物体的泛化成功率相较不用课程的基线提升 <b>43%</b>。</p>
+    <div class="meta">
+      <span>四个接触密集任务</span><span>50 条示教</span><span>Franka Panda + KUKA iiwa</span>
+      <span><a href="https://arxiv.org/abs/2502.17432">📄 arXiv:2502.17432</a></span>
+      <span><a href="https://jasonjzliu.com/factr/">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>contact-rich manipulation</span><span>force feedback</span><span>curriculum learning</span><span>imitation learning</span><span>bilateral teleoperation</span><span>action chunking transformer</span><span>external joint torque</span><span>力觉反馈</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">力觉信息在现代协作机械臂（Franka Panda、KUKA LBR iiwa）上是<b>现成可读</b>的，但主流数据驱动方法（含 Behavior Cloning）几乎只依赖视觉，导致机器人行为局限于不需要精细力反馈的准静态运动学任务。作者指出两大障碍：一是缺少能在采数据时就<b>捕捉力反馈</b>的低成本直观遥操作系统；二是即便把力拼进观测，策略也往往<b>过拟合视觉、忽略力</b>——因为接触力信号区分度低，机械臂不接触时长期接近零。</p>
+    <blockquote>"policies often overfit to using visual modality … without proper care during training, policies tend to ignore force input and rely primarily on visual information."</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="低成本双边力反馈遥操作系统与四个任务">
+      <figcaption>Figure 0 / teaser。[左] 低成本双臂力反馈遥操作系统：两个被驱动的 leader 臂、两个带外部关节力矩传感的 follower 臂（Franka Panda / KUKA LBR iiwa）、一个前置相机与两个腕部相机。[右] 用 FACTR 训练自主策略的四个接触密集任务。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>87.5%</b><small>FACTR 在未见物体上的平均成功率</small></div>
+      <div><b>+43%</b><small>相较无课程基线的泛化提升（摘要）</small></div>
+      <div><b>+64.7%</b><small>遥操作任务完成率提升</small></div>
+      <div><b>~$1230</b><small>单个力反馈 leader 臂的物料成本</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">方法由两部分组成：(1) 一套<b>低成本双边遥操作系统</b>，把 follower 臂感知到的外部关节力矩回传给 leader 臂，让示教者"摸"到环境几何约束；(2) <b>FACTR 力觉课程训练</b>——在训练早期用算子（Gaussian blur / downsampling）强烈模糊视觉输入，随训练推进逐步减弱模糊、恢复视觉细节，从而迫使策略先学会利用力模态。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="FACTR 策略架构">
+      <figcaption>Figure 2。策略是 encoder-decoder transformer：预训练 ViT 把图像 I 编码为视觉 token，MLP force encoder 把关节力矩 τ 编码为一个 force token，拼接后过 encoder 自注意力；decoder 用 k 个 action token 通过 cross-attention 关注视觉/力 token，最终 MLP 输出未来 k 步关节位置目标 q̂。训练期对视觉支路施加逐渐减弱的模糊课程，让策略"先用力、后融合视觉"。</figcaption>
+    </figure>
+
+    <h3>① 双边力反馈遥操作系统</h3>
+    <p>Leader 臂沿用 GELLO 式的低成本舵机 + 3D 打印结构，但主动驱动舵机以提供功能：力反馈控制律 <b>τ<sub>feedback</sub> = μ<sub>f</sub> K<sub>f,p</sub> τ<sub>ext</sub> − K<sub>f,d</sub> q̇</b>，只回传<b>外部关节力矩 τ<sub>ext</sub></b>（不含内部摩擦/惯性），让操作者更清晰地感知环境；配合零空间投影做<b>可定制冗余度消解</b>（用户自定义 q<sub>rest</sub> 静息姿态）、RNEA 主动<b>重力补偿</b>、摩擦补偿与关节限位保护。作者强调只传外力，避免操作者在无接触运动时受到 follower 臂的惯性摩擦干扰。</p>
+
+    <h3>② Force-Attending Curriculum（核心）</h3>
+    <p>定义像素空间算子 β<sub>P</sub>(I, σ) 与隐空间算子 β<sub>L</sub>(z, σ)，可选 <b>Gaussian blur</b> 或 <b>downsampling</b>（MaxPool + 最近邻插值）。尺度参数 σ<sub>n</sub> 由调度器（linear / cosine / exponential / step）在 N 步训练内逐渐衰减。直觉是：σ→∞ 时所有视觉输入坍缩成几乎相同的张量，模型只能学一个全局输出，于是梯度更新被迫集中在<b>更新 force encoder 以最大化区分输入</b>上；随后逐步释放视觉细节。论文正文中的默认配置为<b>隐空间 + Gaussian blur + linear 调度器</b>，并对随机初始化的 force encoder 做 warm-up。作者用 Neural Tangent Kernel (NTK) 框架给出了简化情形下的理论分析。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">四个接触密集任务：<b>Box Lift</b>（双臂抬箱悬停≥2s）、<b>Non-Prehensile Pivot</b>（把物体顶到夹具角上翻转 90°）、<b>Fruit Pick and Place</b>（抓取柔软水果放入碗中）、<b>Rolling Dough</b>（持续擀面团成柱状≥8s）。每个任务用同一套超参、50 条遥操作示教，每个物体评测 5–10 次。基线为 ACT (Vision-Only) 与 ACT (Vision+Force)（拼了力但无课程）。</p>
+
+    <h3>主结果：FACTR 显著改善对未见物体的泛化</h3>
+    <table>
+      <tr><th>方法（未见测试物体平均成功率）</th><th>Test 成功率</th></tr>
+      <tr><td>ACT (Vision-Only)</td><td>21.3%</td></tr>
+      <tr><td>ACT (Vision+Force)，无课程</td><td>61.2%</td></tr>
+      <tr><td class="good">FACTR (Ours)</td><td class="good">87.5%</td></tr>
+    </table>
+    <p>在训练物体上各方法表现相近（除擀面团任务中 vision-only 直接把面团压扁、完全失败）；差距体现在未见物体上。作者认为力反馈在<b>模式切换</b>时刻（如接触到箱子、抓住水果的瞬间）提供了关键信号。</p>
+    <figure>
+      <img src="img/results.webp" alt="四任务训练/测试物体成功率对比">
+      <figcaption>Figure 4。四个任务上三种方法对训练物体与未见测试物体的成功率对比。FACTR 在测试物体上一致领先，验证其对未见视觉外观与几何形状的泛化能力。</figcaption>
+    </figure>
+
+    <h3>FACTR 学会关注"模式切换"</h3>
+    <figure>
+      <img src="img/attention.webp" alt="action token 对力/视觉 token 的 cross-attention">
+      <figcaption>Figure 7。可视化 decoder 第一层 action token 对力/视觉 token 的平均 cross-attention。[左] 无课程时策略对力关注不足，在新箱子上要么抬不起、要么保持不住；[右] FACTR 在双臂接触箱子时对力的注意力超过视觉，捕捉到"接触建立"的模式切换。</figcaption>
+    </figure>
+
+    <h3>恢复行为（Box Lift，第二次尝试）</h3>
+    <p>先让策略成功抬箱一次，再把箱子打落，评估第二次尝试。Table I 显示：训练物体上所有方法恢复成功率近 100%；但在测试物体上 vision-only 从第一次的 31.7% 跌到第二次的 13.3%，而带力的策略保持相近。作者观察到 vision-only 在箱子被打落后常"僵住"不重试，而 FACTR 通过外部关节力矩读数回落到抬起前的值来检测失接触并成功重试。</p>
+    <table>
+      <tr><th>Box Lift 恢复（第二次尝试）</th><th>训练物体</th><th>测试物体</th></tr>
+      <tr><td>ACT (Vision-Only)</td><td>4/5</td><td>4/30 (13.3%)</td></tr>
+      <tr><td>ACT (Vision+Force)</td><td>5/5</td><td>16/30 (53.3%)</td></tr>
+      <tr><td class="good">FACTR</td><td>3/3</td><td class="good">27/30 (90.0%)</td></tr>
+    </table>
+
+    <h3>消融：课程 vs 固定尺度</h3>
+    <p>在最难的 pivot 任务上（仅用 5 个测试物体、各 5 次）验证课程的必要性。作者发现<b>逐渐衰减的课程一致优于固定尺度</b>："performance with a curriculum of decaying smoothing performs better than a fixed curriculum across all tasks"——固定模糊虽能避免过拟合视觉，但无法从未模糊图像中提取完成任务所需的细节。同时对比像素/隐空间、两种算子、四种调度器后，"we do not find a uniform advantage or disadvantage for any set of parameters"，说明 FACTR 对课程参数<b>相对鲁棒</b>。</p>
+    <p>遥操作用户研究（对比无驱动 leader-follower 基线）：FACTR 系统带来 <b>+64.7%</b> 任务完成率、<b>−37.4%</b> 完成时间、<b>+83.3%</b> 主观易用性。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文 Sec. VI 明确<b>作者陈述（stated）</b>的局限。</div>
+    <details class="lim" open><summary>外部关节力矩传感精度有限</summary><p>follower 臂的外部关节力矩传感器精度受限，力矩读数可能太噪，尤其影响需要细微力调整的精细操作。作者建议未来引入高分辨率触觉传感或 haptic gloves 提升反馈精度。</p></details>
+    <details class="lim"><summary>依赖外部关节力矩传感器</summary><p>方法假设 follower 臂本身具备外部关节力矩传感。未来可探索适配"仅在末端装 force-torque 传感器"的机械臂。</p></details>
+    <details class="lim"><summary>课程超参具任务依赖性</summary><p>课程效果受多个超参影响（模糊算子选择、调度策略等），可能高度依赖具体任务、需要大量调参。作者建议发展<b>自适应 / 自调优</b>的课程策略来动态调整超参。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2502.17432">https://arxiv.org/abs/2502.17432</a> · Project: <a href="https://jasonjzliu.com/factr/">jasonjzliu.com/factr</a>
+  </div>
+</footer>
+
+</body>
+</html>

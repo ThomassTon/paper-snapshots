@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKIL: Semantic Keypoint Imitation Learning for Generalizable Data-Efficient Manipulation</title>
+<meta name="keywords" content="imitation learning, semantic keypoints, vision foundation model, data-efficient manipulation, cross-embodiment learning, diffusion policy, DiFT, 机器人操作">
+<meta name="description" content="SKIL 用视觉基础模型自动抽取语义关键点作为稀疏观测，实现数据高效、可泛化的机器人模仿学习，仅 30 条示范即可完成挂毛巾等长程任务。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">RSS 2025 · Robotics</span>
+    <h1>SKIL：语义关键点模仿学习</h1>
+    <div class="sub">Semantic Keypoint Imitation Learning for Generalizable Data-Efficient Manipulation</div>
+    <div class="authors">Shengjie Wang, Jiacheng You, Yihang Hu, Jiongye Li, Yang Gao · IIIS, Tsinghua University / Shanghai AI Laboratory / Shanghai Qi Zhi Institute</div>
+    <p class="lead">SKIL 借助 vision foundation model 自动抽取<strong>语义关键点（semantic keypoints）</strong>，并为其构造 descriptor 作为稀疏观测，让模仿学习在极低样本量下依然可泛化、可完成长程任务。真实实验中它把基线方法的成功率翻倍，挂毛巾这类长程任务仅需 <strong>30 条示范</strong> 即可达到约 70% 成功率，而以往方法完全失败；由于关键点抽象与本体无关，SKIL 还能天然利用人类视频进行 cross-embodiment 学习。</p>
+    <div class="meta">
+      <span>arXiv 2501.14400 · v2 2025-07-02</span>
+      <span>6 个真实任务 · Franka + Robotiq</span>
+      <span><a href="https://arxiv.org/abs/2501.14400">📄 arXiv:2501.14400</a></span>
+      <span><a href="https://skil-robotics.github.io/SKIL-robotics/">🔗 Project page</a></span>
+    </div>
+    <div class="kw"><span>imitation learning</span><span>semantic keypoints</span><span>vision foundation model</span><span>data-efficient manipulation</span><span>cross-embodiment learning</span><span>diffusion policy</span><span>DiFT / RADIO</span><span>机器人操作</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">衣物操作、桌面整理这类真实任务，要求策略同时具备<strong>泛化性、高精度与长程能力</strong>。模仿学习虽有效，但复杂任务仍需大量专家示范，样本复杂度高、数据采集昂贵。SKIL 的核心洞见是：真实操作任务其实很少依赖物体的颜色、纹理或几何细节。</p>
+    <blockquote>"when picking up a cup, a smart agent should focus mainly on the position of the handle instead of its color or shape." —— 稀疏的语义关键点（如杯柄、衣领与袖口）才是最关键的 task-relevant information，它们在不同物体与场景间高度一致，从而缓解过拟合。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="teaser">
+      <figcaption>Figure 1：仅用有限机器人示范，SKIL 就能完成可泛化、长程的操作任务（如把布挂到架子上）。面对 unseen 物体与场景时，SKIL 在四个 short-horizon 任务上大幅超越基线。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>72.8%</b><small>6 任务测试平均成功率（unseen 物体）</small></div>
+      <div><b>+146%</b><small>相比基线的相对提升</small></div>
+      <div><b>~70%</b><small>Hang Towel 长程任务，30 条示范</small></div>
+      <div><b>+40%</b><small>Pick Mouse 加 20 条人类视频后</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">SKIL 由两大模块组成：<strong>Semantic Keypoints Description Module</strong> 从 RGBD 帧中获得语义关键点并计算其 descriptor；<strong>Policy Module</strong> 用 transformer encoder 融合关键点信息，再由 diffusion action head 输出动作序列。视觉基础模型近年在 semantic correspondence 上的成功，正是 SKIL 抽取带语义对应关键点的动机。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="architecture">
+      <figcaption>Figure 3：SKIL 整体框架。Description Module 为语义关键点计算 descriptor；transformer encoder 融合所有关键点 token 得到 fused embedding；在 fused embedding 与机器人状态的条件下，diffusion action head 输出最终动作序列。</figcaption>
+    </figure>
+
+    <h3>One-time Reference Features Generation</h3>
+    <p>每个任务只需<strong>一张参考图</strong>即可自动检测参考关键点与特征，之后贯穿整个训练与评估。流程：用 SAM 得到物体 mask，用 vision foundation model（如 DiFT、RADIO）提取 patch-wise 特征图，再对 mask 内特征做 K-means 聚类得到 reference features。</p>
+    <figure>
+      <img src="img/reference-gen.webp" alt="reference feature generation">
+      <figcaption>Figure 2：参考特征生成过程。(1) 用 SAM 与 Vision Foundation Model 分别得到 mask M 与特征图 F_r；(2) 对被 mask 覆盖的特征 F_r[M] 用 K-means 聚类，得到参考特征 F_r。</figcaption>
+    </figure>
+
+    <h3>Semantic Keypoints Descriptor</h3>
+    <p>对当前帧，基于参考特征构造 <strong>cosine-similarity map</strong>；关键点的 descriptor 由该相似度图与原始 depth image 共同计算得到。这样的描述子既包含语义对应信息，又携带 3D 空间线索，且天然稀疏——极大降低了问题维度，是数据高效的来源。</p>
+
+    <h3>Policy Module：Transformer Encoder + Diffusion Head</h3>
+    <p>每个关键点 descriptor 先被嵌入 d 维隐空间并加 positional encoding，transformer encoder 处理全部 token 后<strong>取所有输出 token 的均值</strong>（而非 [CLS] token）得到 fused embedding W_t；再以其为条件由 diffusion action head 生成动作。</p>
+
+    <h3>SKIL-H：Cross-embodiment Learning</h3>
+    <p>由于语义关键点抽象不含本体信息，可利用包括人类视频在内的多样数据源。受 ATM 启发，SKIL-H 把关键点轨迹预测作为中间任务，含两个模块：<strong>Trajectory Prediction Module</strong>（从纯视频预测未来关键点轨迹，用机器人 + 人类示范共同训练）与 <strong>Trajectory-to-Action Module</strong>（把预测轨迹映射为机器人动作，仅用机器人示范训练）。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">硬件为配备 Robotiq 夹爪的 Franka 机械臂，固定 Zed2 立体相机采集 RGBD（不使用腕部相机）。共 6 个真实任务（4 个 short-horizon + 2 个 long-horizon），每物体 5 次随机初始化试验。基线包括 <strong>DP（Diffusion Policy）、DP3、RISE、GenDP-S</strong>。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="six real-world tasks">
+      <figcaption>Figure 5：6 个真实任务概览——上排 4 个 short-horizon（Pick Mouse / Grasp Handle of Cup / Grasp Wall of Cup / Fold Towel），下排 2 个 long-horizon（Hang Towel / Hang Cloth）。</figcaption>
+    </figure>
+
+    <h3>真实任务成功率（TABLE I，unseen 测试物体）</h3>
+    <table>
+      <tr><th>Method</th><th>Pick Mouse</th><th>Grasp Handle</th><th>Grasp Wall</th><th>Fold Towel</th><th>Hang Towel</th><th>Hang Cloth</th><th>Avg (Test)</th></tr>
+      <tr><td>DP</td><td>4%</td><td>36%</td><td>36%</td><td>50%</td><td>0%</td><td>12%</td><td>23.0%</td></tr>
+      <tr><td>DP3</td><td>18%</td><td>32%</td><td>18%</td><td>58%</td><td>0%</td><td>24%</td><td>25.0%</td></tr>
+      <tr><td>RISE</td><td>14%</td><td>34%</td><td>12%</td><td>32%</td><td>0%</td><td>16%</td><td>18.0%</td></tr>
+      <tr><td>GenDP-S</td><td>32%</td><td>32%</td><td>30%</td><td>58%</td><td>0%</td><td>28%</td><td>30.0%</td></tr>
+      <tr><td>SKIL (Ours)</td><td class="good">72%</td><td class="good">94%</td><td class="good">80%</td><td class="good">72%</td><td class="good">72%</td><td class="good">47%</td><td class="good">72.8%</td></tr>
+    </table>
+    <p>数值为测试阶段（unseen 物体，同类别）成功率。SKIL 训练物体平均 81.7%、测试物体 72.8%，两个长程任务上所有基线均为 0%。</p>
+
+    <h3>环境泛化（TABLE II · Grasp Handle of Cup）</h3>
+    <table>
+      <tr><th>Method</th><th>Situation 0 原始</th><th>Situation 1 加干扰物</th><th>Situation 2 换背景</th><th>Situation 3 二者叠加</th></tr>
+      <tr><td>DP</td><td>4/10</td><td>4/10</td><td>0/10</td><td>0/10</td></tr>
+      <tr><td>DP3</td><td>5/10</td><td>1/10</td><td>4/10</td><td>0/10</td></tr>
+      <tr><td>RISE</td><td>4/10</td><td>3/10</td><td>2/10</td><td>1/10</td></tr>
+      <tr><td>GenDP-S</td><td>5/10</td><td>3/10</td><td>5/10</td><td>2/10</td></tr>
+      <tr><td>SKIL (Ours)</td><td class="good">9/10</td><td class="good">9/10</td><td class="good">8/10</td><td class="good">8/10</td></tr>
+    </table>
+    <p>在加入干扰物、换背景乃至二者叠加的最难 Situation 3 下，SKIL 仍保持一致的高性能，而基线大幅下滑。</p>
+
+    <h3>数据效率（TABLE III，长程任务）</h3>
+    <p>对 Hang Towel 与 Hang Cloth 两个长程任务，SKIL 仅用 <strong>30 条示范</strong> 就达到高成功率（Hang Towel 72%），而所有基线完全失败；基线常见失败模式是"跳过"折叠等中间阶段。short-horizon 任务上 SKIL 在 20 条示范时已达 90% 级别。</p>
+
+    <h3>Cross-embodiment：人类视频有效</h3>
+    <figure>
+      <img src="img/human-video.webp" alt="human video improvement">
+      <figcaption>Figure 8：不同数量无动作标签人类视频下的性能对比（"10R+20H" = 10 条机器人 + 20 条人类示范）。成功率随人类示范数量显著上升。</figcaption>
+    </figure>
+    <p>SKIL-H 用 10 条机器人示范 + 0~20 条人类视频。在最难的 Pick Mouse 上，<strong>20 条人类视频带来 40% 的成功率提升</strong>；更多人类视频还使评估时动作序列更平滑，印证了关键点描述带来的成功 cross-embodiment 抽象。</p>
+
+    <h3>Ablations</h3>
+    <ul>
+      <li><strong>关键点选取策略（TABLE V）</strong>：对比 Random / Manual，最终选用 K-means。</li>
+      <li><strong>视觉基础模型（Figure 9 / TABLE XI）</strong>：DINOv2、DiFT、RADIO v2.5 在 A10 GPU 上呈现"计算开销（latency）—成功率"的权衡。</li>
+      <li>另有仿真基准 MetaWorld（TABLE VII）与 DexArt（TABLE VI）结果佐证。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下两点均为作者在论文 Section VI Limitations 中<strong>明确陈述（stated）</strong>。</div>
+    <details class="lim" open><summary>能力受上游视觉基础模型上限约束</summary><p>"its capability is strictly upper-bounded by the capability of its upstream vision foundation model." 例如作者尝试的 Bulb Assembly 任务失败，因为当前模型（DiFT）抽取的关键点精度达不到该任务的高要求。</p></details>
+    <details class="lim"><summary>无法完成需要精细环境感知的任务</summary><p>SKIL 只从相关物体上抽取关键点，缺乏对环境的细致感知；在有多个障碍物的任务中可能违反 safety constraints。作者提出未来可发展一种高效的、基于关键点的环境表示来扩展能力。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · SKIL: Semantic Keypoint Imitation Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2501.14400">https://arxiv.org/abs/2501.14400</a> · Project: <a href="https://skil-robotics.github.io/SKIL-robotics/">skil-robotics.github.io</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "slug": "k-vil",
+  "title": "K-VIL：基于关键点的视觉模仿学习",
+  "arxiv_id": "2209.03277",
+  "url": "https://arxiv.org/abs/2209.03277",
+  "category": "机器人 · Robotics",
+  "keywords": ["visual imitation learning", "keypoint", "geometric constraints", "principal manifold estimation", "object-centric representation", "one-shot imitation", "admittance control", "movement primitive", "机器人操作"],
+  "summary_zh": "K-VIL 从少量人类演示视频中自动提取稀疏、以物体为中心、与本体无关的关键点几何约束（五类：p2p/p2l/p2P/p2c/p2S）任务表示，配合 local frames 与 VMP，并用新颖的 keypoint-based admittance controller 在杂乱新场景中复现单臂操作技能，支持 one-shot 与增量学习。",
+  "date": "2026-07-23",
+  "source": "arxiv-pdf"
+}

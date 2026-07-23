@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FILIC：面向接触密集操作的双环力引导模仿学习与阻抗力矩控制</title>
+<meta name="keywords" content="imitation learning, contact-rich manipulation, impedance control, force estimation, ACT Transformer, sensorless force, digital twin, 力矩控制, 力引导策略">
+<meta name="description" content="FILIC 用双环结构把 Transformer 模仿学习策略与阻抗力矩控制结合起来，并用关节力矩＋数字孪生做无传感器末端力估计，实现柔顺的力感知接触操作。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  .eq{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:16px 0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:15px;color:#3a3833;overflow-x:auto}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Contact-Rich Manipulation</span>
+    <h1>FILIC：双环力引导模仿学习 + 阻抗力矩控制</h1>
+    <div class="sub">Dual-Loop Force-Guided Imitation Learning with Impedance Torque Control for Contact-Rich Manipulation Tasks</div>
+    <div class="authors">Haizhou Ge, Yufei Jia, Zheng Li, Yue Li, Zhixing Chen, Lu Shi, Lei Han, Ruqi Huang, Guyue Zhou · Tsinghua SIGS / Tencent Robotics X</div>
+    <p class="lead">多数模仿学习（IL）策略仍是 <b>position-centric</b>、缺乏显式的力感知，而给协作臂加装 F/T 传感器又昂贵。FILIC 用<b>双环结构</b>把 Transformer 模仿学习策略（外环）与<b>阻抗力矩控制</b>（内环）结合，做到 “compliant force-informed, force-executed manipulation”；对于没有力传感器的机器人，进一步提出用<b>关节力矩 + 数字孪生</b>做无传感器的末端力估计。</p>
+    <div class="meta">
+      <span>接触密集操作</span><span>无力/力矩传感器</span><span>ACT Transformer 策略</span>
+      <span><a href="https://arxiv.org/abs/2509.17053">📄 arXiv:2509.17053</a></span>
+      <span><a href="https://github.com/OpenGHz/mujoco-wrench-estimator.git">💻 Code (GitHub)</a></span>
+    </div>
+    <div class="kw"><span>imitation learning</span><span>contact-rich manipulation</span><span>impedance control</span><span>阻抗力矩控制</span><span>force estimation</span><span>sensorless force</span><span>ACT Transformer</span><span>digital twin</span><span>力引导策略</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">很多接触密集（contact-rich）任务——插拔、按压、锁紧——都需要<b>精确的力调节</b>。但主流 IL 策略只学位置轨迹，对力一无所知；而给协作臂装 F/T 传感器 “is often costly and requires additional hardware design”，限制了可扩展性。FILIC 要回答的是：能否<b>不加专用力传感器</b>，也让廉价机器人学会既能感知力、又能柔顺执行力的操作。</p>
+    <blockquote>“most imitation learning (IL) policies remain position-centric and lack explicit force awareness, and adding force/torque sensors to collaborative robot arms is often costly.”</blockquote>
+    <figure>
+      <img src="img/demonstration.webp" alt="four demonstration tasks with force feedback">
+      <figcaption><b>Figure 2 · 四个演示任务的过程与力反馈曲线。</b>“Peaks or sudden shifts delineate key contact events, such as pressing, releasing, locking, or tightening.” 演示采集时用<b>触觉反馈手柄</b>——力越大振动频率越高（离散递增），帮助演示者提供力有变化的轨迹。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>90.0%</b><small>仿真 peg-in-hole 成功率<br>（估计末端力）</small></div>
+      <div><b>+10 pp</b><small>相对 joint-torque 输入<br>（仿真）</small></div>
+      <div><b>2 kHz</b><small>内环阻抗力矩控制频率</small></div>
+      <div><b>0 个</b><small>专用 F/T 传感器</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">FILIC 是一个<b>双环（dual-loop）</b>框架：高层模仿学习策略（外环，25 Hz）负责“看图 + 感知力 → 输出目标末端位姿序列”；底层<b>阻抗力矩控制器</b>（内环，2 kHz）负责柔顺地执行这些位姿。对于没有力传感器的机器人，一个基于 Jacobian 的<b>末端力估计器</b>把关节力矩反解为末端 wrench，喂回策略。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="FILIC architecture">
+      <figcaption><b>Figure 1 · FILIC 整体架构。</b>外环（蓝）：External Force Estimator 输出交互力，与前向运动学 FK 结果经 MLP 融合；双 ResNet 编码视觉观测，并通过 <b>cross-attention</b> 与力嵌入融合，送入标准 Transformer（ACT）以 25 Hz 生成位姿序列。内环（绿）：预测位姿经逆运动学 IK 跟踪，阻抗力矩控制器以 2 kHz 运行，重力补偿模块以 250 Hz 刷新。</figcaption>
+    </figure>
+
+    <h3>① Transformer 模仿学习策略（外环, 25 Hz）</h3>
+    <p>视觉观测由双 ResNet backbone 编码，末端力向量经 MLP 映射，二者通过 <b>cross-attention</b> 融合成多模态特征，交给 ACT（Action Chunking with Transformers）风格的 Transformer encoder-decoder，输出一段 6-DOF 目标末端位姿序列（k × 6）。这样策略不仅“看得见”，还“感受得到”接触力。</p>
+
+    <h3>② 阻抗力矩控制（内环, 2 kHz）</h3>
+    <p>内环用简化的<b>弹簧-阻尼</b>形式（为稳定性省去惯性项），把外环给的目标位姿转成关节力矩指令：</p>
+    <div class="eq">τ_cmd = B·(v̂ − v) + K·(q̂ − q) + τ̂</div>
+    <p>其中 K、B 为刚度/阻尼系数，(q̂, v̂) 为期望关节位置/速度，τ̂ 为重力与 Coriolis 补偿项（以 250 Hz 刷新）。由此实现“force-executed”的柔顺执行。</p>
+
+    <h3>③ 无传感器末端力估计（Jacobian + 数字孪生）</h3>
+    <p>核心思路：真实观测的关节力矩里，扣掉机器人自身动力学“应有”的力矩，剩下的就是外部接触带来的力矩；再用 Jacobian 转置的伪逆映射到末端 wrench：</p>
+    <div class="eq">F_ext = J(q)<sup>T+</sup> · (τ_obs − τ_inv)</div>
+    <p>其中 τ_obs 是电机传感器观测到的关节力矩；τ_inv 是一个与真机同步的 <b>MuJoCo 数字孪生（digital twin）</b>给出的期望动力学力矩；J(q)<sup>T+</sup> 为 Jacobian 转置的伪逆，通过 <b>SVD</b> 求得。这样无需任何专用 F/T 传感器，就能得到末端六维力估计。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">评测分两部分：仿真中的 <b>peg-in-hole</b> 插孔（6-DOF 机械臂，0.95 cm 圆柱销、1 cm 孔），以及真机上的四个接触密集任务——插适配器（plug adapter）、按急停按钮（e-stop）、C 型夹固定（C-clamp）、拧瓶盖（cap tightening）。三种<b>本体感知输入</b>作对比：仅末端位置（Pos）、位置 + 关节力矩（Pos + JT）、位置 + 估计末端力（Pos + EF）。</p>
+
+    <figure>
+      <img src="img/peg-in-hole.webp" alt="simulation peg-in-hole setup">
+      <figcaption><b>Figure 4 · 仿真 peg-in-hole 任务的场景与流程。</b>(a) 初始配置 → (b) 接近孔位 → (c) 插入孔中。</figcaption>
+    </figure>
+
+    <h3>仿真：peg-in-hole 成功率（Table II）</h3>
+    <table>
+      <tr><th>本体感知输入</th><th>成功率</th></tr>
+      <tr><td>EE position only</td><td>68.0%</td></tr>
+      <tr><td>EE position + joint torque</td><td>80.0%</td></tr>
+      <tr><td>EE position + estimated EE force</td><td class="good">90.0%</td></tr>
+    </table>
+
+    <h3>真机：四任务成功率（Table III）</h3>
+    <table>
+      <tr><th>任务</th><th>Pos only</th><th>Pos + JT</th><th>Pos + EF</th></tr>
+      <tr><td>Plug adapter 插适配器</td><td>46.7%</td><td>63.3%</td><td class="good">80.0%</td></tr>
+      <tr><td>E-stop button 急停按钮</td><td>43.3%</td><td>60.0%</td><td class="good">83.3%</td></tr>
+      <tr><td>C-clamp 夹具固定</td><td>30.0%</td><td>63.3%</td><td class="good">76.6%</td></tr>
+      <tr><td>Cap tightening 拧瓶盖</td><td>26.6%</td><td>70.0%</td><td class="good">80.0%</td></tr>
+    </table>
+    <p>相对于 joint-torque 输入，估计末端力（EF）在真机上分别带来 <b>+16.7 / +23.3 / +13.3 / +10.0 个百分点</b>的提升（plug / e-stop / clamp / cap），仿真中为 +10.0 pp。position-only 基线则表现出一致的失败模式：“inability to recover from lateral misalignment”、按压行为不一致、以及任务过早终止。</p>
+
+    <h3>力估计精度（Figure 3）</h3>
+    <figure>
+      <img src="img/force-error.webp" alt="force estimator prediction error under static loads">
+      <figcaption><b>Figure 3 · 末端力估计器在不同静载下的预测误差。</b>在 6-DOF AIRBOT Play 末端挂不同已知质量（对应 g=9.81 m/s² 下的真实向下拉力：0 / 4.9 / 9.8 / 14.7 / 19.6 N），柱为均值、误差棒为标准差。误差整体保持在约 ±0.3 N 量级，说明无传感器估计足以支撑策略使用。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文未设独立的 Limitations 章节；下列第 1 点为作者在 conclusion / future work 中<b>明确陈述</b>，其余为依据方法设计<b>推断</b>（inferred）。</div>
+    <details class="lim" open><summary>依赖建模动力学（stated）</summary><p>“Our sensorless force reconstruction relies on modeled dynamics.” 即末端力估计的准确度取决于数字孪生动力学模型与真机的一致性；作者将“enhancing robustness against modeling inaccuracies”列为 future work。</p></details>
+    <details class="lim"><summary>固定阻抗，尚未变刚度（inferred / future work）</summary><p>内环用固定 K、B 的弹簧-阻尼律；作者提到未来要 “integrating variable impedance”，说明当前对刚度需求变化大的任务适应性有限。</p></details>
+    <details class="lim"><summary>力仍是显式反解、非隐式推理（inferred）</summary><p>力经 Jacobian 伪逆显式估计后喂给策略；作者将 “exploring implicit force reasoning” 列为方向，暗示当前管线对模型误差与噪声较敏感。</p></details>
+    <details class="lim"><summary>任务与平台规模有限（inferred）</summary><p>评测集中在插孔/按压/锁紧/拧紧等少数接触任务、单一 6-DOF 平台（AIRBOT Play）；向更多任务与本体的泛化尚待验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · FILIC (arXiv:2509.17053) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2509.17053">https://arxiv.org/abs/2509.17053</a>
+    · 代码 / Code: <a href="https://github.com/OpenGHz/mujoco-wrench-estimator.git">OpenGHz/mujoco-wrench-estimator</a>
+  </div>
+</footer>
+
+</body>
+</html>

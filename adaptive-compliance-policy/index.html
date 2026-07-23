@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adaptive Compliance Policy: Learning Approximate Compliance for Diffusion Guided Control</title>
+<meta name="keywords" content="compliance control, visuomotor policy, diffusion policy, 接触丰富操作, force-torque sensing, stiffness matrix, bimanual manipulation, imitation learning, virtual target pose, admittance control">
+<meta name="description" content="ACP 让 diffusion policy 除了预测位姿，还在线预测空间/时间变化的近似顺应性（刚度），在接触丰富操作任务上比纯位置控制的视觉运动策略提升 50% 以上。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">ICRA 2025 · Robotics</span>
+    <h1>Adaptive Compliance Policy</h1>
+    <div class="sub">Learning Approximate Compliance for Diffusion Guided Control — 让视觉运动策略学会“该软的时候软”</div>
+    <div class="authors">Yifan Hou, Zeyi Liu, Cheng Chi, Eric Cousineau, Naveen Kuppuswamy, Siyuan Feng, Benjamin Burchfiel, Shuran Song · Stanford University &amp; Toyota Research Institute</div>
+    <p class="lead">顺应性（compliance）在操作中至关重要，它在不确定性下平衡位置与力的控制，却几乎被今天只做位置控制的 visuomotor policy 忽略。ACP 在 diffusion policy 输出位姿之外，额外在线预测<strong>随空间、时间变化的近似刚度</strong>，从人类演示中学习“何时该顺应、沿哪个方向顺应”，在接触丰富任务上比 SOTA 视觉运动策略提升 <strong>50%+</strong>。</p>
+    <div class="meta">
+      <span>cs.RO</span><span>Diffusion Policy + Compliance</span><span>2 项接触丰富真机任务</span>
+      <span><a href="https://arxiv.org/abs/2410.09309">📄 arXiv:2410.09309</a></span>
+      <span><a href="https://adaptive-compliance.github.io/">🌐 Project page</a></span>
+    </div>
+    <div class="kw"><span>compliance control</span><span>diffusion policy</span><span>接触丰富操作</span><span>force-torque sensing</span><span>stiffness matrix</span><span>virtual target pose</span><span>bimanual manipulation</span><span>imitation learning</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">接触丰富操作（翻起物体、擦拭曲面）需要在位置与力之间取得平衡：接触前要精确跟踪轨迹，接触后要顺应表面、避免过大接触力。现有 visuomotor policy 只预测位姿、用固定刚度执行；而顺应性其实需要沿<strong>时间</strong>（接触前后不同）、沿<strong>空间</strong>（不同轴需要不同刚度）、以及<strong>随任务</strong>三个维度变化。此前方法要么手工预选参数，要么假设均匀恒定刚度，鲁棒性受限。</p>
+    <blockquote>“…we estimate an approximate compliance profile with two useful properties: avoiding large contact forces and encouraging accurate tracking.” —— 不去求解完整（且病态的）顺应性参数，而是估计满足两条性质的近似顺应性。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="compliance requirements">
+      <figcaption>Fig 1 · 顺应性需求示意。左：翻起手机需要“时间上变化”的刚度——沿轨迹方向低刚度 K₂、垂直方向高刚度 K₁（K₁ ≫ K₂）。右：双臂擦拭花瓶时，两只手臂在 3D 空间需要各自不同的顺应方向（红=高刚度、绿=低刚度）。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>96</b><small>Flipping 总成功率 (%)，ACP</small></div>
+      <div><b>93.75</b><small>Vase Wiping 总成功率 (%)，ACP</small></div>
+      <div><b>50%+</b><small>相对 SOTA 视觉运动策略提升</small></div>
+      <div><b>2</b><small>接触丰富真机任务</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">ACP 在标准 diffusion policy 之上，让网络在预测参考位姿的同时，额外预测<strong>顺应性（近似刚度）</strong>。核心思想（Theorem 1）：在“接触力主导、接触力非零、非夹持接触”三条假设下，机器人只需在<strong>反馈力方向上使用低刚度、其余方向保持高刚度</strong>，即可满足接触约束——既避免大接触力，又不牺牲跟踪精度。</p>
+    <figure>
+      <img src="img/method.webp" alt="policy architecture comparison">
+      <figcaption>Fig 2 · 三种策略对比与位姿表示。左起：Compliant policy（只出 Pose，接顺应控制器）、Stiff policy（Pose + 顺应控制器但均匀低层刚度）、ACP（同时输出 Pose / Stiffness / Virtual Target，经 Compliance Computation 得到 Stiffness Matrix 再送 Compliance Controller）。最右：ACP 推理出的 Reference Pose（黄）、Virtual Target Pose（橙）与 Compliance direction（黄箭头）在翻起任务中的可视化。</figcaption>
+    </figure>
+    <h3>近似顺应性：方向 + 幅值</h3>
+    <p>刚度矩阵按“方向”和“幅值”两部分构造：<strong>方向</strong>——低刚度 k<sub>low</sub> 对齐反馈力向量，其余所有方向用高刚度 k<sub>high</sub>；<strong>幅值</strong>——k<sub>low</sub> 随力的大小以分段函数递减，力越大越顺应，从而平滑适配。这样避免了从人类演示中直接反解完整顺应性这一“ill-defined problem”。</p>
+    <h3>力感知与网络结构</h3>
+    <p>系统用一颗 <strong>ATI mini-45 力/力矩传感器</strong>（7000Hz 采集，部分变体降采样到 250Hz）。论文对比两种力编码：(1) <strong>temporal convolution</strong>——32 个力时刻经 5 层 causal convolution → 768D 向量；(2) <strong>FFT encoding</strong>——把 6D wrench 转成频谱图 (6×30×17)，用带 coordinate convolution 的 ResNet-18 处理。二者与 CLIP-ViT-B/16 图像特征（224×224，两帧）一起做 transformer self-attention，并拼接 3 帧位姿历史。</p>
+    <h3>Diffusion 输出与统一执行</h3>
+    <p>策略每只手臂输出 <strong>19D</strong>：Reference pose (9D，位置 + 旋转矩阵前两行)、Virtual target pose (9D，由参考位姿与力经弹簧模型算出的真实顺应控制器目标)、以及 low-stiffness 方向的刚度幅值标量 (1D)。该表示让策略能在力控或导纳控制等不同底层接口上统一执行。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在两个接触丰富真机任务上评测。所有方法在相同数据、相同训练轮数下对比：<strong>ACP</strong>、<strong>ACP w/o FFT</strong>（用 causal convolution 代替 FFT 编码力）、<strong>Stiff policy</strong>（带力输入、均匀低层刚度 k=500 N/m 的标准 diffusion policy）、<strong>Compliant policy</strong>（不预测顺应性）。</p>
+
+    <h3>Task I · Item Flipping（翻起物体）</h3>
+    <p>用点状手指抵住墙角枢转，把物体翻起。15 种物体、230 段演示、训练 300 epoch；5 类场景各 20 次共 100 次测试。</p>
+    <table>
+      <tr><th>场景（成功率 %）</th><th>Stiff</th><th>Compliant</th><th>ACP w/o FFT</th><th>ACP</th></tr>
+      <tr><td>Train Items</td><td>20</td><td>80</td><td>90</td><td class="good">90</td></tr>
+      <tr><td>Unseen Items</td><td>0</td><td>15</td><td>100</td><td class="good">95</td></tr>
+      <tr><td>Push &amp; Flip</td><td>5</td><td>15</td><td>100</td><td class="good">95</td></tr>
+      <tr><td>Varied Fixture</td><td>35</td><td>5</td><td>95</td><td class="good">100</td></tr>
+      <tr><td>Unstable Fixture</td><td>10</td><td>0</td><td>90</td><td class="good">100</td></tr>
+      <tr><td><strong>Overall</strong></td><td>14</td><td>23</td><td>95</td><td class="good">96</td></tr>
+    </table>
+    <p>ACP 能容忍较大的位置不确定性同时维持接触；当物体较硬或不确定性方向不对齐时，baseline 会脱离接触。</p>
+
+    <h3>Task II · Vase Wiping（擦拭花瓶）</h3>
+    <p>双臂任务：左臂握持随机摆位的花瓶，右臂用海绵工具擦除随机形状的记号，200 段演示。评测“3 次擦拭内擦净”。（Stiff policy 把工具压断，被排除出最终对比。）</p>
+    <table>
+      <tr><th>场景（成功率 %）</th><th>Compliant</th><th>ACP w/o FFT</th><th>ACP</th></tr>
+      <tr><td>Small Mark</td><td>60</td><td>100</td><td class="good">100</td></tr>
+      <tr><td>Large Mark</td><td>20</td><td>60</td><td class="good">80</td></tr>
+      <tr><td>Perturbation before contact</td><td>25</td><td>75</td><td class="good">100</td></tr>
+      <tr><td>Perturbation after contact</td><td>100</td><td>100</td><td class="good">100</td></tr>
+      <tr><td><strong>Overall</strong></td><td>43.75</td><td>81.25</td><td class="good">93.75</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/wiping-stiffness.webp" alt="predicted stiffness during wiping">
+      <figcaption>Fig 7 · 擦拭任务中 ACP 预测的刚度演化（world frame）。上：x/y/z 三轴刚度随时间变化，接触阶段（Horizon 3–4）明显下降以顺应瓶面，虚线为未执行动作。下：擦拭过程中的 Reference Pose（黄）、Virtual Target Pose（橙）与顺应方向。</figcaption>
+    </figure>
+
+    <h3>Ablations &amp; 定性对比</h3>
+    <figure>
+      <img src="img/comparisons.webp" alt="wiping method comparison">
+      <figcaption>Fig 8 · 擦拭定性对比（三行）。ACP（上）保持接触并擦净；Stiff policy（中）施力过大导致 <em>Broken Tool</em>；Compliant policy（下）对摩擦敏感而 <em>Lose Contact</em>，擦不干净。</figcaption>
+    </figure>
+    <p>消融显示：<strong>FFT encoding</strong> 在“大面积记号”等需要多次擦拭的场景优于 temporal convolution（Large Mark 80 vs 60）；去掉顺应性预测的 Compliant policy 因摩擦敏感而失接触，均匀高刚度的 Stiff policy 则接触力过大甚至损坏工具——印证了“沿力方向低刚度、其余高刚度”这一近似顺应性设计的价值。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 原文没有独立的 Limitations 章节；以下各点为<strong>从方法假设与实验设置推断（inferred）</strong>，非作者显式列举。</div>
+    <details class="lim" open><summary>依赖“接触力主导”等假设（inferred）</summary><p>Theorem 1 需要接触力主导、接触力非零、非夹持接触三条假设，因此不适合快速运动或重物——这类情形下惯性力/重力可能超过接触力，近似顺应性不再成立。</p></details>
+    <details class="lim"><summary>仅验证 3D 平移顺应性（inferred）</summary><p>实验只在 3D 平移空间评测顺应性；论文提到 6D（含旋转）在原理上可行，但未做验证。</p></details>
+    <details class="lim"><summary>训练时使用“事后”力信息（inferred）</summary><p>训练时对力做 1 秒滑动平均滤波，引入了推理阶段不可得的 hindsight information，存在训练/推理不一致的隐患。</p></details>
+    <details class="lim"><summary>任务范围有限（inferred）</summary><p>仅在 flipping 与 vase wiping 两个特定任务上演示，向更广泛接触丰富任务的泛化程度尚不清楚。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Adaptive Compliance Policy · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2410.09309">https://arxiv.org/abs/2410.09309</a> · <a href="https://adaptive-compliance.github.io/">Project page</a>
+  </div>
+</footer>
+
+</body>
+</html>

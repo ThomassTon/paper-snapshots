@@ -1,0 +1,11 @@
+{
+  "slug": "bimanual-manip-taxonomy",
+  "title": "A Bimanual Manipulation Taxonomy",
+  "arxiv_id": "",
+  "url": "https://doi.org/10.1109/LRA.2022.3196158",
+  "category": "机器人 · Robotics",
+  "keywords": ["bimanual manipulation", "双臂操作", "taxonomy", "动作分类", "contact graph", "rule-based classification", "learning from demonstration", "hand dominance", "humanoid robot"],
+  "summary_zh": "面向机器人双臂操作的分类学：以协调、交互、手的角色与对称性四个关键维度组织人类双臂动作类别，并用基于接触图的表示 + 规则决策树在 KIT Bimanual Manipulation Dataset（120 条录制）上验证，总体准确率 84.66%。",
+  "date": "2026-07-23",
+  "source": "publisher-pdf"
+}

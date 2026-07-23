@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoDiG：面向机器人的约束感知扩散引导 · 自主赛车实时避障</title>
+<meta name="keywords" content="diffusion model, constraint-aware guidance, barrier function, 实时避障, autonomous racing, trajectory planning, 扩散引导采样, warm-start, safety-critical robotics, MPC">
+<meta name="description" content="CoDiG 把 barrier function 融入扩散模型去噪过程，在采样时引导轨迹满足约束，实现微型自主赛车的实时避障——数据高效、无需投影或外部模拟器。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Diffusion Guidance · Autonomous Racing</span>
+    <h1>CoDiG：面向机器人的约束感知扩散引导</h1>
+    <div class="sub">Constraint-Aware Diffusion Guidance for Robotics: Real-Time Obstacle Avoidance for Autonomous Racing</div>
+    <div class="authors">Hao Ma, Sabrina Bodmer, Andrea Carron, Melanie Zeilinger, Michael Muehlebach（ETH Zürich · Max Planck Institute for Intelligent Systems）</div>
+    <p class="lead">扩散模型能拟合复杂高维分布，却天生不懂"约束"，难以进安全攸关场景。CoDiG 把 <b>barrier function</b> 直接融进扩散去噪的 reverse SDE，在采样阶段用轻量的 barrier 梯度把轨迹"推"向可行域——无需重训网络、无需投影或外部模拟器。在微型自主赛车实机上，配合 warm-start 达到 <b>2.5&nbsp;Hz</b> 实时重规划、<b>100%</b> 避障成功率。</p>
+    <div class="meta">
+      <span>微型自主赛车实机验证</span><span>数据高效：仅 80 条训练轨迹</span><span>NVIDIA RTX 4090</span>
+      <span><a href="https://arxiv.org/abs/2505.13131">📄 arXiv:2505.13131</a></span>
+      <span><a href="https://openreview.net/forum?id=8OPDJOpfZV">OpenReview 8OPDJOpfZV</a></span>
+    </div>
+    <div class="kw"><span>diffusion model</span><span>constraint-aware guidance</span><span>barrier function</span><span>实时避障</span><span>autonomous racing</span><span>trajectory planning</span><span>warm-start</span><span>safety-critical robotics</span><span>MPC</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">扩散模型（diffusion models）在机器人领域潜力巨大，因为它能"capture complex, high-dimensional data distributions"。但纯靠数据训练的模型缺乏 <b>constraint-awareness</b>：面对分布外场景，采样出的轨迹可能碰撞障碍或动力学不可行，因此难以部署到安全攸关任务。已有做法要么在训练期塞入大量满足约束的数据（成本高、泛化差），要么在推理期做投影 / 外部校正（计算昂贵）。</p>
+    <blockquote>"their lack of constraint-awareness limits their deployment in safety-critical applications." —— CoDiG 的目标：在采样时用 barrier 梯度增广 score，无需 projections、辅助模型或 simulators。</blockquote>
+    <div class="grid2">
+      <figure>
+        <img src="img/denoise-no-barrier.webp" alt="sampling without barrier function">
+        <figcaption><b>(a) 不加 barrier function 的采样。</b>无约束扩散采样出的轨迹会直接穿过障碍——不满足避障要求。</figcaption>
+      </figure>
+      <figure>
+        <img src="img/denoise-barrier.webp" alt="sampling with barrier function">
+        <figcaption><b>(b) 加入 barrier function 的采样（CoDiG）。</b>去噪过程（t = 1 → 0.591 → 0.002）逐步被引导，生成结构化、绕开障碍的安全轨迹。</figcaption>
+      </figure>
+    </div>
+    <div class="kpi">
+      <div><b>2.5 Hz</b><small>warm-start 实时重规划频率（vs 0.25 Hz）</small></div>
+      <div><b>100%</b><small>避障成功率（5 trials × 15 laps）</small></div>
+      <div><b>50</b><small>warm-start 后的去噪步数（vs 1000）</small></div>
+      <div><b>80</b><small>最终训练轨迹数（数据高效）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">CoDiG 的核心思路：<b>不改动底层神经网络</b>，只在反向扩散过程里把 barrier function 的梯度加进 score，从而把采样引向"约束满足"的输出。它是 data-efficient、general-purpose 的框架，也能跨任务泛化。</p>
+
+    <figure>
+      <img src="img/flowchart.webp" alt="CoDiG framework flowchart">
+      <figcaption><b>Fig. 9 · 系统总览。</b>框架把三部分串起来：diffusion-based trajectory planner（生成参考轨迹）、constraint-aware guidance module（用 barrier 梯度引导采样满足避障约束）、warm-start（复用上一次轨迹加噪，加速实时重规划），最终由 tracking MPC (TMPC) 跟踪执行——TMPC 本身并不知道障碍信息。</figcaption>
+    </figure>
+
+    <h3>Barrier-guided reverse SDE（约束感知引导）</h3>
+    <p>把"满足约束 C"的条件分布写成对 score 的修正：<br>
+    <code>∇log p_t(x_t|C) = ∇log p_t(x_t) − γ_t ∇V(x_t; C)</code>（Eq. 5）。其中 barrier function <b>V</b> 在不可行区域取大值、在可行区域取 0。据此改写反向扩散：<br>
+    <code>dx_t = β(t)[−x_t − (1+η)(∇log p_t(x_t) − γ_t∇V(x_t;C))]dt + η√(2β(t)) dw̃_t</code>（Eq. 6）。<br>
+    参数 η ∈ [0,1] 加速收敛；权重 γ_t 按调度从 0 逐步增大——早期让模型自由去噪，后期再逐步施加约束。赛车任务中 V 由"避障项 + 惩罚偏离 nominal time-optimal 轨迹的二次项"组成（Eq. 7）。</p>
+
+    <h3>Warm-start：让实时重规划成为可能</h3>
+    <p>常规每次都从高斯噪声重新采样，需要约 1000 步去噪、太慢。Warm-start 改为对<b>上一次轨迹加少量噪声</b>再去噪，把步数从 1000 降到约 50，既实现实时重规划、又保持时间上的连续性（temporal consistency）。这把采样频率从 0.25 Hz 提到 2.5 Hz。</p>
+
+    <figure>
+      <img src="img/unet-arch.webp" alt="time-conditioned U-Net architecture">
+      <figcaption><b>Fig. 4 · 网络结构。</b>time-conditioned score-based 生成模型：U-Net backbone 通过多级卷积 / 反卷积提取多尺度特征，配合 temporal embedding 与 spatial transformer 模块。训练 500 epochs。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead"><b>平台：</b>自建的微型自主赛车 + 缩比赛道 + motion capture 系统，推理在 NVIDIA RTX 4090 上。<b>数据：</b>先解 time-optimal control 得到 100 条专家轨迹（约 16 小时计算），在安全区域加冗余障碍增广到 10,000 条，最终以 Frenet 坐标系（横向位移 ŷ、航向角 φ̂）下的 <b>80 条轨迹</b>训练。生成的轨迹交给 tracking MPC (TMPC) 执行。</p>
+
+    <table>
+      <tr><th>指标</th><th>Without warm-start</th><th>CoDiG (warm-start)</th></tr>
+      <tr><td>去噪步数</td><td>~1000</td><td class="good">~50</td></tr>
+      <tr><td>采样 / 重规划频率</td><td>0.25 Hz</td><td class="good">2.5 Hz</td></tr>
+      <tr><td>实机避障成功率</td><td>—</td><td class="good">100%（5 trials × 15 laps，10 种障碍配置）</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/near-optimal.webp" alt="CoDiG vs offline time-optimal trajectories">
+      <figcaption><b>Fig. 7 · 接近时间最优。</b>CoDiG 实时生成的轨迹（红）与离线计算的 time-optimal 轨迹（黑）在多种障碍配置下高度吻合，只为安全裕度做出微小偏离——说明实时约束引导几乎不牺牲最优性。</figcaption>
+    </figure>
+
+    <figure>
+      <img src="img/episode1.webp" alt="real-world obstacle avoidance episode">
+      <figcaption><b>Fig. 2 · 实机避障回合。</b>障碍侵入 → 触发重规划 → 成功绕行的完整过程，验证了动态条件下的实时安全性。</figcaption>
+    </figure>
+
+    <h3>Ablation：warm-start 的取舍</h3>
+    <p>对比同一障碍配置下"标准 500 步"与"partial diffusion 50 步（warm-start）"生成的参考轨迹（Fig. 6）：warm-start 的轨迹更<b>粗糙、更保守</b>，但换来了稳定性与实时性。图中灰圈为静态障碍、黑圈为动态障碍。训练侧的消融（Fig. 5）则比较了不同输入模态与 noise schedule 下的收敛表现。</p>
+
+    <figure>
+      <img src="img/warm-start.webp" alt="warm-start vs standard sampling comparison">
+      <figcaption><b>Fig. 6 · Warm-start 对比。</b>标准采样（500 步）轨迹更精细；warm-start（50 步）虽更粗糙、更保守，但足以稳定实时运行。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下第 1 点由作者在文中明确指出（stated）；第 2、3 点为根据方法设计与实验范围推断（inferred）。</div>
+    <details class="lim" open><summary>Warm-start 让轨迹更粗糙、更保守（stated）</summary><p>为了把去噪步数从 1000 降到 50，warm-start 生成的轨迹 profile 更粗糙、路径更保守——这是实时性与轨迹精细度之间的直接权衡。</p></details>
+    <details class="lim"><summary>需要为每个任务设计 task-specific barrier function（inferred）</summary><p>barrier function V 需针对具体任务（如赛车避障）设计。作者认为相比数据采集成本这部分开销可忽略，但它仍是把框架迁到新任务时的一项人工设计负担。</p></details>
+    <details class="lim"><summary>与其他 inference-time 约束方法缺乏直接量化对比（inferred）</summary><p>论文主要展示 CoDiG 自身的有效性与消融，未给出与 projection / 外部校正等其他推理期约束方法在同一实机上的头对头定量比较。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Constraint-Aware Diffusion Guidance for Robotics (CoDiG) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2505.13131">https://arxiv.org/abs/2505.13131</a>
+  </div>
+</footer>
+
+</body>
+</html>

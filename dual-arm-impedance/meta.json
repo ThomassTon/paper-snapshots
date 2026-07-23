@@ -1,0 +1,11 @@
+{
+  "slug": "dual-arm-impedance",
+  "title": "A Projected Inverse Dynamics Approach for Dual-arm Cartesian Impedance Control",
+  "arxiv_id": "1707.00484",
+  "url": "https://arxiv.org/abs/1707.00484",
+  "category": "机器人 · Robotics",
+  "keywords": ["dual-arm manipulation", "Cartesian impedance control", "projected inverse dynamics", "力闭合抓取 / internal force", "friction cone", "contact wrench optimisation", "force-sensorless", "操作空间控制", "KUKA LWR"],
+  "summary_zh": "在 projected inverse dynamics 框架下把双臂协同操作的控制力矩正交分解：非约束分量实现物体处 6-DOF 笛卡尔阻抗，约束分量在摩擦锥内以最小力矩维持力闭合抓取；外部扰动由物体位移估计，全程无需接触点力/力矩传感器。",
+  "date": "2026-07-23",
+  "source": "arxiv-eprint"
+}
