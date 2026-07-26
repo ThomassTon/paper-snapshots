@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q-VGM: Q-Guided Value-Gradient Matching for Flow-Matching VLA Policies</title>
+<meta name="keywords" content="VLA, flow matching, off-policy RL, value-gradient matching, IQL critic, denoising optimal control, π0.5, LIBERO, learn-from-experience, robot manipulation">
+<meta name="description" content="Q-VGM 把 critic 的动作梯度 ∇AQ 转成残差速度目标，直接监督 flow-matching VLA 的速度场，离线自举把 LIBERO 平均成功率从 79.0% 提到 92.5%。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · VLA · Off-Policy RL</span>
+    <h1>Q-VGM: Q-Guided Value-Gradient Matching for Flow-Matching VLA Policies</h1>
+    <div class="sub">把 critic 的动作梯度变成残差速度监督，让 flow-matching VLA 从自己的 rollout 里离线自我提升</div>
+    <div class="authors">Ziqian Wang, Yitian Liu, Xingjian Mao, Minqian Wang, Yao Mu · 上海交通大学 / University of Michigan, Ann Arbor</div>
+    <p class="lead">SFT 只学专家近优数据，无法从失败 rollout 中学习。Q-VGM 用一个 off-policy critic 的一阶信号
+      <b>∇<sub>A</sub>Q</b>，把去噪过程当作最优控制问题：用 look-forward 干净动作估计 + 迭代 Q-梯度上升
+      + keep-best 选择得到「改进后的动作」，再折算成残差速度目标直接监督速度场。<b>不需要动作似然、不反传整条去噪链、完全离线、推理时不用 critic</b>——在 LIBERO 上把平均成功率从 79.0% 提到 92.5%。</p>
+    <div class="meta">
+      <span>NeurIPS 2026 preprint</span><span>Base policy: π0.5</span><span>Benchmark: LIBERO + 真机</span>
+      <span><a href="https://arxiv.org/abs/2606.08015">📄 arXiv:2606.08015</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.08015">PDF</a></span>
+    </div>
+    <div class="kw"><span>VLA</span><span>flow matching</span><span>off-policy RL</span><span>value-gradient matching</span><span>IQL critic</span><span>denoising optimal control</span><span>π0.5</span><span>LIBERO</span><span>learn-from-experience</span><span>robot manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">Flow-matching action expert 已是 VLA 的主流骨干，但其后训练几乎都靠在专家演示上做 SFT——这继承了模仿学习的根本局限：<b>只利用近优的专家数据</b>，部署与评测时产生的大量失败与次优 rollout 无从利用，策略性能被演示的质量和覆盖度封死。RL 原则上能从成败经验中同时提取信号，让策略超越示教者。</p>
+    <p>但对 flow-matching VLA，实现这一点受两方面制约：<b>(1) 数据 regime</b>——PPO / GRPO 这类 on-policy 方法每次更新都要新鲜 rollout，真机上代价高昂且丢弃历史经验；<b>(2) 参数化</b>——policy gradient 需要可解的动作似然，而迭代去噪并不暴露它，且 policy gradient 只用到零阶奖励（标量 advantage）。相比之下，来自 learned critic 的一阶信号 <b>∇<sub>A</sub>Q</b> 样本效率显著更高。这促使转向 off-policy、value-based RL。</p>
+    <blockquote>核心障碍是一个「错配」：critic 评估的是可执行的干净动作 chunk，而 flow policy 演化在带噪的中间状态上。因此价值改进必须表达为「去噪时刻的速度修正」，而非终端动作标签。</blockquote>
+    <p>已有 value-based 方法都没能给速度场本身提供 value-aware 监督：反传整条去噪链（Diffusion-QL）在 VLA 规模上不稳定；test-time Q-selection / Q-guidance 不改动底层策略；把 critic 改进后的动作蒸馏成终端监督标签（PA-RL）则无视了速度场的 flow 结构。</p>
+    <figure>
+      <img src="img/plug-insertion.webp" alt="real-robot plug insertion filmstrip">
+      <figcaption>Figure 1（右）：真机双臂插头插接任务同一初始配置对比。上排（红）SFT 策略在插座处留下毫米级错位而失败；下排（绿）Q-VGM 微调后的策略施加学到的速度修正、修正对齐并完成插接。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>79.0→92.5%</b><small>LIBERO 平均成功率（4 suite）</small></div>
+      <div><b>+13.5pt</b><small>相对 few-shot SFT 初始策略</small></div>
+      <div><b>≈400×</b><small>比 online RL 更少的 rollout 数据</small></div>
+      <div><b>4</b><small>真机操作任务（含插头插接）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">Q-VGM 把策略改进建成对 π0.5 去噪过程的<b>随机最优控制（stochastic optimal control）</b>问题：在 KL 正则的 tilted 分布下，最优速度修正 <b>h⋆ = β·∇<sub>x</sub>V</b> 正比于去噪时刻价值函数的梯度。整套方法分两步——先训练一个 off-policy critic，再把 critic 的梯度转成残差速度目标去监督 action expert。只训练 action expert；推理时仅跑 v<sub>θ</sub>，不做 critic 查询或搜索。</p>
+    <figure>
+      <img src="img/overview.webp" alt="Q-VGM overview architecture">
+      <figcaption>Figure 2：Q-VGM 总览。冻结的 VLM prefix 被压缩成 RL token，条件化一个 stepwise IQL critic（左）。在每个较晚的去噪步，Euler look-forward 得到的干净动作估计经 J 步 clipped Q-梯度上升改进，再折算成残差速度目标 ĥ<sub>Q</sub><sup>[k]</sup>，由 action expert 学习匹配（右）。</figcaption>
+    </figure>
+
+    <h3>① Action-Sensitive Stepwise Chunk Critic（动作敏感的分步 chunk critic）</h3>
+    <p>Value-gradient matching 需要可靠的动作空间梯度 ∇<sub>A</sub>Q。为此设计一个 off-policy critic：
+      <b>状态表示</b>——把冻结 VLM backbone 产生的 prefix 用 autoencoder 压成一个 RL token
+      z<sub>rl</sub>∈ℝ<sup>2048</sup>，与本体感（proprioceptive）投影拼接成 critic 状态 s；重建损失作为正则让 z<sub>rl</sub> 保持锚定在冻结 prefix 上。因 z<sub>rl</sub> 维度远高于 A，为避免忽略动作输入，把动作 chunk A <b>在 critic 每一隐层重新注入（per-layer action injection）</b>，保住局部动作敏感性。</p>
+    <p><b>Stepwise IQL 训练</b>——稀疏奖励长时程任务里，整段 chunk 只给一个值太弱，因此 critic 预测每个动作位置的分步值 {Q<sup>(i)</sup>(s,A)}，需要标量时再求和 Q(s,A)=Σ<sub>i</sub>Q<sup>(i)</sup>。用 IQL（expectile τ=0.8）训练：action-free value head 预测分步 V<sup>(i)</sup>，每个 Q-head 朝分步 TD target 回归（chunk 内 bootstrap 到下一位置、边界处 bootstrap 到下一 chunk 首位）。用两个 Q-head 取最小（clipped double Q-learning）。因 backup 用 V 而非策略采样动作，critic 训练<b>完全 off-policy</b>。</p>
+
+    <h3>② Q-Guided Value-Gradient Matching（价值梯度匹配）</h3>
+    <p>令终端奖励 r(x<sub>1</sub>)=Q(s,x<sub>1</sub>)。h⋆ 需要每个去噪时刻的 ∇<sub>x</sub>V，但 critic 只在干净动作处给 ∇<sub>A</sub>Q。方法先估计再折算：</p>
+    <ul>
+      <li><b>Look-forward 估计</b>：在较晚去噪步，剩余去噪极少，中间状态的价值≈其将到达的干净动作的 critic 分数。用冻结 base 速度做一步 Euler 前瞻 Â<sub>base</sub><sup>[k]</sup>=x<sup>[k]</sup>+(1−τ<sub>k</sub>)v<sub>base</sub>，把估计锚在行为策略分布 / critic 训练支撑内。经 Jacobian 分析（其偏离单位阵的项为 O(1−τ<sub>k</sub>)），近似 ∇<sub>x</sub>V ≈ ∇<sub>A</sub>Q(s,Â<sub>base</sub><sup>[k]</sup>)——在边界 τ=1 精确，随 τ 减小退化，故只在<b>最后 M=5 步</b>施用。</li>
+      <li><b>梯度上升 + keep-best</b>：从 Â<sub>base</sub> 出发做 J 步 clipped Q-梯度上升，保留价值最高的候选 Â<sub>Q</sub><sup>[k]</sup>=argmax<sub>j</sub>Q。因 j=0 是未改动的 base 预测，keep-best 在上升不改善时回退到原动作——相当于对局部 Q 地形做离散 line search，自适应选择每样本的有效修正幅度 β<sub>eff</sub>。</li>
+      <li><b>残差速度目标</b>：把累积位移折回剩余时间得 ĥ<sub>Q</sub><sup>[k]</sup>=(Â<sub>Q</sub><sup>[k]</sup>−Â<sub>base</sub><sup>[k]</sup>)/(1−τ<sub>k</sub>)，把 flow 从 base 目的地推向 critic 改进后的动作。</li>
+    </ul>
+    <p><b>Residual velocity matching</b>：只在晚期步（mask m<sub>k</sub>）上训练 action expert，使其残差速度 (v<sub>θ</sub>−v<sub>base</sub>) 匹配 detached 的 ĥ<sub>Q</sub>。轨迹、look-forward 估计、候选与目标都 stop-gradient，梯度只流过当前局部预测 v<sub>θ</sub>(x<sup>[k]</sup>,τ<sub>k</sub>)。推理时 v<sub>θ</sub>=v<sub>base</sub>+h<sub>θ</sub>，critic 引导被完全 amortize 进 action expert——<b>无 test-time search，无整链反传</b>。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">统一从 few-shot SFT 的 π0.5 出发，用 SFT 策略评测 rollout 组成固定数据集，训练 stepwise IQL critic，再离线微调策略。critic-based 基线共享同一 SFT checkpoint / rollout 数据 / RL-token 特征 / critic，只在「如何用 critic」上不同。四个研究问题 RQ1–RQ4 覆盖仿真提升、抽取机制对比、样本效率、真机迁移。</p>
+
+    <h3>LIBERO 成功率（Table 1，每任务 50 rollouts，每 suite 500 episodes）</h3>
+    <table>
+      <tr><th>Method</th><th>Spatial</th><th>Object</th><th>Goal</th><th>Long</th><th>Avg</th></tr>
+      <tr><td>Initial policy (π0.5 few-shot SFT)</td><td>85.6</td><td>84.8</td><td>83.4</td><td>62.2</td><td>79.0</td></tr>
+      <tr><td>Test-time Q Selection</td><td>90.2</td><td>89.6</td><td>87.8</td><td>76.2</td><td>86.0</td></tr>
+      <tr><td>Test-time Q Guidance</td><td>93.8</td><td>90.6</td><td>89.8</td><td>80.4</td><td>88.7</td></tr>
+      <tr><td>Q-Improved Action Distillation</td><td>93.4</td><td>91.8</td><td>90.6</td><td>79.2</td><td>88.8</td></tr>
+      <tr><td>Diffusion-QL</td><td>79.8</td><td>74.6</td><td>80.4</td><td>55.6</td><td>72.6</td></tr>
+      <tr><td><b>Q-VGM (Ours)</b></td><td class="good">96.2</td><td class="good">95.4</td><td class="good">94.6</td><td class="good">83.8</td><td class="good">92.5</td></tr>
+    </table>
+    <p>Q-VGM 在<b>每个 suite</b>上都超过 test-time critic 方法与蒸馏基线。值得注意：<b>Diffusion-QL 反而把 SFT 策略拉低到 72.6%</b>——因为把 critic 梯度反传过整条去噪链不稳定，印证了论文的动机论证。</p>
+
+    <h3>样本效率（Table 2，LIBERO-Spatial；成绩按各自论文报告，backbone/SFT 初始化不同）</h3>
+    <table>
+      <tr><th>Method</th><th>Backbone</th><th>Type</th><th>RL data</th><th>Spatial SR</th></tr>
+      <tr><td>π<sub>RL</sub></td><td>π0.5</td><td>online PPO</td><td>≈204,800 on-policy episodes</td><td>99.6</td></tr>
+      <tr><td>SimpleVLA-RL</td><td>OpenVLA-OFT</td><td>online GRPO</td><td>≈358,400 on-policy episodes</td><td>99.1</td></tr>
+      <tr><td>ARFM</td><td>flow VLA</td><td>offline</td><td>benchmark demos + 手工 dense reward</td><td>95.8</td></tr>
+      <tr><td><b>Q-VGM (Ours)</b></td><td>π0.5</td><td>offline</td><td>500 eval episodes + 432 demos</td><td class="good">96.2</td></tr>
+    </table>
+    <p>Q-VGM 用<b>比 online RL 微调少约 400× 的 rollout episodes</b> 取得提升，且只用 SFT 策略标准评测中已经记录的 episodes 加一个稀疏成功奖励——不需额外专家监督或手工稠密奖励。（诚实对比：纯 online RL 的 π<sub>RL</sub>/SimpleVLA-RL 在 Spatial 单项上以海量数据换到更高的 99+%。）</p>
+
+    <h3>真机迭代 learn-from-experience（Table 3，每任务 20 trials）</h3>
+    <table>
+      <tr><th>Task</th><th>Success rate</th></tr>
+      <tr><td>Grasp Blue Cup</td><td>20/20</td></tr>
+      <tr><td>Handover Microphone</td><td>15/20</td></tr>
+      <tr><td>Move Pot</td><td>19/20</td></tr>
+    </table>
+    <p>在双臂机器人平台上做 train–deploy–collect–retrain 循环：从 few-shot SFT 起，策略仅用自生成 rollout 做完全离线更新，每个改进后的策略再部署去采新经验。第四个任务是需要毫米级对齐的插头插接（见 Figure 1）。</p>
+
+    <h3>消融（Table 4，LIBERO，40 任务平均 SR%）</h3>
+    <table>
+      <tr><th>Variant</th><th>Avg SR (%)</th></tr>
+      <tr><td><b>Full method</b></td><td class="good">92.5</td></tr>
+      <tr><td>ResNet encoder 取代 RL token</td><td>87.4</td></tr>
+      <tr><td>No per-layer action injection</td><td>88.2</td></tr>
+      <tr><td>Single critic head</td><td>90.1</td></tr>
+      <tr><td>No keep-best selection</td><td>88.6</td></tr>
+      <tr><td>All-step velocity alignment (m<sub>k</sub>=1)</td><td>86.2</td></tr>
+      <tr><td>No frozen-base anchor</td><td>86.8</td></tr>
+    </table>
+    <p>Critic 侧：用 ResNet 图像编码器替代 RL-token 状态下降最大（92.5→87.4），说明 value-gradient matching 受益于 VLA-grounded 的状态表示；per-layer 动作注入与 double-Q 最小也提升局部动作敏感性。策略侧：keep-best 避免在过冲时用最后一次上升迭代，late-step mask 把引导集中在 look-forward 估计最接近 critic 训练分布的地方，frozen-base anchor 把速度目标绑在行为策略支撑上——三者都对「梯度→速度目标」的转换起稳定作用。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下均为论文 §Limitations 中<b>作者明确陈述（stated）</b>的局限，非本文推断。</div>
+    <details class="lim" open><summary>依赖 learned critic，∇<sub>A</sub>Q 的可靠性是核心限制</summary><p>价值梯度只在离线 rollout 支撑附近最可信；离开该区域，critic 误差会产生误导性的速度修正。论文用 gradient clipping 与 keep-best（在梯度上升不改善时回退到 base 动作）缓解，并指出更强的做法是把 trust region 内化进采样动力学、自适应地约束相对预训练 flow policy 的 path-space 偏离。</p></details>
+    <details class="lim"><summary>critic 的可扩展性与泛化</summary><p>随任务时程与环境多样性增长，Q-learning 越来越难 scale。作者提出的未来方向是把 world model 与价值估计结合：学到的动力学模型可通过多步 rollout 缩短有效 TD 时程，价值函数继续为 value-gradient matching 提供梯度信号。</p></details>
+    <details class="lim"><summary>作用范围限定在晚期去噪步</summary><p>look-forward 近似 ∇<sub>x</sub>V≈∇<sub>A</sub>Q 只在边界 τ=1 精确，随 τ 减小退化，因此监督仅施加在最后 M=5 步；早期去噪步不接受 critic 引导（此为方法设计的直接推论）。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Q-VGM: Q-Guided Value-Gradient Matching for Flow-Matching VLA Policies · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.08015">https://arxiv.org/abs/2606.08015</a>
+  </div>
+</footer>
+
+</body>
+</html>
