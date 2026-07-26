@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAFE：面向 Vision-Language-Action 模型的多任务失败检测</title>
+<meta name="keywords" content="Vision-Language-Action, VLA, failure detection, 失败检测, conformal prediction, 特征探针, OpenVLA, π0, out-of-distribution, robot manipulation">
+<meta name="description" content="SAFE 从 VLA 内部特征学习一个标量失败概率，训练于已见任务、泛化到未见任务，并用 functional conformal prediction 平衡检测精度与时延。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics / VLA 安全</span>
+    <h1>SAFE：面向 VLA 模型的多任务失败检测</h1>
+    <div class="sub">Multitask Failure Detection for Vision-Language-Action Models</div>
+    <div class="authors">Qiao Gu, Yuanliang Ju, Shengxiang Sun, Igor Gilitschenski, Haruki Nishimura, Masha Itkina, Florian Shkurti · University of Toronto / Vector Institute / Toyota Research Institute (TRI)</div>
+    <p class="lead">通用 VLA 策略在<b>未见任务</b>上成功率会大幅下滑，急需一个能<b>及时报警</b>的失败检测器。SAFE 发现 VLA 的内部特征已经蕴含了关于任务成败的高层通用知识——失败时不同任务的特征会落入同一个 <b>“failure zone”</b>。据此，SAFE 从 VLA 最后一层特征学习出<b>单一标量失败分数</b>，训练于已见任务而泛化到未见任务，并用 functional conformal prediction 给出随时间变化的报警阈值。</p>
+    <div class="meta">
+      <span>NeurIPS 2025</span><span>failure detection</span><span>OpenVLA · π₀ · π₀-FAST</span>
+      <span><a href="https://arxiv.org/abs/2506.09937">📄 arXiv:2506.09937</a></span>
+      <span><a href="https://vla-safe.github.io/">🌐 Project page</a></span>
+    </div>
+    <div class="kw"><span>Vision-Language-Action</span><span>VLA</span><span>failure detection</span><span>失败检测</span><span>conformal prediction</span><span>特征探针 feature probing</span><span>OpenVLA / π₀</span><span>out-of-distribution</span><span>robot manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">大规模 VLA 已成为可跟随语言指令、完成多样任务的通用策略；但一旦<b>直接部署到未见任务</b>而不采集新数据微调，成功率就明显下降。论文引用近期评测：VLA 在已见任务上成功率约 <b>80–90%</b>，但在未见任务上会跌到 <b>30–60%</b>，并伴随多种失败模式。要安全可靠地部署，就需要一个能及时报警、让机器人“停下、回退或求助”的失败检测器。</p>
+    <p>然而现有失败检测器几乎都只在<b>一个或少数固定任务</b>上训练与测试；而通用 VLA 要求检测器能泛化，在<b>未见任务与新环境</b>下同样识别失败。论文因此提出全新的 <b>multitask failure detection</b> 问题设定：检测器只在已见任务上训练，却在未见任务上评估。</p>
+    <blockquote>“When the VLA is failing, the features, even those from different tasks, fall into the same ‘failure zone’.” —— 这一观察正是 SAFE 的出发点。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="failure zone teaser">
+      <figcaption>Figure 1：VLA 的内部特征捕捉了关于任务成败的高层信息。(a) 用 π₀-FAST 在 LIBERO-10 上的 latent 特征可视化，失败 rollout 即便来自不同任务，也聚集到同一个 “failure zone”；(b) 同样的特征按 task ID 上色，说明分离与任务身份无关；(c) 展示特征随时间的演化——失败 rollout 初期正常、在机器人失手后才踏入 failure zone，成功 rollout 则始终在区外。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>80–90% → 30–60%</b><small>VLA 已见 vs 未见任务成功率（论文引述）</small></div>
+      <div><b>1 scalar</b><small>SAFE 输出单一失败概率</small></div>
+      <div><b>3 架构</b><small>OpenVLA · π₀ · π₀-FAST</small></div>
+      <div><b>sim + real</b><small>仿真与真机均评测</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">SAFE 由三部分组成：<b>(1)</b> 从 VLA 模型<b>最后一层</b>抽取 latent 特征；<b>(2)</b> 用 MLP 或 LSTM backbone 顺序处理特征并预测失败分数；<b>(3)</b> 用 <b>functional conformal prediction (CP)</b> 在留出的校准集上确定一个随时间变化的阈值——一旦预测分数超过阈值就报警。设计刻意保持简单（仅一到两层），以避免过拟合、提升在未见任务上的泛化。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="SAFE architecture">
+      <figcaption>Figure 2：SAFE 的三大组件——特征抽取（VLA 最后一层，在解码为 token logits 或 velocity field 之前）、失败分数预测（MLP / LSTM）、以及 functional CP 阈值选择。测试时分数超过阈值即可自信地判定失败。</figcaption>
+    </figure>
+
+    <h3>特征探针：从内部特征预测失败 (Feature Probing)</h3>
+    <p>检测器 <b>f(e₀:ₜ)</b> 以到当前时刻 t 的 VLA 特征序列为输入，预测失败分数 sₜ。论文探索两种 backbone：</p>
+    <ul>
+      <li><b>SAFE-MLP</b>：用 MLP g(·) 把每一步特征 eₜ 独立投影为标量，并<b>累加</b>为失败分数 f_MLP(e₀:ₜ)=Σ σ(g(e_τ))；用 <b>L1 loss</b> 训练——对失败 rollout 抬高分数、对成功 rollout 压低分数。</li>
+      <li><b>SAFE-LSTM</b>：用 LSTM 顺序处理特征流，把隐状态投影为标量并经 sigmoid 归一到 [0,1]；用逐时刻的 <b>binary cross-entropy</b> 训练。</li>
+    </ul>
+    <p>特征的聚合方式（如何把 VLA 各 token 的隐向量并成单一 embedding e）作为消融项在已见评测集上选优。SAFE 与具体 VLA 架构解耦，因而可套用在 OpenVLA、π₀、π₀-FAST 等不同策略上。</p>
+
+    <h3>阈值选择：functional conformal prediction</h3>
+    <p>SAFE 用 functional CP 在留出校准集上标定一条随时间变化的置信带 <b>C_α</b>：用户指定的显著性水平 α 越小、带越宽（越保守、报警越晚）。测试时失败分数一旦突破 C_α 即触发失败标志。这样 SAFE 能在<b>检测精度与检测时延</b>之间取得可调的权衡，并给出带统计保证的报警时机。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在仿真（LIBERO、SimplerEnv）与真机（π₀-FAST + Franka、OpenVLA + WidowX）上，跨 OpenVLA / π₀ / π₀-FAST 评测，主指标为 <b>ROC-AUC</b>（越高越好，衡量在所有阈值上平均的检测精度）。对比涵盖 uncertainty quantification 与 failure detection 两类多样 baseline：Token Uncertainty、Sample Consistency、STAC、Embedding Distance（Mahalanobis 距离、Euclidean k-NN）等。</p>
+
+    <table>
+      <tr><th>Baseline 类别</th><th>论文对其表现的结论</th></tr>
+      <tr><td>Token Unc.（token 不确定性）</td><td>表现差，与 LLM 文献一致</td></tr>
+      <tr><td>Sample Consist. / STAC</td><td>较好，但需<b>每步采样多个 action</b>，开销大、真机不实用</td></tr>
+      <tr><td>Embed. Distr.（Mahala. / k-NN）</td><td>表现好，两个仿真基准最佳、真机第二，印证内部特征富含成败信息</td></tr>
+      <tr><td class="good">SAFE-MLP / SAFE-LSTM</td><td class="good">在所有设定下均优于或持平最佳 baseline，且只需 1 个 action</td></tr>
+    </table>
+
+    <p>关键结论（verbatim）：跨仿真基准平均，SAFE-MLP 与 SAFE-LSTM 表现相近，在<b>未见任务上比最佳 baseline 高 4–5%</b>，同时在已见任务上仍取得最佳。真机上（π₀-FAST+Franka 与 OpenVLA+WidowX）<b>SAFE-MLP 取得最佳</b>，SAFE-LSTM 与最佳 baseline（Mahala. dist. 和 Euclidean k-NN）接近。相比 Embedding Distance 方法，SAFE 的优势归因于它通过学习到的神经网络从原始特征中提取高层抽象信息的更强能力。</p>
+
+    <div class="note"><b>忠实呈现：</b>部分需要多次动作采样的方法（如 STAC、Gripper total var.）在个别未见任务设定上取得了最佳——SAFE 并非在每个单项上都第一，但它<b>只用 1 个 action</b> 就在整体上持平或超越，因而在精度—效率权衡上更实用。</div>
+
+    <figure><img src="img/qualitative.webp" alt="qualitative failure detection">
+      <figcaption>Figure 5：SAFE-LSTM 检出的失败与真实机器人失败高度吻合。蓝色阴影为 functional CP 带 C_α，一旦失败分数越过 C_α 即报警。例如 π₀-FAST 策略错过插入、动作在某时刻后变得不稳定，SAFE 随即触发失败标志。</figcaption></figure>
+
+    <figure><img src="img/real-results.webp" alt="real-world results">
+      <figcaption>Figure 6：真机实验中 SAFE-MLP 在 π₀-FAST Franka 与 OpenVLA WidowX 上取得最佳失败检测性能。(a) 为定量结果（ROC-AUC 在 5 个不同任务划分随机种子上平均），(b–e) 为真机上的定性示例。</figcaption></figure>
+
+    <figure><img src="img/real-setup.webp" alt="real robot setup">
+      <figcaption>Figure 3：真机实验布置（左）与采集到的示例 rollout（右）。</figcaption></figure>
+
+    <h3>消融</h3>
+    <p>论文进一步消融了特征聚合方式、训练任务数量（Table 6）、以及不同 visual encoder / backbone 架构（Table 7）；并对比了 failure detection、uncertainty quantification 与 OOD detection 三者的关系。整体表明：<b>VLA 最后一层特征已足以支撑跨任务的失败判别</b>，而如何跨多层聚合信息仍是开放问题。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下前两点为论文 <i>Limitations</i> 段落<b>明确陈述</b>；第三点为依据方法设计<b>推断</b>。</div>
+    <details class="lim" open><summary>只覆盖 manipulation，跨本体/sim2real/无动作视频未验证（stated）</summary><p>论文只考虑操作类任务的多任务失败检测，尚不清楚检测器在跨 embodiment、sim2real 迁移或 action-less video 上的泛化能力如何。</p></details>
+    <details class="lim"><summary>仅用最后一层特征，多层信息聚合未解（stated）</summary><p>SAFE 只使用 VLA 最后一层的特征；如何有效地跨 VLA 多层聚合信息，仍是未来工作的开放问题。</p></details>
+    <details class="lim"><summary>依赖失败 rollout 与校准集（inferred from design）</summary><p>训练需要成功与失败两类演示，且 functional CP 阈值需在留出校准集上标定；在无法采集足量失败样本或校准分布偏移时，报警时机与精度可能受影响。此点为根据方法设计推断，非论文明述。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · SAFE: Multitask Failure Detection for Vision-Language-Action Models · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2506.09937">https://arxiv.org/abs/2506.09937</a> · Project: <a href="https://vla-safe.github.io/">https://vla-safe.github.io/</a>
+  </div>
+</footer>
+
+</body>
+</html>

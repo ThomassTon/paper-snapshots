@@ -1,0 +1,11 @@
+{
+  "slug": "hide-and-seek-vla",
+  "title": "Hide-and-Seek in Trajectories: Discovering Failure Signals for VLA Runtime Monitoring",
+  "arxiv_id": "2605.30834",
+  "url": "https://arxiv.org/abs/2605.30834",
+  "category": "机器人 · Robotics",
+  "keywords": ["VLA runtime monitoring", "failure detection", "coarsely supervised learning", "contrastive learning", "conformal prediction", "失败检测", "OpenVLA", "flow-matching policy", "weakly supervised localization"],
+  "summary_zh": "Hide-and-Seek 把 VLA 失败检测建成“粗监督”问题：仅用轨迹级成功/失败标签，通过跨轨迹与轨迹内两种对比损失定位最具失败指示性的动作，无需任何逐步标注，并用 conformal prediction 做运行时报警，在 LIBERO、VLABench 与真实机械臂上达到 SOTA。",
+  "date": "2026-07-26",
+  "source": "arxiv-html"
+}

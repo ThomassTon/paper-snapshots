@@ -1,0 +1,11 @@
+{
+  "slug": "ppguide-diffusion",
+  "title": "PPGuide: Steering Diffusion Policies with Performance Predictive Guidance",
+  "arxiv_id": "2603.10980",
+  "url": "https://arxiv.org/abs/2603.10980",
+  "category": "机器人 · Robotics",
+  "keywords": ["diffusion policy", "classifier guidance", "multiple instance learning", "attention", "self-supervised", "robotic manipulation", "inference-time steering", "Robomimic / MimicGen", "模仿学习"],
+  "summary_zh": "PPGuide 用 attention-based multiple instance learning 自监督地标注 rollout 中与成败相关的 observation-action 片段，训练轻量 performance predictor，在推理时以梯度引导预训练 diffusion policy 远离失败模式，在 Robomimic / MimicGen 的 8 个任务上一致提升成功率。",
+  "date": "2026-07-26",
+  "source": "arxiv-html"
+}

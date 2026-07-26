@@ -1,0 +1,11 @@
+{
+  "slug": "safe-vla-failure",
+  "title": "SAFE: Multitask Failure Detection for Vision-Language-Action Models",
+  "arxiv_id": "2506.09937",
+  "url": "https://arxiv.org/abs/2506.09937",
+  "category": "机器人 · Robotics",
+  "keywords": ["Vision-Language-Action", "VLA", "failure detection", "失败检测", "conformal prediction", "特征探针 feature probing", "OpenVLA / π0", "out-of-distribution", "robot manipulation"],
+  "summary_zh": "SAFE 发现 VLA 内部特征在失败时会落入同一 “failure zone”，据此从最后一层特征学习出单一标量失败分数，训练于已见任务并泛化到未见任务，再用 functional conformal prediction 平衡检测精度与时延；在仿真与真机、OpenVLA/π0/π0-FAST 上取得 SOTA。",
+  "date": "2026-07-26",
+  "source": "arxiv-html"
+}

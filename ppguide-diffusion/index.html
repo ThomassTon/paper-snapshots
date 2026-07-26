@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPGuide：用性能预测引导来纠偏 Diffusion Policy</title>
+<meta name="keywords" content="diffusion policy, classifier guidance, multiple instance learning, attention, self-supervised, robotic manipulation, inference-time steering, Robomimic, MimicGen, 模仿学习">
+<meta name="description" content="PPGuide 用注意力多示例学习自监督地标注 rollout 中与成败相关的动作片段，训练轻量性能预测器，在推理时以梯度引导预训练 diffusion policy 远离失败模式。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  .eq{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:14.5px;color:#3a3833;overflow-x:auto}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Diffusion Policy · 推理时引导</span>
+    <h1>PPGuide：用性能预测引导 Diffusion Policy</h1>
+    <div class="sub">Steering Diffusion Policies with Performance Predictive Guidance</div>
+    <div class="authors">Zixing Wang, Devesh K. Jha, Ahmed H. Qureshi, Diego Romeres · Mitsubishi Electric Research Laboratories (MERL) / Purdue University</div>
+    <p class="lead">Diffusion policy 学多模态操作行为很强，但动作误差会随时间累积、最终导致失败。PPGuide 是一个<strong>轻量、基于分类器</strong>的框架：它用自监督方式自动找出 rollout 里与成败相关的 observation-action 片段，训练一个 performance predictor，在<strong>推理时用梯度</strong>把预训练好的 diffusion policy 引离失败模式——无需额外专家示范、无需 dense reward、也无需昂贵的 world model。</p>
+    <div class="meta">
+      <span>Robomimic + MimicGen · 8 任务</span>
+      <span>仅用 10% 专家示范训练</span>
+      <span><a href="https://arxiv.org/abs/2603.10980">📄 arXiv:2603.10980</a></span>
+      <span><a href="https://arxiv.org/pdf/2603.10980">PDF</a></span>
+    </div>
+    <div class="kw"><span>diffusion policy</span><span>classifier guidance</span><span>multiple instance learning</span><span>attention</span><span>self-supervised</span><span>robotic manipulation</span><span>inference-time steering</span><span>Robomimic / MimicGen</span><span>模仿学习</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">Diffusion policy 能高效学习复杂、multi-modal 的机器人操作行为，但生成的 action sequence 中的误差会随时间 <em>compound</em>（累积），最终可能导致任务失败。已有缓解手段——扩充专家示范数据集、或学习 predictive world model——要么需要更多标注，要么计算代价高昂。</p>
+    <blockquote>“errors in generated action sequences can compound over time which can potentially lead to failure … We introduce Performance Predictive Guidance (PPGuide), a lightweight, classifier-based framework that steers a pre-trained diffusion policy away from failure modes at inference time.”</blockquote>
+    <p>PPGuide 的核心思路：只用<strong>稀疏的二值成败信号</strong>（success / failure），从 policy 自己的 rollout 中自监督地学出「哪些动作片段导致了成功或失败」，再把这份知识以梯度形式在采样时注入 diffusion 去噪过程。它是 model-agnostic 的，可套在任意预训练 diffusion policy 上。</p>
+    <figure>
+      <img src="img/square-example.webp" alt="PPGuide steering example on Square insertion">
+      <figcaption>Fig. 3 · 一个直观例子：在 square insertion 任务中，base policy 会走向 misalignment（错位），PPGuide 的引导梯度把动作纠回对齐的插入轨迹。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>+16%</b><small>Square（异构 epoch 1300）</small></div>
+      <div><b>+18%</b><small>Transport（异构 epoch 1300）</small></div>
+      <div><b>+10%</b><small>Square vs DP（epoch 500）</small></div>
+      <div><b>10%</b><small>仅用的专家示范比例</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">PPGuide 分三阶段：① 用 attention-based Multiple Instance Learning (MIL) 离线估计每个动作片段与成败的「相关性」；② 用 z-score 阈值把片段自监督地标为 SR / FR / IR；③ 训练轻量 performance predictor，在推理去噪时提供实时梯度引导。</p>
+    <figure>
+      <img src="img/framework.webp" alt="PPGuide framework overview">
+      <figcaption>Fig. 1 · PPGuide 框架总览。左：把整条 trajectory 当作 bag、每个 observation-action chunk 当作 instance，attention-based MIL 学出注意力权重并将片段标注为 Success-Relevant / Failure-Relevant / Irrelevant；中：在自标注数据上训练轻量分类器 f_guide；右：推理时用其梯度引导 diffusion 采样远离失败模式。</figcaption>
+    </figure>
+
+    <h3>① Attention-based Multiple Instance Learning</h3>
+    <p>把一条 trajectory 𝒯 视为带有 bag-level 标签 <em>Y ∈ {success, failure}</em> 的 bag，其中每个 <em>(oₜ, aₜ)</em> 是一个 instance。每个 instance 先过 encoder ϕ 得到嵌入 <em>hₜ = ϕ(oₜ, aₜ)</em>，再经 <strong>gated attention</strong> 得到权重 αₜ、加权聚合为 bag 表示 z，最后由 g 输出 <em>P(Y | 𝒯)</em>，端到端用 binary cross-entropy 训练：</p>
+    <div class="eq">αₜ = softmax<sub>t</sub>( w<sup>⊤</sup>( tanh(V hₜ<sup>⊤</sup>) ⊙ sigm(U hₜ<sup>⊤</sup>) ) ) &nbsp;&nbsp;(Eq.1)　　z = Σₜ αₜ hₜ &nbsp;&nbsp;(Eq.2)</div>
+    <p>MIL 无需 instance 级监督即可让模型给「witness」片段（真正决定成败的时刻）分配高注意力权重。</p>
+
+    <h3>② 自监督标注（z-score 阈值 τ）</h3>
+    <p>对所有 rollout 算出 {αₜ}，用 z-score 阈值 τ 分三类：成功 bag 中 αₜ&gt;τ 的记为 <strong>Success-Relevant (SR)</strong>，失败 bag 中 αₜ&gt;τ 的记为 <strong>Failure-Relevant (FR)</strong>，其余 αₜ≤τ 记为 <strong>Irrelevant (IR)</strong>。论文观察到 IR 片段数量通常是 SR/FR 的 10 倍以上——说明模型确实能「精确定位关键时刻」。</p>
+
+    <h3>③ 推理时梯度引导</h3>
+    <p>在自标注数据上训练分类器 f_guide 输出 <em>P(y | oₜ, aₜ), y ∈ {SR, FR, IR}</em>。去噪步 k 时对 action 求梯度，一个鼓励成功、一个排斥失败，叠加进 noise 预测：</p>
+    <div class="eq">ε̂<sub>θ</sub> = ε<sub>θ</sub>(aₜ<sup>k</sup>, k, oₜ) + w<sub>sr</sub>·∇<sub>a</sub> log P(SR|·) − w<sub>fr</sub>·∇<sub>a</sub> log P(FR|·) &nbsp;&nbsp;(Eq.3-5)</div>
+    <p>设计上 <strong>w<sub>sr</sub> ≪ w<sub>fr</sub></strong>：失败模式多样、需要稳健的「普遍排斥」，而成功动作稀疏且高度依赖上下文，过强的「恒定吸引」会破坏稳定性。为省算力，引导只在<strong>交替（如偶数步）</strong>的去噪步施加，即可达到与「每步都引导」几乎相同的效果。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在 Robomimic 与 MimicGen 的 8 个任务上评测（Stack D1、Stack Three D1、Coffee D2、Coffee Prep. D1、Kitchen D1、Mug Cleanup D1、Square、Transport），涵盖 long-horizon、precision、articulated object 等挑战；均在<strong>只用原始专家示范 10%</strong> 的低数据设定下训练。Baseline：<strong>DP</strong>（base diffusion policy）、<strong>DP-SS</strong>（+stochastic sampling），以及 PPGuide 的变体 <strong>PPGuide-SS</strong>（stochastic sampling）、<strong>PPGuide-CG</strong>（每步 constant guidance）、<strong>PPGuide</strong>（交替引导）。</p>
+    <figure>
+      <img src="img/tasks.webp" alt="Evaluation tasks from Robomimic and MimicGen">
+      <figcaption>Fig. 2 · 评测任务示例（Robomimic + MimicGen）。任务在 long-horizon（如 Coffee Prep. D1、Kitchen D1、Mug Cleanup D1、Transport）、precision（Coffee D2、Coffee Prep. D1、Square）、articulated object（Coffee D2、Coffee Prep. D1、Mug Cleanup D1）上各有侧重。</figcaption>
+    </figure>
+
+    <h3>主结果（Table II，success rate，摘 epoch 500）</h3>
+    <p>数字逐字摘自论文；括号内为相对 base DP 的增减。</p>
+    <table>
+      <tr><th>Task</th><th>DP</th><th>DP-SS</th><th>PPGuide-CG</th><th>PPGuide</th></tr>
+      <tr><td>Stack D1</td><td>92%</td><td>88% (-4%)</td><td class="good">94% (+2%)</td><td class="good">94% (+2%)</td></tr>
+      <tr><td>Stack Three D1</td><td>28%</td><td>24% (-4%)</td><td class="good">36% (+8%)</td><td>34% (+6%)</td></tr>
+      <tr><td>Coffee D2</td><td>54%</td><td>44% (-10%)</td><td class="good">58% (+4%)</td><td class="good">58% (+4%)</td></tr>
+      <tr><td>Coffee Prep. D1</td><td>16%</td><td>14% (-2%)</td><td class="good">20% (+4%)</td><td class="good">20% (+4%)</td></tr>
+      <tr><td>Kitchen D1</td><td>52%</td><td>38% (-14%)</td><td class="good">54% (+2%)</td><td>52% (+0%)</td></tr>
+      <tr><td>Mug Cleanup D1</td><td>26%</td><td>24% (-2%)</td><td class="good">32% (+6%)</td><td>30% (+4%)</td></tr>
+      <tr><td>Square</td><td>62%</td><td>58% (-4%)</td><td class="good">72% (+10%)</td><td class="good">72% (+10%)</td></tr>
+      <tr><td>Transport</td><td>60%</td><td>54% (-6%)</td><td class="good">68% (+8%)</td><td class="good">68% (+8%)</td></tr>
+    </table>
+    <p>注意 <strong>DP-SS 在几乎所有任务上都劣于 base DP</strong>——论文据此指出 stochastic sampling 并不适配 PPGuide 框架。PPGuide / PPGuide-CG 则在 long-horizon 与 precision 任务上收益最大。</p>
+
+    <h3>异构评测（Table III）</h3>
+    <p>用 epoch 250–450 训练的 relevance 分类器去引导 epoch 1300–1600 的 deployment policy（rollout 与部署 policy 不同）。在较早 checkpoint 上收益尤为显著：</p>
+    <table>
+      <tr><th>Task (epoch)</th><th>DP</th><th>PPGuide</th></tr>
+      <tr><td>Square @1300</td><td>54%</td><td class="good">70% (+16%)</td></tr>
+      <tr><td>Square @1500</td><td>62%</td><td class="good">68% (+6%)</td></tr>
+      <tr><td>Transport @1300</td><td>56%</td><td class="good">74% (+18%)</td></tr>
+      <tr><td>Transport @1600</td><td>58%</td><td class="good">70% (+12%)</td></tr>
+    </table>
+
+    <h3>消融 · Ablations</h3>
+    <p>PPGuide（交替引导）“achieved almost the same level as PPGuide-CG with much less guidance inference”——用更少的引导计算换到几乎相同的性能。引导强度存在标准的先升后降 trade-off；z-score 阈值敏感，在 Coffee D2 上取 {1.5, 1.75, 2.0, 2.25} 时性能在 <strong>2.0</strong> 处达峰。</p>
+    <figure>
+      <img src="img/zscore-ablation.webp" alt="z-score threshold ablation on Coffee D2">
+      <figcaption>Fig. 5 · z-score 阈值消融（Coffee D2，对 guidance strength 0.25/0.3/0.35 取平均）。性能在 z-score = 2.0 时最优，说明 “Performance of PPGuide is sensitive to z-score selection”。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文 Limitations / Future Directions 中<strong>作者明确陈述</strong>的内容。</div>
+    <details class="lim" open><summary>Cold-start 依赖初始 policy 质量</summary><p>需要一个「表现尚可」的初始 policy 才能工作；若 policy 几乎从不成功，就没有足够的成功信号供 MIL 学习。未来方向：更稳健的探索策略以获得更多样的初始轨迹。</p></details>
+    <details class="lim"><summary>可能学到 spurious correlation</summary><p>MIL 可能把反复出现的无关特征误判为「相关」。未来方向：在部署中在线更新 relevance 分类器、更精细的 credit assignment 来刻画误差的逐步累积。</p></details>
+    <details class="lim"><summary>超参数敏感</summary><p>z-score 阈值 τ 与引导强度 w<sub>sr</sub>/w<sub>fr</sub> 都需针对任务仔细调参；实验中阈值取 2.0 附近才最优，偏离即掉点。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · PPGuide: Steering Diffusion Policies with Performance Predictive Guidance · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2603.10980">https://arxiv.org/abs/2603.10980</a>
+  </div>
+</footer>
+
+</body>
+</html>
