@@ -1,0 +1,11 @@
+{
+  "slug": "dice-rl",
+  "title": "From Prior to Pro: Efficient Skill Mastery via Distribution Contractive RL Finetuning",
+  "arxiv_id": "2603.10263",
+  "url": "https://arxiv.org/abs/2603.10263",
+  "category": "机器人 · Robotics",
+  "keywords": ["RL finetuning", "diffusion policy", "flow matching", "residual policy", "behavior cloning", "distribution contraction", "off-policy RL", "long-horizon manipulation", "强化学习微调"],
+  "summary_zh": "DICE-RL 把 RL 当作作用在预训练生成式 BC 策略上的“分布收缩”算子：冻结 diffusion/flow 的 behavior prior、只学一个轻量 residual，配合 filtered BC 选择性正则与 best-of-N 价值引导动作选择，稳定、样本高效地把 prior 微调成高成功率的 pro 策略，在 Robomimic、LIBERO-10 与 NIST 真机装配上均有效。",
+  "date": "2026-07-26",
+  "source": "arxiv-html"
+}
