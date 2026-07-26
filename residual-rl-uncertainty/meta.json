@@ -1,0 +1,11 @@
+{
+  "slug": "residual-rl-uncertainty",
+  "title": "Accelerating Residual Reinforcement Learning with Uncertainty Estimation",
+  "arxiv_id": "2506.17564",
+  "url": "https://arxiv.org/abs/2506.17564",
+  "category": "机器人 · Robotics",
+  "keywords": ["Residual RL", "uncertainty estimation", "stochastic base policy", "diffusion policy", "Soft Actor-Critic", "sparse reward", "sample efficiency", "sim-to-real", "Robosuite"],
+  "summary_zh": "用冻结 base policy 的不确定性把探索聚焦到它不自信的区域，并让 off-policy critic 观测 base action，从而在稀疏奖励下加速对 Gaussian / Diffusion 等随机 base policy 的 Residual RL；在 Robosuite 与 D4RL Kitchen 上超过微调、demo-augmented 与其它 residual RL 基线，并 zero-shot 迁移到真实 Franka。",
+  "date": "2026-07-26",
+  "source": "arxiv-html"
+}
