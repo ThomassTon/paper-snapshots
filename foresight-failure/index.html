@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foresight：用动作条件世界模型隐变量做长时程操作的失败检测</title>
+<meta name="keywords" content="failure detection, long-horizon manipulation, action-conditioned world model, V-JEPA 2-AC, conformal prediction, latent representation, robot policy monitoring, 失败检测">
+<meta name="description" content="Foresight 用 action-conditioned world model 的隐变量监控长时程操作轨迹，仅需任务级成功/失败标签，并用 functional conformal prediction 校准时变阈值。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · 失败检测 · 世界模型</span>
+    <h1>Foresight：用动作条件世界模型隐变量做长时程操作的失败检测</h1>
+    <div class="sub">Failure Detection for Long-Horizon Robotic Manipulation with Action-Conditioned World Model Latents</div>
+    <div class="authors">Haoran Zhang, Yifu Lu, Boyang Wang, Xuhui Kang, Yen-Ling Kuo, Zezhou Cheng, Mengdi Wang, Odest Chadwicke Jenkins（University of Michigan / University of Virginia / Princeton University 等）</div>
+    <p class="lead">长时程操作里，"失败何时开始"往往说不清，逐帧标注也稀缺。Foresight 用 <b>action-conditioned world model</b> 的隐变量在线监控轨迹，只需<b>任务级成功/失败标签</b>训练，再用 <b>functional conformal prediction</b> 校准出随时间变化的报警阈值——把"当前观测是否仍与动作所隐含的进度一致"变成一条可报警的失败分数曲线。</p>
+    <div class="meta">
+      <span>V-JEPA 2-AC backbone（frozen）</span>
+      <span>LIBERO-Long · ManiSkill-Long · BEHAVIOR-1K</span>
+      <span>真机：ReactorX-200 · Franka</span>
+      <span><a href="https://arxiv.org/abs/2606.23085">📄 arXiv:2606.23085</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.23085">PDF</a></span>
+    </div>
+    <div class="kw">
+      <span>failure detection</span><span>long-horizon manipulation</span>
+      <span>action-conditioned world model</span><span>V-JEPA 2-AC</span>
+      <span>functional conformal prediction</span><span>latent representation</span>
+      <span>policy monitoring</span><span>ROC-AUC</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">长时程操作任务往往横跨数百到数千步、包含多个子阶段，失败可能在任意阶段悄然发生。作者指出核心难点在于：<b>"the meaning of a visual state depends on the action history and task stage"</b>——同一帧画面在不同动作历史与任务阶段下含义完全不同。仅依赖 policy uncertainty、vision-language 判断或孤立的 anomaly detection，在这种设定下都不够。</p>
+    <blockquote>Foresight monitors whether observed trajectories remain "consistent with the progress implied by the robot's actions" —— 用动作所隐含的进度作为参照，判断观测轨迹是否"跑偏"。</blockquote>
+    <figure>
+      <img src="img/task-overview.webp" alt="benchmarks and tasks overview">
+      <figcaption>评测覆盖的任务总览：仿真的 LIBERO-Long、ManiSkill-Long、BEHAVIOR-1K，以及真机 ReactorX-200 / Franka。任务时程从数百步到近万步不等，涵盖多阶段拾放、装配等长时程操作。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>3</b><small>仿真 benchmark（最长 ~8557 步）</small></div>
+      <div><b>2</b><small>真机平台 ReactorX-200 / Franka</small></div>
+      <div><b>0</b><small>逐帧标注——仅用任务级成功/失败标签</small></div>
+      <div><b>0.76</b><small>BEHAVIOR-1K ROC-AUC（最长时程仍领先）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead">Foresight 是一个三阶段流水线：先微调 action-conditioned world model 抽取隐变量，再用一个 causal sequence model 把隐变量映射成逐时刻失败分数 s<sub>t</sub>，最后用 functional conformal prediction 校准出时变阈值 δ<sub>t</sub> 并在部署时报警。</p>
+    <figure>
+      <img src="img/pipeline.webp" alt="Foresight three-stage pipeline">
+      <figcaption>Stage 1：在机器人 rollouts 上微调 <b>WM-AC</b>（Temporal Feature Encoder + Action Predictor），得到观测隐变量 z<sub>h</sub> 与预测隐变量 z<sub>p</sub>。Stage 2：把带 positional encoding 的隐变量 token 送入 <b>Causal Transformer</b>，经 sigmoid 输出逐时刻 failure score s<sub>t</sub>。Stage 3：校准 conformal band δ<sub>t</sub>，部署时当 s<sub>t</sub> ≥ δ<sub>t</sub> 即判定失败（右侧红叉=报警，绿勾=正常）。</figcaption>
+    </figure>
+
+    <h3>Action-Conditioned World Model（WM-AC）</h3>
+    <p>以冻结的 <b>V-JEPA 2-AC</b> 作为视觉编码骨干。在每个时刻 t：观测隐变量 z<sup>h</sup><sub>t</sub> = Pool(f<sub>φ</sub>(c<sub>t</sub>)) 编码当前观测；预测隐变量 z<sup>p</sup><sub>t</sub> = Pool(g<sub>ψ</sub>(z<sup>h</sup><sub>t</sub>, A<sub>t</sub>)) 在给定 policy 动作块 A<sub>t</sub> 的条件下编码"预期的未来状态"。二者的一致性正是失败信号的来源。</p>
+
+    <h3>Failure Detector（causal sequence model）</h3>
+    <p>一个因果序列模型（可选 Transformer / LSTM / MLP）逐 token 处理时序：u<sub>t</sub> = W·z<sup>p</sup><sub>t</sub> + p<sub>t</sub>（投影隐变量 + sinusoidal positional encoding），输出逐时刻失败分数 s<sub>t</sub> = D<sub>θ</sub>(U<sub>≤t</sub>) ∈ [0,1]。训练<b>只用任务级成功/失败标签</b>，无需失败发生时刻的逐帧标注。论文称其提供 <b>"a unified framework for failure detection across different policies"</b>。</p>
+
+    <h3>Functional Conformal Prediction（FCP）阈值校准</h3>
+    <p>为每个时刻构造时变阈值 δ<sub>t</sub> = μ<sub>t</sub> + h<sub>t</sub>：μ<sub>t</sub> 是成功 calibration rollouts 的平均失败分数，h<sub>t</sub> = q̂·σ<sub>t</sub> 是基于 calibration nonconformity 分数的分位数带宽。当 s<sub>t</sub> ≥ δ<sub>t</sub> 时判为失败，并带有统计意义上的 false-positive-rate 保证。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead">评测指标：<b>ROC-AUC</b>（把逐时刻分数用 max pooling 聚合）与 <b>Balanced Accuracy</b>=(TPR+TNR)/2。基线包括 <b>FAIL-Detect</b>（无失败数据的 uncertainty/OOD 检测）、<b>SAFE-MLP/LSTM</b>（policy 内部隐变量）、<b>RND</b>（Random Network Distillation）、<b>Gauge</b>（压缩视频世界模型隐变量 + conformal prediction）。</p>
+
+    <h3>仿真 benchmark（Table 2，Foresight-Transformer）</h3>
+    <table>
+      <tr><th>Benchmark（平均步长）</th><th>最强非 Foresight 基线</th><th>Foresight-Transformer</th><th>指标</th></tr>
+      <tr><td>LIBERO-Long（~253 步）</td><td>0.91 ± 0.02（SAFE-LSTM）</td><td>0.89 ± 0.02</td><td>ROC-AUC</td></tr>
+      <tr><td>LIBERO-Long</td><td>0.88 ± 0.02（SAFE-LSTM）</td><td class="good">0.94 ± 0.06</td><td>Bal. Acc</td></tr>
+      <tr><td>ManiSkill-Long（~1484 步）</td><td>0.83 ± 0.02（RND）</td><td class="good">0.84 ± 0.03</td><td>ROC-AUC</td></tr>
+      <tr><td>ManiSkill-Long</td><td>0.68 ± 0.18（RND）</td><td class="good">0.80 ± 0.10</td><td>Bal. Acc</td></tr>
+      <tr><td>BEHAVIOR-1K（~8557 步）</td><td>0.72 ± 0.02（SAFE-LSTM）</td><td class="good">0.76 ± 0.02</td><td>ROC-AUC</td></tr>
+      <tr><td>BEHAVIOR-1K</td><td>0.64 ± 0.05（SAFE-LSTM）</td><td class="good">0.78 ± 0.02</td><td>Bal. Acc</td></tr>
+    </table>
+    <p>优势在<b>时程最长</b>的 BEHAVIOR-1K 上最明显：相对最强非 Foresight 基线取得约 <b>+0.14 balanced accuracy、+0.04 ROC-AUC</b>。在 LIBERO-Long 上 ROC-AUC 略低于 SAFE-LSTM（0.89 vs 0.91），但 balanced accuracy 明显更高（0.94 vs 0.88）。</p>
+
+    <figure>
+      <img src="img/qualitative-libero.webp" alt="qualitative failure detection curve on LIBERO">
+      <figcaption>LIBERO-Long 上的定性示例：蓝线为失败分数 s<sub>t</sub>，红虚线为 FCP 校准阈值 δ<sub>t</sub>。轨迹前段 s<sub>t</sub> 保持低位（绿框帧=正常），当机械臂开始跑偏后 s<sub>t</sub> 迅速上升并越过 δ<sub>t</sub>，触发 Alarm（红框帧），GT 与 Pred 一致判为失败。</figcaption>
+    </figure>
+
+    <h3>真机结果（Table 3，Foresight-Transformer，ROC-AUC）</h3>
+    <table>
+      <tr><th>平台 / 策略</th><th>ROC-AUC</th></tr>
+      <tr><td>ReactorX-200 · ACT</td><td class="good">0.93 ± 0.01</td></tr>
+      <tr><td>ReactorX-200 · π0.5</td><td>0.87 ± 0.03</td></tr>
+      <tr><td>ReactorX-200 · SmolVLA</td><td>0.79 ± 0.09</td></tr>
+      <tr><td>Franka（cross-embodiment）· GR00T N1.5</td><td>0.89 ± 0.10</td></tr>
+    </table>
+    <p>Foresight-Transformer 在 <b>4 个真机设定中的 3 个</b>取得最高 ROC-AUC。</p>
+
+    <figure>
+      <img src="img/qualitative-realworld.webp" alt="qualitative failure detection on real robot">
+      <figcaption>真机上的逐时刻监控：与仿真一致，s<sub>t</sub> 越过时变阈值 δ<sub>t</sub> 时报警，帧序列由绿（正常）转红（报警），显示方法可迁移到实体机器人。</figcaption>
+    </figure>
+
+    <h3>跨策略泛化（Table 4）</h3>
+    <p>在一个策略上训练、在另一个策略上测试考察迁移能力：训练于 π0-FAST、测试于 OpenVLA（LIBERO-Long），得 ROC-AUC 0.64 ± 0.02、Bal. Acc 0.90 ± 0.01。作者指出迁移是<b>非对称且依赖策略</b>的——π0.5 相比 ACT / SmolVLA 表现出更广的行为覆盖。总体结论：<b>"action-conditioned world-model embeddings provide a scalable representation for reliable failure monitoring in long-horizon manipulation."</b></p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 第 1 条为论文<b>明确陈述</b>的局限；第 2 条源自方法对 calibration 分布的依赖（论文陈述）；第 3 条为从设计与结果<b>推断</b>的局限。</div>
+    <details class="lim" open><summary>预训练世界模型的算力与延迟（stated）</summary><p>作者原文："A key limitation is the computational cost and latency of pretrained world models, which makes on-device deployment challenging and may limit applicability to highly reactive or agile tasks requiring fast closed-loop control." 即世界模型推理开销大，难以在设备端部署，也不适合需要快速闭环控制的高反应性/敏捷任务。</p></details>
+    <details class="lim"><summary>Conformal 保证依赖校准分布匹配（stated）</summary><p>FCP 的 false-positive-rate 保证成立的前提是 calibration 分布与部署条件一致；一旦部署环境与校准数据分布偏移，阈值 δ<sub>t</sub> 的统计保证会失效。</p></details>
+    <details class="lim"><summary>跨策略迁移非对称且不稳定（inferred）</summary><p>由 Table 4 推断：跨策略迁移的 ROC-AUC 可低至 0.64，且迁移方向依赖具体策略对，说明失败检测器一定程度上耦合了被监控策略的行为分布，泛化到未见策略并不 robust。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Foresight: Failure Detection for Long-Horizon Robotic Manipulation with Action-Conditioned World Model Latents · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.23085">https://arxiv.org/abs/2606.23085</a>
+  </div>
+</footer>
+
+</body>
+</html>

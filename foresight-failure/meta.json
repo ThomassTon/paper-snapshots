@@ -1,0 +1,11 @@
+{
+  "slug": "foresight-failure",
+  "title": "Foresight: Failure Detection for Long-Horizon Robotic Manipulation with Action-Conditioned World Model Latents",
+  "arxiv_id": "2606.23085",
+  "url": "https://arxiv.org/abs/2606.23085",
+  "category": "机器人 · Robotics",
+  "keywords": ["failure detection", "long-horizon manipulation", "action-conditioned world model", "V-JEPA 2-AC", "functional conformal prediction", "latent representation", "policy monitoring", "ROC-AUC"],
+  "summary_zh": "Foresight 用 action-conditioned world model（V-JEPA 2-AC 骨干）的隐变量在线监控长时程操作轨迹，仅用任务级成功/失败标签训练一个 causal sequence model 输出逐时刻失败分数，再以 functional conformal prediction 校准时变阈值报警；在 LIBERO-Long、ManiSkill-Long、BEHAVIOR-1K 及 ReactorX-200/Franka 真机上，时程越长优势越明显。",
+  "date": "2026-07-28",
+  "source": "arxiv-html"
+}
