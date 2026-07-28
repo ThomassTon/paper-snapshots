@@ -1,0 +1,11 @@
+{
+  "slug": "sage-diffusion-planner",
+  "title": "SAGE：用自监督能量门控改进扩散规划器",
+  "arxiv_id": "2603.02650",
+  "url": "https://arxiv.org/abs/2603.02650",
+  "category": "机器人 · Robotics",
+  "keywords": ["diffusion planner", "offline RL", "JEPA", "self-supervised", "latent consistency energy", "inference-time re-ranking", "action gating", "D4RL", "feasibility"],
+  "summary_zh": "SAGE 在推理期用 JEPA latent 一致性能量为扩散规划器的候选轨迹前缀打 feasibility 分，与 value 融合重排序来抑制动力学不可行的计划；无需环境 rollout 与重训，在 D4RL 上把整体平均分从 95.59 提到 97.69。",
+  "date": "2026-07-28",
+  "source": "arxiv-html"
+}

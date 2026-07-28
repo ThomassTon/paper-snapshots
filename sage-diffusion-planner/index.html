@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGE：用自监督能量门控改进扩散规划器</title>
+<meta name="keywords" content="diffusion planner, offline RL, JEPA, self-supervised, latent consistency energy, inference-time re-ranking, action gating, D4RL, feasibility">
+<meta name="description" content="SAGE 用 JEPA latent 一致性能量在推理时对扩散规划器采样的候选轨迹重排序，惩罚动力学不可行的计划，无需环境交互与重训。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Offline RL · Diffusion Planning</span>
+    <h1>SAGE：用自监督能量门控改进扩散规划器</h1>
+    <div class="sub">Improving Diffusion Planners by Self-Supervised Action Gating with Energies</div>
+    <div class="authors">Yuan Lu, Dongqi Han, Yansen Wang, Dongsheng Li</div>
+    <p class="lead">扩散规划器（diffusion planner）在 offline RL 中很强，但 value-guided 选择常会挑中「分数高却与动力学局部不一致」的轨迹，导致执行脆弱。SAGE 是一个<strong>推理期（inference-time）重排序</strong>方法：用 JEPA 学到的 latent 一致性信号给每条候选轨迹打一个「能量」（feasibility 分数），再与 value 融合来选动作。无需环境 rollout，也无需重训 policy。</p>
+    <div class="meta">
+      <span>D4RL · Locomotion / Navigation / Manipulation</span>
+      <span>500 evaluation seeds</span>
+      <span>推理开销 +6.8%</span>
+      <span><a href="https://arxiv.org/abs/2603.02650">📄 arXiv:2603.02650</a></span>
+      <span><a href="https://arxiv.org/pdf/2603.02650">PDF</a></span>
+    </div>
+    <div class="kw"><span>diffusion planner</span><span>offline RL</span><span>JEPA</span><span>self-supervised</span><span>latent consistency energy</span><span>inference-time re-ranking</span><span>action gating</span><span>D4RL</span><span>feasibility</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">扩散规划器先采样一批候选轨迹，再用 value 评分挑一条来执行。问题在于：value 高的轨迹不一定<strong>局部可行（locally feasible）</strong>——早期若干步可能违反环境动力学。作者称之为 <em>feasibility gap</em>：一条轨迹在 value 下看着诱人，但前缀（prefix）里藏着不可实现的转移，在 replanning 下执行会崩。</p>
+    <blockquote>问题的根源：value 优化在 offline 设定下鼓励向数据外「外推（extrapolation）」，而 feasibility 需要的是「保守（conservatism）」——把「找高 value 未来」与「拒绝局部不可行轨迹」这两个相互冲突的目标混在同一个打分里，产生了张力。</blockquote>
+    <figure>
+      <img src="img/maze2d-effect.webp" alt="Maze2D 中 SAGE 抑制不可行轨迹">
+      <figcaption>Figure 3：Maze2D 采样 100 条轨迹。左：MCSS（Monte-Carlo sample selection）会选中<strong>穿墙 / 越界（wall-crossing or out-of-bounds）</strong>的轨迹；右：SAGE 的 prefix energy 过滤 + soft penalty 抑制了这些失败模式，同时保留了轨迹多样性。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>+2.10</b><small>Overall 平均分 95.59→97.69</small></div>
+      <div><b>0.94–0.99</b><small>能量定位违规的 AUROC</small></div>
+      <div><b>+6.8%</b><small>相对 DV+MCSS 的推理延迟</small></div>
+      <div><b>0 rollout</b><small>无需环境交互 / 重训 policy</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">SAGE 把 <strong>feasibility 与 value 解耦</strong>：在推理期为每条候选轨迹的前缀单独计算一个自监督 feasibility 分数（能量），既不重训 diffusion generator，也不动 critic。训练分两阶段，推理期做一次能量重排序。</p>
+    <figure>
+      <img src="img/framework.webp" alt="SAGE 框架">
+      <figcaption>Figure 1：SAGE 框架。(a) 用带 EMA teacher 的掩码状态窗口学习 predictive JEPA 状态表示；(b) 训练 action-conditioned latent predictor，其预测误差即 transition energy；(c) 测试期用「energy + value」门控给候选轨迹打分选动作。</figcaption>
+    </figure>
+    <h3>Stage I — Predictive State Representation (JEPA)</h3>
+    <p>在<strong>仅状态（state-only）</strong>的 offline 轨迹上训练一个 JEPA encoder：给定 context window 与 future offsets，从被掩码的 context 预测未来状态的 latent embedding。目标结合 alignment loss 与 VICReg 正则（方差/协方差惩罚，防止表征坍缩）：</p>
+    <blockquote>ℒ_JEPA = ℒ_sim + λ_var · ℒ_var + λ_cov · ℒ_cov</blockquote>
+    <h3>Stage II — Action-Conditioned Latent Predictor</h3>
+    <p>冻结 JEPA latent 空间，在其上训练 action-conditioned predictor <em>f_η</em>，用三种互补损失：<strong>teacher-forced one-step loss</strong>（真前缀下的单步预测精度）、<strong>short-horizon rollout loss</strong>（自回归一致性）、以及 <strong>action-usage hinge</strong>（用 batch 内打乱的动作惩罚「对动作不敏感」）：</p>
+    <blockquote>ℒ_AC = ℒ_tf + λ_ro · ℒ_ro + λ_neg · ℒ_neg</blockquote>
+    <h3>推理期：能量重排序（inference-time selection）</h3>
+    <p>对每条候选轨迹，在前 <em>K</em> 个转移上计算 latent 一致性能量（能量越低越局部可行）：</p>
+    <blockquote>E(τ̂ⁱ) = (1/K) Σ<sub>k</sub> ‖ f_η(zⁱ<sub>t+k</sub>, aⁱ<sub>t+k</sub>) − zⁱ<sub>t+k+1</sub> ‖₁</blockquote>
+    <p>先按能量保留最低的 𝒫 比例候选（keep-rate 过滤），再把能量与 value 融合选动作：</p>
+    <blockquote>i* ∈ argmax<sub>i</sub> ( J(τ̂ⁱ) − λ · E(τ̂ⁱ) )</blockquote>
+    <p>可直接插进任何「能采样轨迹 + 用 value 选动作」的扩散规划管线；每步只需 O(CK) 次轻量 latent 评估。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 D4RL 上评测：MuJoCo locomotion（HalfCheetah / Hopper / Walker2d）、Franka Kitchen manipulation、AntMaze navigation（medium/large × play/diverse）、Maze2D（umaze/medium/large），每项 <strong>500 个 evaluation episode seeds</strong>。基线覆盖 BC、BCQ/CQL/IQL、diffusion policy（DQL/IDQL）、diffusion planner（Diffuser/DV），以及 feasibility 类方法（RGG/LDCQ/LoMAP）。SAGE 主要挂在 DV（Diffusion Veteran）上，与其 MCSS 选择对比。</p>
+    <table>
+      <tr><th>Domain（平均分）</th><th>DV baseline</th><th>SAGE</th><th>Δ</th></tr>
+      <tr><td>MuJoCo</td><td>82.9</td><td class="good">84.4</td><td>+1.5</td></tr>
+      <tr><td>Kitchen</td><td>81.8</td><td class="good">85.6</td><td>+3.8</td></tr>
+      <tr><td>AntMaze</td><td>81.6</td><td class="good">84.5</td><td>+2.9</td></tr>
+      <tr><td>Maze2D</td><td>161.6</td><td class="good">163.1</td><td>+1.5</td></tr>
+      <tr><td><strong>Overall</strong></td><td>95.59</td><td class="good">97.69</td><td>+2.10</td></tr>
+    </table>
+    <p>统计显著性（Table 3，对 500 条 per-episode return 做 unpaired two-sample test）：Overall <strong>p = 1.1×10⁻⁹</strong>、MuJoCo 4.8×10⁻¹³、Kitchen 1.1×10⁻⁴²、AntMaze 0.020；Maze2D 0.152（已接近性能天花板，ceiling effect）。</p>
+    <figure><img src="img/auroc.webp" alt="能量对可行性的判别力 AUROC"><figcaption>Figure 8：能量对 feasibility 的判别力（AUROC ↑）。柱为跨环境均值，误差棒为 standard error。SAGE 能量在 MuJoCo/Kitchen/Maze2D ≈0.98–0.99、AntMaze ≈0.94，说明「能量」确实能把可行与不可行转移分开。</figcaption></figure>
+    <figure><img src="img/energy-localize.webp" alt="能量定位可行性违规"><figcaption>Figure 2：能量能<strong>定位</strong>可行性违规——同一条 offline episode 在 clean 与「注入损坏动作段」后的逐步 latent 一致性能量对比，损坏会诱发一个尖锐、局部的能量 spike，且与被打乱区间对齐。</figcaption></figure>
+    <h3>Ablations</h3>
+    <p>三个关键超参（Figures 4–6）：<strong>prefix 长度 K</strong> 约 5–10 步最好，K≥20 反而退化；<strong>keep-rate 𝒫</strong> 过激过滤会牺牲多样性，𝒫=0.8 较平衡；<strong>penalty 权重 λ</strong> 取中等值（≈0.1）最能与 value 选择互补，λ 过大则过度偏向「容易的动力学」。</p>
+    <figure><img src="img/ablation-prefix.webp" alt="prefix 长度 K 的消融"><figcaption>Figure 4：四个评测域上，平均性能随 prefix 窗口长度 K 的变化——收益先升后稳，K 过长时退化。</figcaption></figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 原文<strong>没有单独的 Limitations 章节</strong>；以下各点均为「从方法设计与实验现象<em>推断（inferred）</em>」，非作者明述。</div>
+    <details class="lim" open><summary>已接近天花板的任务收益有限（inferred）</summary><p>Maze2D 的显著性 p=0.152、Δ 仅 +1.5，作者归因于 ceiling effect——当基线已很强时 SAGE 提升空间小。</p></details>
+    <details class="lim"><summary>依赖超参调优（inferred）</summary><p>prefix 长度 K、keep-rate 𝒫、penalty 权重 λ 三者都会显著影响结果（见 Figures 4–6），需针对任务调参。</p></details>
+    <details class="lim"><summary>假设「短时可预测性」（inferred）</summary><p>能量信号只看前 K 步的 latent 一致性，本质假设短 horizon 可预测；对长 horizon 的分布漂移可能力不从心。</p></details>
+    <details class="lim"><summary>受限于 offline 数据质量（inferred）</summary><p>JEPA 表示与 latent predictor 都在 offline 轨迹上学得，其可行性判别力依赖数据覆盖与动力学一致性。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · SAGE: Improving Diffusion Planners by Self-Supervised Action Gating with Energies · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2603.02650">https://arxiv.org/abs/2603.02650</a>
+  </div>
+</footer>
+
+</body>
+</html>
