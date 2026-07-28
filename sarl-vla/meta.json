@@ -1,0 +1,11 @@
+{
+  "slug": "sarl-vla",
+  "title": "用语义强化学习适配通用机器人策略 (SARL)",
+  "arxiv_id": "2606.31958",
+  "url": "https://arxiv.org/abs/2606.31958",
+  "category": "机器人 · Robotics",
+  "keywords": ["VLA", "semantic action space", "reinforcement learning", "prompt steering", "long-horizon manipulation", "deployment-time adaptation", "skill composition", "WidowX / Libero", "语言引导"],
+  "summary_zh": "SARL 把 VLA 的语言 prompt 当作 RL 的动作空间，用语义 Q 函数在线学习最优指令序列，把预训练技能重新组合以解决 zero-shot prompting 无法完成的长程任务；真实机器人上 60–100 个 episode 即把成功率从近 0% 提升到约 80%，超越 DSRL、Residual RL 与 ICL-VLM。",
+  "date": "2026-07-28",
+  "source": "arxiv-html"
+}

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SARL：用语义强化学习适配通用机器人策略</title>
+<meta name="keywords" content="VLA, vision-language-action, semantic action space, reinforcement learning, prompt steering, long-horizon manipulation, 语言引导, deployment-time adaptation, skill composition, WidowX / Libero">
+<meta name="description" content="SARL 把 VLA 的语言指令当作 RL 的动作空间，通过在线交互学习最优 prompt 序列，高效适配长程复杂任务。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics / VLA · RL</span>
+    <h1>用语义强化学习适配通用机器人策略</h1>
+    <div class="sub">Adapting Generalist Robot Policies with Semantic Reinforcement Learning</div>
+    <div class="authors">Jagdeep Singh Bhatia, Andrew Wagenmaker, William Chen, Sergey Levine · 2026/06/30</div>
+    <p class="lead">与其在<b>机器人动作空间</b>里做 RL，不如把 VLA 的<b>语言 prompt 当作动作空间</b>。SARL（Semantic Action Reinforcement Learning）通过在线交互学习"该发什么指令"，把已经藏在预训练里的技能重新组合，从而解决 zero-shot prompting 无法完成的复杂长程任务——真实机器人上仅 60–100 个 episode 就把成功率从近 0% 拉到约 80%。</p>
+    <div class="meta">
+      <span>base policy: π<sub>0.5</sub></span>
+      <span>WidowX 4 真实任务 + Libero-10</span>
+      <span>UC Berkeley</span>
+      <span><a href="https://arxiv.org/abs/2606.31958">📄 arXiv:2606.31958</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.31958">PDF</a></span>
+    </div>
+    <div class="kw"><span>VLA</span><span>semantic action space</span><span>reinforcement learning</span><span>prompt steering</span><span>long-horizon manipulation</span><span>deployment-time adaptation</span><span>skill composition</span><span>WidowX / Libero</span><span>语言引导</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">VLA（vision-language-action）模型从大规模预训练中习得了广博的技能库，理论上是下游 RL 适配的强先验。但标准 RL 直接在<b>机器人动作层面</b>优化，要求 base policy 的动作分布一开始就接近最优策略——对于超出预训练分布的<b>复杂、长程任务</b>，这个假设崩溃了。而直接用一句复杂 prompt 让 VLA 完成新任务，往往同时败在两处：既不会把任务<b>分解</b>成可执行的原子行为，也无法把这些行为<b>落地（ground）</b>到机器人真正能成功执行的技能上。</p>
+    <blockquote>"Our key insight is that … language prompts are an effective alternative space for learning to solve such tasks: modulating language inputs elicits skills already within the policy's repertoire, which can be composed to solve tasks beyond its zero-shot capabilities."</blockquote>
+    <p>作者的核心洞见：把 VLA 视为一个<b>可被语义控制的动作先验（semantically controllable action prior）</b>。与其学习精确的低层动作，不如学习一串语义指令去"驾驶"它——例如做煎蛋："turn on the stove"、"open the fridge"、"grab the egg"……复用预训练技能、而非从零发现新技能，让搜索空间被任务语义天然约束，既保持探索的高表达力，又始终落在合理动作上。</p>
+    <figure>
+      <img src="img/x1.webp" alt="teaser">
+      <figcaption>Figure 1：在部署时驾驭 VLA 先验去解决复杂长程任务很困难。SARL 提出<b>用 RL 优化 VLA 的语言输入</b>；这个"语义动作空间"探测预训练里已编码的技能，带来表达力强、样本高效的探索。并非所有诱发的行为都推进任务——SARL 学会把复杂目标分解为可达成的阶段，并把每个阶段落地到能成功执行的行为上。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>≈0%→80%</b><small>任务成功率（原 task prompt 下近 0）</small></div>
+      <div><b>60–100</b><small>在线 episode 即达成上述提升</small></div>
+      <div><b>4 + 10</b><small>WidowX 真实任务 + Libero-10 仿真</small></div>
+      <div><b>3</b><small>超越的基线：DSRL / Residual RL / ICL-VLM</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">SARL 把决策问题从原始 MDP 提升到一个"语义 MDP" ℳ<sub>sem</sub>：动作不再是机器人动作 <i>a</i>∈𝒜<sub>robot</sub>，而是语言指令 ℓ∈𝒜<sub>sem</sub>，由 VLA 作为二者之间的转换器（<i>a</i>∼π<sub>vla</sub>(·|<i>s</i>,ℓ)）。在语义空间里探索，等于只在"语义上有意义、且被 VLA 先验覆盖"的行为里搜索，从而极大提升探索效率。</p>
+    <figure>
+      <img src="img/x2.webp" alt="decomposition and grounding">
+      <figcaption>Figure 2：适配 VLA 解决新任务需要两件事——把任务目标<b>分解（decomposition）</b>为可达成的阶段，并把每个阶段<b>落地（grounding）</b>到环境中能成功执行的行为。Zero-shot prompting 两者都做不好；用 VLM 提示能做到分解但做不到落地；<b>只有 SARL 通过学习优化 VLA 的 prompt 输入，两者兼得</b>。例如"put the hammer on the plate and pick up the mushroom"过于复杂、且 hammer 是 OOD 物体易被认错而失败，而"move down and grasp"简单、不点名物体，反而能成功驱动机器人。</figcaption>
+    </figure>
+    <h3>① 语义 Q 函数 + softmax 策略</h3>
+    <p>SARL 学习一个<b>语义 Q 函数 Q<sub>sem</sub></b>，通过 temporal-difference (TD) backup 估计"在状态 <i>s</i> 下某条语义指令对完成任务 τ 的推进程度"。行动时从 Q 值诱导的 softmax 分布采样：π<sup>t</sup><sub>sem</sub>(ℓ|<i>s</i>) ∝ exp(Q<sup>t</sup><sub>sem</sub>(<i>s<sub>t</sub></i>, ℓ))。整个流程是一个在线 RL 循环（Algorithm 1），把学习从低层动作空间抬升到语义语言空间。</p>
+    <h3>② 用 VLM 压缩语义动作空间</h3>
+    <p>朴素地在"所有可能 prompt"上学习是不可行的。SARL 让一个 <b>VLM</b> 看当前图像观测 <i>s<sub>t</sub></i> 与高层任务 τ，生成一小组候选语义动作 𝒜<sup>t</sup><sub>sem</sub>，仅在其中选择。为进一步简化，算法<b>缓存并复用 VLM 提出的前 N∈{32, 64, 100} 条 prompt</b>。</p>
+    <blockquote>"VLMs alone are not effective at directly controlling VLAs … By interleaving VLM queries with real-world interaction, SARL is able to achieve the best-of-both worlds."</blockquote>
+    <p>关键区别：VLM 能提出"看起来合理"的指令，却缺乏对"这条指令实际会诱发什么物理行为"的落地知识。SARL 把 VLM 的语义先验与真实交互交织：既借用 VLM 的分解能力，又通过经验把语义动作<b>落地到 VLA 的实际行为</b>上，从而在先验之上持续改进。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead">在仿真 <b>Libero-10</b> 与四个真实 <b>WidowX</b> 长程任务上评估。base VLA 基于 π<sub>0.5</sub>，分别在 Libero-90 与 Bridge v2 上微调；这些任务被特意设计为多阶段、长程，base policy 在每个 setting 里都只在一个任务上有像样表现。真实实验中每个任务预先注入 <b>3 条完整演示</b>到 SARL 与 Residual RL 的 replay buffer（DSRL 因在 latent-noise 空间学习而无法吸收演示）。</p>
+    <figure>
+      <img src="img/x5.webp" alt="task suite">
+      <figcaption>Figure 5：四个复杂长程的 WidowX 真实任务，外加 Libero-10 基准上的十个仿真任务。</figcaption>
+    </figure>
+    <p><b>基线：</b>（动作空间 RL 类）<b>DSRL</b>——在扩散策略的 latent-noise 空间做 steering；<b>Residual RL</b>——学习一个对 base policy 动作做小幅修正的残差策略。（自适应改 prompt 类）<b>ICL-VLM</b>——用 in-context learning 处理历史观测来选 prompt。</p>
+
+    <h3>结果一：SARL 高效适配通用策略</h3>
+    <p>在 Libero-10 与四个真实任务上，SARL 都把 base VLA 在原 task prompt 下<b>近 0% 的成功率提升到约 80%</b>，仅需 60–100 个在线 episode。这说明 VLA 的 prompt 空间是一个表达力强、质量高的探索与学习空间——只调语言输入，就能诱发朴素 prompting 无法展现的解题行为。</p>
+    <figure>
+      <img src="img/x3.webp" alt="real-world results">
+      <figcaption>Figure 3：四个复杂真实任务上，在语义动作上学习的 SARL 带来最好的部署期策略改进。它解锁了 DSRL[75] 与 Residual RL[79,4,80] 等先前 steering 方法无法企及的新能力——因为这些方法从根本上被 base policy 在<b>原任务 prompt</b> 下的表现所限。</figcaption>
+    </figure>
+    <figure>
+      <img src="img/x4.webp" alt="libero results">
+      <figcaption>Figure 4：在长程 Libero-10 任务上，SARL 优于 DSRL[75]、Residual RL[79,4,80] 与 ICL-VLM[13]。SARL 在<b>五个任务上成功适配</b>策略[33]，并在另一个已接近解决的任务上追平；<b>另有四个任务任何方法都未能解决</b>。</figcaption>
+    </figure>
+
+    <h3>结果二：改 prompt vs 改动作——解锁全新能力</h3>
+    <p>为什么动作空间 RL 不行？作者的诊断：(1) 现有 steering 方法被锁死在单一 task prompt 上；(2) 在这个 prompt 下，base policy 的动作分布并不覆盖解题所需的多样动作。zero-shot prompt 下，base policy 的动作分布往往<b>坍缩到完全错误的模式</b>——如让 VLA "move the hammer to the plate. then, grasp the mushroom"，它却把 mushroom 移到盘子并抓起一把勺子（Figure 6）。</p>
+    <blockquote>"DSRL can filter to find good actions from the base policy's distribution, but cannot synthesize fundamentally new ones … residual RL is restricted to exploring a narrow funnel around the base policy's actions."</blockquote>
+    <p>因此这两类基线只在 base policy 本已接近成功时才学得动（如 Libero Task 5 或真实 Task 4）；而 SARL 不受此约束，通过调 prompt 去探索动作 steering 完全够不到的先验区域，在<b>五个 Libero-10 任务与全部 WidowX 任务</b>上推进显著。</p>
+
+    <h3>结果三：SARL vs VLM prompting——落地和分解同样重要</h3>
+    <p>ICL-VLM 基线优于 zero-shot，证实"任务分解确实有用"；但 SARL 全面超越 VLM。原因（Figure 7）：VLM 常选出"语义上合理却仍执行失败"的指令——如点名"hammer"（OOD 物体）反而让 VLA 去抓勺子，只有空间指令"move right"能成功引导；又如选错动词"drop"，导致 VLA 在到达目标前就松开寿司。VLM 能在单个 episode 内 in-context 学习，却无法从这类失败中恢复；而 SARL 通过多次经验<b>学到每条语言指令诱发的落地行为</b>，据此恰当选指令。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 以下两点为论文 §6 "Discussion and Limitations" 中作者<b>明确陈述（stated）</b>的局限；第三点为从设计推断（inferred）。</div>
+    <details class="lim" open><summary>① 速度：VLM in-the-loop（stated）</summary><p>每步都要查询 VLM 生成/筛选候选语义动作，带来推理开销。作者提出的一个延伸方向：研究部署时是否仍需 VLM，或学到的 Q 函数能否自行泛化。</p></details>
+    <details class="lim"><summary>② 依赖"指令多样→行为多样"的 VLA（stated）</summary><p>SARL 的前提是：VLA 在不同指令下能产生足够多样的行为。作者相信社区会持续发展更强的 language-conditioned policy，从而让本方法愈发适用，并希望本工作能激励训练具备更好 language-following 能力的策略。</p></details>
+    <details class="lim"><summary>③ 部分任务仍无解 / 需演示与人工设计（inferred）</summary><p>Figure 4 显示 <b>四个 Libero-10 任务任何方法都未解决</b>；真实实验中每任务需 3 条演示注入 replay buffer，且语义动作候选依赖 VLM prompt 与缓存规模 N 等设置——这些属于从实验设计推断的实际约束，非作者在 §6 单列。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · 用语义强化学习适配通用机器人策略 (SARL) · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.31958">https://arxiv.org/abs/2606.31958</a>
+  </div>
+</footer>
+
+</body>
+</html>
