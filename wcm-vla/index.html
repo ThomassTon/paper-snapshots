@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WCM: A World Critic Model for Vision-Language-Action Reinforcement Learning</title>
+<meta name="keywords" content="Vision-Language-Action, reinforcement learning, world model, critic model, LeJEPA, POMDP, value estimation, robotic manipulation, off-policy RL, 时序建模">
+<meta name="description" content="WCM 用 LeJEPA 世界模型改造 VLA-RL 的 critic：联合预测未来 latent state 与估计 value，缓解部分可观测下的状态近似问题。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · VLA · 强化学习</span>
+    <h1>WCM：面向 VLA 强化学习的世界评论家模型</h1>
+    <div class="sub">World Critic Model for Vision-Language-Action Reinforcement Learning</div>
+    <div class="authors">Senyu Fei, Xiaopeng Yu, Siyin Wang, Xianzhong Zhao, Jingjing Gong, Xipeng Qiu · arXiv 2607.29613</div>
+    <p class="lead">critic-based 的 VLA-RL 里，value 估计大多只吃单帧观测，与机器人控制的<b>部分可观测（POMDP）</b>本质不符。WCM 把 critic 换成一个基于 <b>LeJEPA</b> 的轻量世界模型：<b>联合预测未来 latent state 与估计 value</b>，让 critic 表征被显式训练去刻画时序动态，而非仅回归标量回报。在 4 个基准共 149 个任务与 7 个真实机器人任务上取得 SOTA，OOD 泛化增益尤为显著。</p>
+    <div class="meta">
+      <span>4 benchmarks · 149 tasks</span><span>Pi0 / Pi0.5 / OpenVLA-OFT</span><span>on-policy + off-policy RL</span>
+      <span><a href="https://arxiv.org/abs/2607.29613">📄 arXiv:2607.29613</a></span>
+      <span><a href="https://sylvestf.github.io/wcm-homepage/">Homepage</a></span>
+      <span><a href="https://github.com/sylvestf/WCM">GitHub</a></span>
+    </div>
+    <div class="kw"><span>Vision-Language-Action</span><span>reinforcement learning</span><span>world model</span><span>critic model</span><span>LeJEPA</span><span>POMDP</span><span>value estimation</span><span>robotic manipulation</span><span>off-policy RL</span><span>时序建模</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">critic-based 的 RL 后训练依赖一个 value estimator，但现有方法大多在<b>单帧观测</b>或<b>单帧 VLM backbone latent</b> 上估值——这与机器人控制的部分可观测性存在根本性错配。朴素地把观测历史塞进 critic，会在高维视觉空间上带来<b>指数级复杂度</b>；而且即便塞进去也不奏效，因为<b>纯标量回报回归</b>为学习跨时序动态提供的监督严重不足。</p>
+    <blockquote>作者把根因归结为一个 “state approximation problem”：<i>without an explicit world modeling objective, the critic's representation cannot capture the temporal structure needed for accurate value estimation.</i></blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="WCM overview">
+      <figcaption>Figure 1：WCM 总览。以往 critic 受部分可观测所困，而朴素多帧结构又因高维观测上的稀疏标量监督而不足。WCM 采用端到端结构，<b>联合预测未来并估计 value</b>，从而有效利用历史信息，取得 SOTA 表现。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>149</b><small>任务数（跨 4 个仿真基准）</small></div>
+      <div><b>+252%</b><small>OpenVLA-OFT 在 ManiSkill 的相对提升</small></div>
+      <div><b>7</b><small>真实机器人操作任务</small></div>
+      <div><b>3</b><small>兼容 backbone：Pi0/Pi0.5/OFT</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">WCM 建立在轻量的 <b>LeJEPA</b> 结构之上。一个 observation encoder 先把过去 K 帧的图像分别编码为序列 latent state；随后一个 predictor 挂两个 decoder head，分别<b>预测下一步 latent state</b>（world head）与<b>估计 value</b>（value head）。它可以无缝接入 on-policy 与 off-policy 两套训练管线，并兼容 Pi0、Pi0.5、OpenVLA-OFT 等 SOTA VLA backbone。</p>
+    <figure>
+      <img src="img/architecture.webp" alt="WCM architecture and pipelines">
+      <figcaption>Figure 2：WCM 方法总览。(a) <b>Architecture</b>：observation encoder 把过去 K 帧映射为序列 latent state；predictor 的两个 decoder head 分别 forecast 下一状态与估计 value。(b) <b>On-policy Pipeline</b>：从 on-policy rollout 估值，计算 GAE advantage 用于 PPO/Flow-SDE 更新。(c) <b>Off-policy Pipeline</b>：用统一 data buffer（SFT + rollouts）通过 AWR/RECAP 稳定地同时更新 WCM 与 policy。</figcaption>
+    </figure>
+    <h3>把 VLA-RL 建模为 POMDP</h3>
+    <p>论文把 VLA 机器人操作显式建模为部分可观测马尔可夫决策过程（POMDP）：观测 <i>o<sub>t</sub></i> 只部分揭示隐藏状态 <i>s<sub>t</sub></i>。单帧 critic 无法从当前观测恢复真实状态，这正是价值估计不准的来源。WCM 通过引入世界建模目标，让 critic 表征去逼近隐藏状态的时序结构。</p>
+    <h3>联合目标：value + world prediction + LeJEPA 正则</h3>
+    <p>训练损失由三项组成——value 估计损失、下一状态<b>预测损失</b> <i>L<sub>pred</sub></i>（teacher-forcing 下预测 latent 与真实 latent 的 L2 误差），以及 LeJEPA 的 <b>SIGReg</b>（Sketched Isotropic Gaussian Regularization）损失，用以防止表征坍缩：</p>
+    <blockquote>L = L<sub>value</sub> + λ · L<sub>pred</sub> + η · L<sub>SIGReg</sub></blockquote>
+    <p>其中 λ 平衡「回归回报」与「预测未来」两种监督——λ=0 即退化为只有时序建模能力、无世界预测的 ViT critic（消融中的对照）。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">评测覆盖 ManiSkill（IND 与沿 vision/semantic/execution 三轴的 OOD）、MetaWorld（pick-and-place 之外的接触任务）、CALVIN（长程任务）与 LIBERO-Plus（泛化能力）；所有 policy 均从 few-shot SFT baseline 初始化，用稀疏 0/1 reward 训练。“+WCM” 表示把 Flow-SDE / PPO 的 critic 替换为 WCM。指标逐字摘自论文。</p>
+
+    <h3>ManiSkill：IND 与 OOD 成功率（%，Table 1）</h3>
+    <table>
+      <tr><th>Backbone</th><th>Method</th><th>IND</th><th>OOD avg.</th></tr>
+      <tr><td>Pi0</td><td>SFT</td><td>38.4</td><td>18.1</td></tr>
+      <tr><td>Pi0</td><td>prev. best (π-stepNFT)</td><td>79.2</td><td>50.4</td></tr>
+      <tr><td>Pi0</td><td>+ WCM</td><td class="good">84.4</td><td class="good">51.5</td></tr>
+      <tr><td>Pi0.5</td><td>SFT</td><td>47.0</td><td>26.4</td></tr>
+      <tr><td>Pi0.5</td><td>prev. best (π-stepNFT)</td><td>85.4</td><td>59.5</td></tr>
+      <tr><td>Pi0.5</td><td>+ WCM</td><td class="good">91.9</td><td class="good">64.4</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>SFT</td><td>28.1</td><td>18.3</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>prev. best (PPO)</td><td>97.7</td><td>77.1</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>+ WCM</td><td class="good">99.0</td><td class="good">77.9</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>Zero-Shot → + WCM</td><td class="good">0.8 → 98.7</td><td class="good">0.8 → 73.5</td></tr>
+    </table>
+    <p>三条关键发现（引自论文）：(1) ManiSkill 上大幅提升，OpenVLA-OFT 取得 <b>252%</b> 的相对提升；(2) 从极低初始性能也能稳定提升——当 OpenVLA-OFT 在完全未见 ManiSkill 数据（0.78%）时初始化，WCM 把性能提高了 <b>12,551%</b>；(3) 在 MetaWorld（需要稳定接触的任务）与 CALVIN（长程）上同样领先。</p>
+
+    <figure><img src="img/results-metaworld-calvin.webp" alt="MetaWorld and CALVIN results"><figcaption>Figure 4：MetaWorld 与 CALVIN 上的结果（成功率或平均完成长度，带 error bar）。作者称提升源于方法能捕获<b>更高阶的状态信息</b>，在 POMDP 设定下增强 latent 表征与 value 估计。</figcaption></figure>
+
+    <h3>LIBERO-Plus：单样本 SFT 起步也能追平全量 SFT（total，%，Table 2）</h3>
+    <p>“One-SFT” 每任务仅见 1 条演示，“Full-SFT” 见 50 条；“+WCM” 自 One-SFT 初始化。WCM 从极弱起点出发，total 成功率反超对应 Full-SFT。</p>
+    <table>
+      <tr><th>Backbone</th><th>Full-SFT</th><th>One-SFT</th><th>+ WCM</th><th>Δ vs One-SFT</th></tr>
+      <tr><td>Pi0</td><td>71.2</td><td>39.1</td><td class="good">72.8</td><td>+33.7</td></tr>
+      <tr><td>Pi0.5</td><td>72.9</td><td>38.0</td><td class="good">73.7</td><td>+35.7</td></tr>
+      <tr><td>OpenVLA-OFT</td><td>71.7</td><td>29.3</td><td class="good">74.0</td><td>+44.7</td></tr>
+    </table>
+
+    <h3>真实机器人 + sim-to-real（Pi0.5，Table 3/4）</h3>
+    <p>7 个真实操作任务上用 OpenVLA-OFT 与 Pi0.5 做 off-policy RL，部署稳定。以 “拿起物体” 为例（成功次数 / 25 trials）：纯 sim SFT 为 0/25，经 sim RL 提升到 carrot 7、banana 7、pepper 6；real SFT 起点为 carrot 13、banana 2、pepper 4，叠加 sim RL 后为 11 / 8 / 9，语义与执行维度的 OOD 也同步改善。</p>
+
+    <h3>Ablations</h3>
+    <figure><img src="img/ablation.webp" alt="ablation on critic architecture and history length"><figcaption>Figure 5：critic 结构与观测历史长度的消融。MLP 是 PPO/Flow-SDE 的 baseline critic；ViT 代表<b>去掉世界预测（λ=0）</b>的 WCM（仅有时序建模能力）。WCM 在所有配置下成功率最高——说明「显式世界预测目标」而非单纯多帧结构才是增益来源。</figcaption></figure>
+    <figure><img src="img/lambda.webp" alt="effect of lambda"><figcaption>Figure 6：λ 对 IND（蓝）与 OOD（红）性能的影响。存在使两者最佳的 λ 取值（星标）；λ 过大或过小都会损失性能，印证 value 回归与未来预测两种监督需要平衡。</figcaption></figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 论文<b>没有</b>单独的 Limitations 章节。以下条目为<b>据方法设计推断（inferred）</b>，非作者明述，仅供研读参考。</div>
+    <details class="lim" open><summary>依赖 SFT 初始化与稀疏奖励（inferred）</summary><p>所有 policy 均从 few-shot SFT baseline 起步、用稀疏 0/1 reward 训练；WCM 是对 critic 的替换而非从零学习，其增益建立在已有 SFT 与奖励设定之上，未探讨无 SFT 或稠密奖励下的表现。</p></details>
+    <details class="lim"><summary>λ 需要按 IND/OOD 权衡调参（stated via Fig. 6）</summary><p>Figure 6 显示 IND 与 OOD 的最优 λ 并不一致，需针对目标场景取舍——引入了一个对结果敏感的超参数。</p></details>
+    <details class="lim"><summary>真实世界评测规模有限（inferred）</summary><p>真机验证覆盖 7 个任务、每任务 25 trials，且以 Pi0.5 / OpenVLA-OFT 的 off-policy RL 为主；主结论仍主要来自 4 个仿真基准，大规模真实部署的鲁棒性有待进一步验证。</p></details>
+    <details class="lim"><summary>历史长度 K 带来的计算开销（inferred）</summary><p>把过去 K 帧编码为序列 latent 提升了时序建模能力，但也随 K 增加计算/显存成本；论文以 LeJEPA 轻量化缓解，未系统给出精度—开销的完整边界。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · WCM: A World Critic Model for VLA Reinforcement Learning · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.29613">https://arxiv.org/abs/2607.29613</a> · <a href="https://sylvestf.github.io/wcm-homepage/">Homepage</a>
+  </div>
+</footer>
+
+</body>
+</html>
