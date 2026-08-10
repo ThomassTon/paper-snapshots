@@ -1,0 +1,11 @@
+{
+  "slug": "intact-wm",
+  "title": "INTACT: Isomorphic Intent-to-Action Learning for Search-Free World Models",
+  "arxiv_id": "2607.26056",
+  "url": "https://arxiv.org/abs/2607.26056",
+  "category": "机器人 · Robotics",
+  "keywords": ["world model", "JEPA", "search-free control", "intent-to-action", "goal-conditioned policy", "LeWM benchmark", "cross-entropy method", "latent dynamics", "免搜索控制", "隐空间世界模型"],
+  "summary_zh": "INTACT 是一个端到端 JEPA，把带动作标注、无奖励的离线轨迹转成可部署的“意图→动作”接口：其分布式动作律的条件均值直接作为免搜索策略，训练一个 epoch 即可在四个官方 LeWM 任务上达到 85.78%–100% 的零搜索成功率，推理仅需 2.9–5.5 ms。",
+  "date": "2026-08-10",
+  "source": "arxiv-latex"
+}

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTACT: Isomorphic Intent-to-Action Learning for Search-Free World Models</title>
+<meta name="keywords" content="world model, JEPA, search-free control, intent-to-action, goal-conditioned policy, LeWM benchmark, latent dynamics, cross-entropy method, 免搜索控制, 隐空间世界模型">
+<meta name="description" content="INTACT 是一个端到端 JEPA，把带动作标注、无奖励的轨迹转成免搜索的“意图→动作”接口，一个 epoch 即可零搜索控制。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:38px;line-height:1.18;margin:0 0 10px;font-weight:800;letter-spacing:.3px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:30px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · World Model · Robotics (cs.RO)</span>
+    <h1>INTACT：为“免搜索世界模型”学习同构的意图→动作映射</h1>
+    <div class="sub">Isomorphic Intent-to-Action Learning for Search-Free World Models</div>
+    <div class="authors">Junhan Sun, Hao Zhao, Guofeng Zhang · Zhejiang University (CAD&CG) · AIR, Tsinghua · InSpatio · RoboParty Lab</div>
+    <p class="lead">前向隐空间世界模型（forward latent world model）只会预测“动作会导致什么”，要反推“为达成目标该用哪个动作”却必须靠昂贵的测试期搜索（CEM/MPPI）。INTACT 是一个端到端 <b>JEPA</b>，把带动作标注、无奖励的离线轨迹直接转成可部署的 <b>intent-to-action</b> 接口：训练一个 epoch，其条件均值即可作为<b>免搜索（search-free）</b>策略直接输出动作，推理仅需 2.9–5.5 ms。</p>
+    <div class="meta">
+      <span>4 个官方 LeWM 任务</span><span>one-epoch 零搜索</span><span>Direct 95.33% macro SR</span>
+      <span><a href="https://arxiv.org/abs/2607.26056">📄 arXiv:2607.26056</a></span>
+      <span><a href="https://arxiv.org/pdf/2607.26056">PDF</a></span>
+    </div>
+    <div class="kw"><span>world model</span><span>JEPA</span><span>search-free control</span><span>intent-to-action</span><span>goal-conditioned policy</span><span>LeWM benchmark</span><span>cross-entropy method</span><span>latent dynamics</span><span>免搜索控制</span><span>隐空间世界模型</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">世界模型学的是一个前向条件：给定视觉状态与动作，预测下一步会发生什么。目标条件控制（goal-conditioned control）则要<b>数值反演</b>这个映射——不断采样动作序列、rollout、打分、保留接近目标的候选。论文指出这造成一种<b>“表示—控制不对称”</b>：动作在训练时塑造了隐空间，但 CEM/MPPI 在部署时却从<b>无信息的随机/高斯动作</b>起步，要反复 rollout 打分后才逐渐变得“朝向任务”。</p>
+    <blockquote>“The world model learns what an action will do, but not which action should realize a requested latent change.” —— 世界模型知道动作会带来什么，却不知道该用哪个动作去实现所需的隐空间变化。</blockquote>
+    <p>论文的核心观察：所需的监督信号其实<b>本就藏在离线轨迹里</b>。即使演示无序、训练无奖励，每一个带动作标注的 transition 都同时揭示了一个“状态条件下的运动意图（motion intent）”以及实现它的动作。跨大量轨迹，这些标注就勾勒出“意图族”与其对应的“动作族”。</p>
+    <figure>
+      <img src="img/teaser.webp" alt="INTACT teaser: direct vs CEM">
+      <figcaption><b>INTACT 把动作对齐的隐空间意图转成免搜索控制。</b> 左：在固定的 E5 Cube 审计中，从 300 个匹配起点比较 INTACT Direct 与 LeWM CEM 300×30，成功率 98.7% vs 67.0%（+31.7 点），97 次有利翻转、仅 2 次不利翻转；下方面板显示 INTACT 避免了表示坍缩、保持统一的多任务意图空间。中：一个共享的 goal-conditioned 算子把隐空间运动意图直接映射为一个 action chunk，无需 CEM、也无需额外的 policy 训练阶段。右：one-epoch INTACT Direct 达到 95.33% 四任务 macro SR，局部验证 96.86%；推理延迟从 CEM 300×30 的 1.48 s 降到 2.9–5.5 ms。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>2.9–5.5<small style="font-size:14px">ms</small></b><small>Direct 推理延迟（原为 CEM 的 1.48 s）</small></div>
+      <div><b>95.33%</b><small>one-epoch 零搜索 Direct 四任务 macro SR</small></div>
+      <div><b>23.44×</b><small>Guarded A 相比标准搜索的采样量削减</small></div>
+      <div><b>1 epoch</b><small>端到端训练，无冻结编码器 / 无二阶段控制器</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">INTACT（<b>IN</b>tent-<b>T</b>o-<b>ACT</b>ion）是一个端到端 JEPA。每个 transition 提供<b>物理意图（physical intent）</b> <i>z<sub>t+1</sub> − z<sub>t</sub></i>；某个未来目标提供<b>部署意图（deployment intent）</b> <i>sg(z<sub>g</sub>) − z<sub>t</sub></i>（sg 为 stop-gradient）。共享编码器给出 <i>z<sub>j</sub>=E<sub>θ</sub>(o<sub>j</sub>)</i>，动作以 B=5 步为一 chunk、训练窗口跨 H=5 个 chunk。</p>
+    <figure>
+      <img src="img/overview.webp" alt="Shared-encoder INTACT training and recurrent control">
+      <figcaption><b>共享编码器的 INTACT 训练与递归控制。</b> 四个视觉域共用一个 encoder 与各自的 task-specific predictor 对。任务内部，图同构（graph-isomorphic）的 local 调用与 goal 调用通过<b>同一套匹配的输入语法</b>进入同一个 INTACT Predictor：local 用带梯度的意图 <i>z<sub>t+1</sub>−z<sub>t</sub></i>，goal 用 detach 的意图 <i>sg(z<sub>g</sub>)−z<sub>t</sub></i>。Forward Predictor 仍保留隐动力学与 SIGReg 监督。推理时，goal 调用直接吐出一个 action chunk 供免搜索 Direct 控制；world rollout 只保留作可选验证与重规划。</figcaption>
+    </figure>
+    <h3>两重“同构（isomorphic）”</h3>
+    <p>论文对 <em>isomorphic</em> 给出两个明确含义：(1) <b>local 与 goal 意图的 backbone 输入图同构</b>——两者共用一套 four-slot grammar 与<b>共享参数</b>；(2) <b>local 与 goal 意图族同构</b>——由<b>同一个 predictor</b> 诱导的 action-law 语义把二者联系起来，而<b>不是</b>逐点隐空间相等（not pointwise latent equality）。也就是说，local 调用用物理后继来<b>锚定表示</b>，goal 调用把未来目标当作 anchor，两者靠“非对称端点梯度”联合起表示学习与控制。</p>
+    <h3>两重“完好（intact）”迁移</h3>
+    <p>名字里的 <em>intact</em> 指两种完好保留：(1) <b>RGB 证据 → 隐空间意图坐标</b>之间完好——端到端的动作梯度保留“动作有效（action-effective）”信息、同时过滤与运动意图无关的干扰；(2) <b>意图族 → 对应动作律族</b>之间完好——共享 predictor 学到的是“被支持的族映射（supported family mapping）”。由此得到的意图坐标支撑一个稳健的<b>分布式动作律（distributional action law）</b>：其<b>条件均值直接作为免搜索策略</b>，而采样仅用于多样性或可选验证，并非目标导向控制所必需。</p>
+    <figure>
+      <img src="img/planning-pipeline.webp" alt="INTACT converts mandatory search into optional verification">
+      <figcaption><b>INTACT 把“必须搜索”变成“可选验证”。</b> LeWM 从无信息高斯采样原始动作、靠前向 rollout 才变得目标导向；INTACT 交替执行“原始 goal 位移 → 共享条件动作均值 → 不变的 Forward Predictor”，产出一个 Direct 计划，可立即执行，也可用 K=128、I=3、σ₀=0.25 的局部 <b>Guarded A</b> 就地验证。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 4 个官方 <b>LeWM</b> 域（PushT、OGBench Cube、DMC Reacher、TwoRoom）上评估。模型输入 RGB 观测与五步 action block；每个 checkpoint 用 seed {0,1,42} 各 100 episode 评估，主表 SR 沿用官方评估器。此外单独报告更严格的 <b>CLEAR-LeWM v0.5.1 Moderate</b> 审计（官方与 CLEAR 分数从不混合）。</p>
+
+    <h3>单任务：one epoch 让搜索变成可选</h3>
+    <p>单任务模型每个从头训练 <b>1 个 epoch</b>（batch 256，AdamW lr 5×10⁻⁴，三个训练种子）。下表为 goal-displacement INTACT 在各部署接口下的官方 SR（%），并与已发表方法对比：</p>
+    <table>
+      <tr><th>方法 / 接口</th><th>候选序列数</th><th>PushT</th><th>Cube</th><th>Reacher</th><th>TwoRoom</th><th>Macro</th></tr>
+      <tr><td>DINO-WM (published, CEM)</td><td>9k</td><td>74.0</td><td>86.0</td><td>79.0</td><td>100.0</td><td>84.75</td></tr>
+      <tr><td>LeWM (E2E 10 ep, CEM)</td><td>9k/3k</td><td>96.0</td><td>74.0</td><td>86.0</td><td>87.0</td><td>85.75</td></tr>
+      <tr><td>Fast-LeWM + SC (10 ep)</td><td>9k</td><td>98.0</td><td>82.0</td><td>90.0</td><td>98.0</td><td>92.00</td></tr>
+      <tr><td>GC-IDM (LeWM + 50-ep head, Direct)</td><td>0</td><td>84.7</td><td>99.3</td><td>100.0</td><td>100.0</td><td>96.00</td></tr>
+      <tr><td><b>INTACT · Direct（1 ep, 零搜索）</b></td><td>0</td><td class="good">85.78</td><td class="good">100.00</td><td class="good">97.67</td><td class="good">97.89</td><td class="good">95.33</td></tr>
+      <tr><td>INTACT · Pure CEM 300×30（禁用 actor）</td><td>9k</td><td>88.44</td><td>68.44</td><td>83.67</td><td>82.89</td><td>80.86</td></tr>
+      <tr><td>INTACT · Actor-on CEM 300×30</td><td>9k</td><td>93.56</td><td>96.89</td><td>86.67</td><td>98.00</td><td>93.78</td></tr>
+      <tr><td><b>INTACT · Guarded A 128×3（局部验证）</b></td><td>384</td><td class="good">92.22</td><td class="good">99.78</td><td class="good">97.44</td><td class="good">98.00</td><td class="good">96.86</td></tr>
+    </table>
+    <p>关键发现：花 9,000 条序列的 Actor-on CEM（93.78）反而<b>比零搜索 Direct（95.33）低 1.55 点</b>；而只用 384 条序列的 Guarded A 把 Direct 提高 1.53 点到 <b>96.86</b>。论文据此把搜索定位为“围绕已学计划的<b>局部验证</b>”，无约束的迭代搜索反而会重新制造 train–deployment gap、浪费已学到的条件律。相比已发表 LeWM，INTACT 只用<b>约 1/10 的全数据遍历</b>、并去掉最多 9,000 条候选序列。</p>
+    <div class="note"><b>不掩盖不利数字：</b>在 CLEAR-LeWM Moderate 审计中，Reacher 从官方 97.67 掉到 <b>49.56</b>（角度拓扑修正后），这也是官方与 CLEAR 分数分开报告的原因；Moderate 下 Direct/Guarded A macro 为 83.33 / 84.83，仍高于 pure CEM 的 65.47。</div>
+
+    <h3>多任务：一个共享编码器改善全部四个域</h3>
+    <p>一个分布式 job 遍历全部四个数据集，共享 ViT-Tiny/14 编码器、projector 与 192 维隐空间，各任务保留小的 Forward/INTACT Predictor（训练 5 epoch）。E5 时 goal-displacement INTACT 达到 <b>89.39% macro Direct SR</b>，而匹配的共享编码器 LeWM（CEM 300×30）仅 66.17，逐任务提升 5.66 / 32.23 / 12.56 / 42.44 点，并超过 85.75 的已发表 task-specific LeWM macro。</p>
+    <figure>
+      <img src="img/multitask-sr.webp" alt="Controlled E5 success across four tasks">
+      <figcaption><b>受控 E5 四任务成功率。</b> LeWM 用 CEM 300×30、学习型 head 用 Direct、最后一柱用 Guarded A 128×3；误差棒为三个训练种子的样本标准差。纵轴自 30% 起以放大高 SR 区差异（非零基）。</figcaption>
+    </figure>
+    <h3>机制分析 / Ablations</h3>
+    <p>论文用一系列匹配干预把“表示塑造”与“读出执行”解耦：</p>
+    <ul>
+      <li><b>不是单纯的目标条件行为克隆：</b>相较 intent-only cell，加上带梯度的物理似然使 macro SR 提高 8.78 点（三任务为正、饱和的 Cube 为 −0.44）。</li>
+      <li><b>族对应比逐点还原更重要：</b>predicted–expert <b>kNN overlap</b> 与官方 Direct SR 相关 r=.954，<b>linear CKA</b> r=.897，而逐点 action R² 只有 .815；<b>任务纯度（task purity）反而与 SR 负相关</b>——干净的任务簇不是所要的关系。</li>
+      <li><b>rank 不是语义凭证：</b>E5 waypoint-intent-only 的 effective rank 更高（93.87 vs 89.26），SR 反而更低（74.22 vs 89.39）。</li>
+      <li><b>Gauge 干预：</b>正确的任务局部配对校准把 CLEAR Moderate SR 从 shuffled 的 9.46% 恢复到 <b>68.04%</b>（+58.58 点）；反向把 Full backbone 映入 LeWM actor 仍停在 5.08%——坐标映射能<b>恢复</b>已学条件律，却无法<b>凭空创造</b>目标 actor 里不存在的能力。</li>
+    </ul>
+    <figure>
+      <img src="img/intent-action-alignment.webp" alt="Intent-action relation tracks control">
+      <figcaption><b>是“意图–动作关系”而非“任务聚类”在追踪控制。</b> 两列分别为 waypoint 与 goal-displacement 接口；四行分别为 task purity、逐点 action R²、predicted–expert CKA、局部 kNN overlap。每个点是一个 checkpoint，标注为与官方四任务 Direct SR 的 checkpoint 级 Pearson 相关。八个面板一致排除“仅靠聚类”的解释。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下均为论文 §Limitations <b>明确陈述（stated）</b>的局限，此处按其原文归纳。</div>
+    <details class="lim" open><summary>三个种子只是粗略的方差估计</summary><p>受控多任务矩阵在六个目标 cell、三个训练种子、每 checkpoint 三个评估种子、E1–E5 下完整，官方 Direct / pure CEM / Guarded A / CLEAR Moderate 均有全覆盖；但作者指出“three seeds still provide only a coarse estimate of training variability”。</p></details>
+    <details class="lim"><summary>动作商仅在“被演示的支持集”上可识别</summary><p>命题 Prop. 只对采样概率为正的端点条件成立，无法识别任意反事实目标；单条专家动作也不能证明另一个动作是否同样有效。在障碍、接触切换与多模态演示附近，full goal displacement 保留方向与距离但仍是近似请求；goal-intent 调用依赖演示支持，二者都不能证明支持集之外的正确行为。首步 Direct 之后，自回归控制会以预测隐状态为条件，其分布可能偏离编码的演示状态。</p></details>
+    <details class="lim"><summary>现有诊断是“必要检查”而非“证书”</summary><p>effective rank 与 SRS 可能奖励各向同性噪声；G<sub>sep</sub> 只是 action-distinct quotient 的代理（两个不同目标可能需要同一当前动作）；expert NLL 与 Direct 共用同一 INTACT Predictor，因此不是独立的因果变量。t-SNE 几何仅为定性、不用于选型。</p></details>
+    <details class="lim"><summary>Direct 高斯控制可能掩盖多模态</summary><p>部署动作是对角高斯的均值；在岔口或接触切换处该均值可能落在两个有效模态之间。搜索可对照前向动力学验证，但会丢掉“零候选”身份。混合 actor、基于学习不确定性的采样、不确定性触发验证与 quotient-aware 模态选择是自然的扩展，但当前证据只支持一个简单的跨任务默认，而非普适动作分布。</p></details>
+    <details class="lim"><summary>Gauge 等价是“任务流形条件化”的</summary><p>基础 Full–goal-only 交换仅用两个训练种子；扩展的 72-cell 审计加强了因果对照，但未建立精确共轭或单一全局仿射图。LeWM / inverse-only backbone 也能被对齐进训练好的 Full actor，故“可对齐性”并非 INTACT 独有属性；跨任务与 leave-one-task-out 迁移仍失败。</p></details>
+    <details class="lim"><summary>范围与评估：仅四个仿真任务、固定图像目标</summary><p>实验用四个仿真任务、固定图像目标、任务专属动作头与离线专家轨迹，<b>尚未</b>建立真实机器人、分布外目标、干扰物或跨本体的泛化。头条结果用官方 LeWM 以保持可比性，更严格的合法性审计单独报告、且应被独立验证。对 PRISM、GC-IDM、SMWM、QuoVLA 等并行系统，论文只比较接口与假设，不比对未匹配的 SR 数字。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    据论文原始 LaTeX 源与图表编译 · INTACT: Isomorphic Intent-to-Action Learning for Search-Free World Models · 仅供学习参考<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2607.26056">https://arxiv.org/abs/2607.26056</a>
+  </div>
+</footer>
+
+</body>
+</html>
