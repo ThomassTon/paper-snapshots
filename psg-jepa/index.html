@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSG-JEPA：仅靠前向预测够吗？为 JEPA 世界模型注入物理状态锚定</title>
+<meta name="keywords" content="JEPA world model, 世界模型, physical state grounding, latent identifiability, proprioceptive state, goal-conditioned planning, robot manipulation, self-supervised representation">
+<meta name="description" content="PSG-JEPA 在 JEPA 世界模型的前向预测之外，引入本体状态与多步关节角变化两类训练期锚定目标，让潜空间可辨识物理状态，在探针、规划与策略三层评测中全面超越基线。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · World Model</span>
+    <h1>PSG-JEPA：仅靠前向预测够吗？</h1>
+    <div class="sub">Is Forward Prediction Enough? Physical State Grounding for JEPA World Models</div>
+    <div class="authors">Haodong Yan, Jiaguan Zhu, Mingyuan Jia, Ruiqing Yin, Junjie He, Zhide Zhong, 等 · arXiv 2026/08/07</div>
+    <p class="lead">JEPA 世界模型只用 action-conditioned 前向预测塑造潜空间，却不保证潜表征能可靠地解码出机器人自身的物理状态。PSG-JEPA 在前向预测之外，加入两条<b>仅在训练期生效</b>的锚定目标——把单帧潜向量锚到本体状态、把潜向量对锚到多步关节角变化，从而让潜空间"看得见"物理状态。推理架构与算力完全不变，却在可辨识性、规划、策略三层评测中全面超越 SOTA 潜世界模型。</p>
+    <div class="meta">
+      <span>OGBench · LIBERO · Real Dual-arm Cobot</span>
+      <span>Backbone: LeWM (JEPA)</span>
+      <span>Training-only heads, inference cost unchanged</span>
+      <span><a href="https://arxiv.org/abs/2608.06799">📄 arXiv:2608.06799</a></span>
+      <span><a href="https://arxiv.org/pdf/2608.06799">PDF</a></span>
+    </div>
+    <div class="kw"><span>JEPA world model</span><span>世界模型</span><span>physical state grounding</span><span>latent identifiability</span><span>proprioceptive state</span><span>goal-conditioned planning</span><span>robot manipulation</span><span>self-supervised representation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">近期 JEPA-based 世界模型（如 LeWM）从观测序列中学习 action-conditioned 的潜动力学。但作者指出：<b>前向预测目标并不显式监督"从单个 latent 解码机器人物理状态、从 latent 对解码状态变化"这件事</b>，于是留下一个 "robot-centric identifiability gap"——视觉与动作之间的对齐关系没有被编码进表征，下游 planner / policy 只能自己从头去学，进而限制规划与策略的性能。</p>
+    <blockquote>"control requires relating visual observations to the robot's state and to how actions change it" —— 因此把 vision–action 对齐放到<b>表征层</b>本身，是控制的基础。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="PSG-JEPA overview teaser">
+      <figcaption>Figure 1. PSG-JEPA 总览。(a) 前向预测型 JEPA（如 LeWM）仅靠 action-conditioned 前向预测学潜空间，不显式监督机器人物理状态/状态变化的可解码性；(b) PSG-JEPA 保留前向通路，同时把单个 latent 锚到 proprioceptive state、把 latent 对锚到 multi-horizon joint-angle changes，两条目标由轻量、仅训练期的 state head 与 transition head 实现；(c) 相比 LeWM，PSG-JEPA 在物理可辨识性、有限 planner 训练下的规划成功率、仿真与真机策略成功率上均更强。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>0.94</b><small>EE-yaw 探针 r（LeWM 仅 0.08）</small></div>
+      <div><b>95.0%</b><small>Cube 规划 SR@5ep（LeWM 80.7%）</small></div>
+      <div><b>85.3%</b><small>LIBERO-Goal 策略成功率</small></div>
+      <div><b>79.3%</b><small>真机平均成功率（LeWM 60.0%）</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">PSG-JEPA 在标准前向 JEPA 损失之外并联两条 <b>physical state grounding</b> 目标，用来"塑形"潜空间。共享 encoder 对每帧观测 o<sub>t+i</sub> 产出 z<sub>t+i</sub>=E<sub>φ</sub>(o<sub>t+i</sub>)；两条目标各挂一个轻量 head，<b>只在训练时使用、训练后丢弃</b>，因此推理结构与算力与基线完全一致。</p>
+    <figure>
+      <img src="img/method.webp" alt="PSG-JEPA grounding objectives">
+      <figcaption>Figure 2. 两条 grounding 目标示意。state head 从每个 latent 预测 ŝ<sub>t+i</sub>=H<sub>s</sub>(z<sub>t+i</sub>)，对齐 logged 机器人状态 s<sub>t+i</sub>；transition head 从每对有效端点 (z<sub>t+i</sub>, z<sub>t+i+k</sub>) 预测 Δq̂<sub>t+i,k</sub>=H<sub>Δ</sub>(z<sub>t+i</sub>,z<sub>t+i+k</sub>)，监督信号为关节角差 Δq<sub>t+i,k</sub>=q<sub>t+i+k</sub>−q<sub>t+i</sub>。</figcaption>
+    </figure>
+    <h3>① Static state grounding —— 单帧锚到本体状态</h3>
+    <p>把每个 latent 拉向机器人本体感知状态（joint angles、gripper state、end-effector pose）。损失为
+    <br><b>ℒ<sub>static</sub> = (1/T) Σ<sub>i=0..T−1</sub> MSE(H<sub>s</sub>(z<sub>t+i</sub>), s<sub>t+i</sub>)</b>。
+    这保证"从单个 latent 就能线性/MLP 读出机器人物理状态"。</p>
+    <h3>② Dynamic transition grounding —— 潜向量对锚到多步关节角变化</h3>
+    <p>把 latent 对 (z<sub>t+i</sub>, z<sub>t+i+k</sub>) 拉向对应的 multi-horizon 关节角变化，横跨所有 horizon k ∈ {1,…,T−1}：
+    <br><b>ℒ<sub>dynamic</sub> = (1/|𝒦|) Σ<sub>k∈𝒦</sub> (1/|ℐ<sub>k</sub>|) Σ<sub>i∈ℐ<sub>k</sub></sub> MSE(Δq̂<sub>t+i,k</sub>, Δq<sub>t+i,k</sub>)</b>。
+    相比只在相邻帧上做 one-step inverse-dynamics，这里的 multi-horizon 端点对提供了更丰富的"状态变化"监督。</p>
+    <h3>③ 组合损失</h3>
+    <p>总损失为 <b>ℒ<sub>PSG</sub> = ℒ<sub>JEPA</sub> + λ<sub>g</sub>(ℒ<sub>static</sub> + ℒ<sub>dynamic</sub>)</b>，其中 λ<sub>g</sub> = 0.1。state head H<sub>s</sub> 与 transition head H<sub>Δ</sub> 均在训练后丢弃，<b>推理架构和计算成本保持不变</b>。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在三个层级评测：<b>(1)</b> 通过 probing 检验 latent 的物理可辨识性；<b>(2)</b> 在冻结 latent 上做 goal-conditioned planning；<b>(3)</b> 在仿真与真机上做 policy learning。基线包括 <b>LeWM</b>（同 backbone 前向预测）、<b>LeWMActionIDM</b>（相邻对加一步 inverse-dynamics 目标）、<b>DINOv2</b>（预训练视觉参照）。</p>
+
+    <h3>Q1 · 物理可辨识性探针（OGBench-Cube，Pearson r，linear/MLP）</h3>
+    <p>Table 1 单帧状态探针：PSG-JEPA 在 <b>EE-yaw</b> 上 r 达 0.94/0.98，而 LeWM 仅 0.08/0.08、LeWMActionIDM 仅 0.11/0.10——前向预测/单步 IDM 几乎"看不见"末端偏航。</p>
+    <table>
+      <tr><th>Method</th><th>JointPos</th><th>EEPos</th><th>Gripper</th><th>EE-yaw</th></tr>
+      <tr><td>LeWM</td><td>0.71/0.69</td><td>0.99/0.99</td><td>0.93/0.96</td><td>0.08/0.08</td></tr>
+      <tr><td>DINOv2</td><td>0.73/0.72</td><td>0.99/0.94</td><td>0.84/0.84</td><td>0.51/0.50</td></tr>
+      <tr><td>LeWMActionIDM</td><td>0.75/0.72</td><td>1.00/0.99</td><td>0.96/0.98</td><td>0.11/0.10</td></tr>
+      <tr><td class="good">PSG-JEPA</td><td class="good">0.83/0.81</td><td class="good">1.00/0.99</td><td class="good">0.97/0.98</td><td class="good">0.94/0.98</td></tr>
+    </table>
+    <p>Table 2 相邻对的 transition 探针：JointVel 0.75/0.75、GripVel 0.69/0.76、Action 0.80/0.86，均为最优或持平最优。</p>
+
+    <h3>Q2 · 冻结 latent 上的 goal-conditioned planning（成功率 %，3 seeds 均值±std）</h3>
+    <p>PSG-JEPA 在<b>小 planner 训练预算</b>和<b>小数据</b>下优势最大：OGBench-Cube 全量数据、GC-IDM 仅训 5 epoch 时即达 95.0±0.7，而 LeWM 80.7±1.9；训到 100 epoch 时达 98.7±1.2。</p>
+    <table>
+      <tr><th>设置</th><th>LeWM</th><th>DINOv2</th><th>LeWMActionIDM</th><th>PSG-JEPA</th></tr>
+      <tr><td>Cube · 全量 · 5ep</td><td>80.7±1.9</td><td>76.5±1.6</td><td>82.8±1.2</td><td class="good">95.0±0.7</td></tr>
+      <tr><td>Cube · 全量 · 100ep</td><td>89.7±0.2</td><td>92.0±0.8</td><td>96.0±0.4</td><td class="good">98.7±1.2</td></tr>
+      <tr><td>Cube · 25%数据 · 5ep</td><td>67.0±0.7</td><td>60.8±5.1</td><td>63.2±1.8</td><td class="good">76.7±2.2</td></tr>
+      <tr><td>Scene · 全量 · 100ep</td><td>91.0±1.1</td><td>90.2±1.4</td><td>94.7±0.6</td><td class="good">96.2±0.8</td></tr>
+      <tr><td>Scene · 25%数据 · 100ep</td><td>83.0±1.1</td><td>80.0±1.1</td><td>87.3±1.6</td><td class="good">89.7±0.9</td></tr>
+    </table>
+    <figure>
+      <img src="img/planning.webp" alt="planning success vs epochs and data">
+      <figcaption>Figure 3. (a) 不同 GC-IDM 训练 epoch 下的成功率（全量演示数据）；(b) 不同演示数据比例下的成功率（planner 训 100 epoch）。误差带为 3 个 planner seed 的 ±1 std。PSG-JEPA 在两条轴上均领先，且在 <b>小 planner 预算 / 小数据</b> 处 margin 最大。</figcaption>
+    </figure>
+
+    <h3>Q3 · 策略学习：仿真 + 真机</h3>
+    <p>LIBERO-Goal（10 任务，每 seed 50 rollout，3 seeds）：PSG-JEPA 85.3±3.9%，高于 LeWM 77.7±0.5%、LeWMActionIDM 82.6±2.2%、DINOv2 80.1±5.3%。真机 Dual-arm Cobot（Mobile ALOHA 设计，每任务 50 trials）三项任务全部超越 LeWM，平均 79.3% vs 60.0%。</p>
+    <table>
+      <tr><th>真机任务</th><th>LeWM</th><th>PSG-JEPA</th></tr>
+      <tr><td>Place-to-Bread</td><td>62%</td><td class="good">84%</td></tr>
+      <tr><td>Place-to-Plate</td><td>58%</td><td class="good">74%</td></tr>
+      <tr><td>Pour-Water</td><td>60%</td><td class="good">80%</td></tr>
+      <tr><td>Average</td><td>60.0%</td><td class="good">79.3%</td></tr>
+    </table>
+    <figure>
+      <img src="img/real-robot.webp" alt="real robot platform and per-task success">
+      <figcaption>Figure 4. (a) 双臂 Cobot 遥操作平台（Mobile ALOHA design）；(b) PSG-JEPA 与 LeWM 在 Place-to-Bread、Place-to-Plate、Pour-Water 三任务上的逐任务成功率——三项全面提升。</figcaption>
+    </figure>
+
+    <h3>Ablations（Table 5，Cube 规划 SR@5ep 与 LIBERO-Goal）</h3>
+    <p>逐一移除组件均导致下降，说明"<b>每个 grounding 组件都有贡献</b>"：去掉 transition head 时规划仅 81.3±2.4%、去掉 state head 时探针 r 掉回 0.69；把 multi-horizon 换成仅相邻对（adjacent/endpoint）规划为 93.5/93.7%——均不及完整版的 95.0±0.7% 与策略 85.3±3.9%。</p>
+    <table>
+      <tr><th>Variant</th><th>State Probe r</th><th>Transition Probe r</th><th>Planning SR%</th><th>Policy %</th></tr>
+      <tr><td>LeWM</td><td>0.68</td><td>0.62</td><td>80.7±1.9</td><td>77.7±0.5</td></tr>
+      <tr><td>w/o transition</td><td>0.93</td><td>0.72</td><td>81.3±2.4</td><td>80.3±3.9</td></tr>
+      <tr><td>w/o state</td><td>0.69</td><td>0.67</td><td>93.3±1.2</td><td>80.0±2.3</td></tr>
+      <tr><td>w/o multi-horizon (adj.)</td><td>0.86</td><td>0.74</td><td>93.5±1.9</td><td>81.5±3.1</td></tr>
+      <tr><td>w/o multi-horizon (end.)</td><td>0.86</td><td>0.75</td><td>93.7±2.0</td><td>81.2±2.7</td></tr>
+      <tr><td class="good">PSG-JEPA (full)</td><td class="good">0.94</td><td class="good">0.75</td><td class="good">95.0±0.7</td><td class="good">85.3±3.9</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 原文（所抓取正文）<b>未设独立的 Limitations 章节</b>，结论仅强调 "physical grounding improves both the identifiability of latent representations and their usefulness for embodied decision-making"。以下各点均为<b>据方法设计推断（inferred）</b>，非作者明确陈述。</div>
+    <details class="lim" open><summary>依赖 logged 本体状态作监督（inferred）</summary><p>两条 grounding 目标都需要与观测对齐的 robot state / joint-angle 日志（s<sub>t+i</sub>、q<sub>t+i</sub>）。对无本体状态记录、或仅有视频的数据集，训练期监督难以获得。</p></details>
+    <details class="lim"><summary>锚定对象偏 proprioceptive（inferred）</summary><p>锚定目标聚焦机器人自身状态与关节角变化，未显式锚定被操作物体 / 场景的物理量；对以物体状态识别为瓶颈的任务，收益可能有限。</p></details>
+    <details class="lim"><summary>评测范围（inferred）</summary><p>结论建立在 OGBench(Cube/Scene)、LIBERO-Goal 及一套双臂 Cobot 真机任务上；跨更多机型/更长时序/更复杂场景的泛化仍待验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Is Forward Prediction Enough? Physical State Grounding for JEPA World Models · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2608.06799">https://arxiv.org/abs/2608.06799</a>
+  </div>
+</footer>
+
+</body>
+</html>

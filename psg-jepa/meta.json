@@ -1,0 +1,11 @@
+{
+  "slug": "psg-jepa",
+  "title": "PSG-JEPA：仅靠前向预测够吗？为 JEPA 世界模型注入物理状态锚定",
+  "arxiv_id": "2608.06799",
+  "url": "https://arxiv.org/abs/2608.06799",
+  "category": "机器人 · Robotics",
+  "keywords": ["JEPA world model", "世界模型", "physical state grounding", "latent identifiability", "proprioceptive state", "goal-conditioned planning", "robot manipulation", "self-supervised representation"],
+  "summary_zh": "PSG-JEPA 在 JEPA 世界模型的 action-conditioned 前向预测之外，并联两条仅训练期生效的锚定目标——把单帧 latent 锚到本体状态、把 latent 对锚到多步关节角变化，让潜空间可辨识物理状态；推理架构与算力不变，却在可辨识性探针、goal-conditioned 规划与仿真/真机策略三层评测中全面超越 LeWM 等 SOTA 潜世界模型。",
+  "date": "2026-08-10",
+  "source": "arxiv-html"
+}
