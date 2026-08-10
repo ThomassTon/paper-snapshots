@@ -1,0 +1,11 @@
+{
+  "slug": "efficient-wam",
+  "title": "Efficient-WAM: A 1B-Parameter World-Action Model with Low-Cost Future Imagination",
+  "arxiv_id": "2606.10040",
+  "url": "https://arxiv.org/abs/2606.10040",
+  "category": "机器人 · Robotics",
+  "keywords": ["World-Action Model", "VLA", "robot manipulation", "future imagination", "Mixture-of-Transformers", "knowledge distillation", "flow matching", "asymmetric denoising", "推理加速", "RoboTwin"],
+  "summary_zh": "Efficient-WAM 提出“action-centric future imagination”原则：未来预测只需保留 task-relevant 的几何、运动与接触线索而非 photorealistic 画面。它从 WAN-2.2-5B 结构化剪枝并蒸馏出紧凑 video expert，配合低分辨率稀疏未来 latent 与非对称视频-动作去噪，使 1B 模型真机单块延迟降到约 98 ms、相对现有 WAM 实现 30× 加速，同时在 RoboTwin 2.0 与 Astribot S1 上保持可比甚至更优的控制成功率。",
+  "date": "2026-08-10",
+  "source": "arxiv-html"
+}

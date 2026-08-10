@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Efficient-WAM：1B 参数的低成本"未来想象"世界-动作模型</title>
+<meta name="keywords" content="World-Action Model, VLA, robot manipulation, future imagination, Mixture-of-Transformers, knowledge distillation, flow matching, asymmetric denoising, 推理加速, RoboTwin">
+<meta name="description" content="Efficient-WAM 用蒸馏得到的紧凑 video expert + 稀疏未来 latent + 非对称去噪，把 WAM 单块延迟压到约 100 ms，实现 30× 加速。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics · World-Action Model</span>
+    <h1>Efficient-WAM</h1>
+    <div class="sub">A 1B-Parameter World-Action Model with Low-Cost Future Imagination —— 用"够用的未来想象"换实时机器人控制</div>
+    <div class="authors">Jiajun Li, Tiecheng Guo, Yifan Ye, Rongyu Zhang, Xiaowei Chi, Qianpu Sun, Ying Li, Yunfan Lou, Yan Huang, Zhihe Lu, Meng Guo, Shanghang Zhang</div>
+    <p class="lead">World-Action Model (WAM) 把"预测未来视频"与"生成动作"耦合起来注入物理先验，但主流做法追求 photorealistic 的未来预测，推理慢、难以实时部署。Efficient-WAM 反其道而行：未来预测只需保留 task-relevant 的几何、运动趋势与接触线索，不必画得清晰。它通过从 WAN-2.2-5B 蒸馏出的紧凑 video expert、稀疏的低分辨率未来 latent、以及非对称视频-动作去噪，把 1B 模型的单块 (per-chunk) 延迟压到约 100 ms，相对现有 WAM 实现 30× 加速。</p>
+    <div class="meta">
+      <span>1B params</span><span>RoboTwin 2.0 + Astribot S1</span><span>~98 ms / chunk · 30× speedup</span>
+      <span><a href="https://arxiv.org/abs/2606.10040">📄 arXiv:2606.10040</a></span>
+      <span><a href="https://arxiv.org/pdf/2606.10040">PDF</a></span>
+    </div>
+    <div class="kw"><span>World-Action Model</span><span>VLA</span><span>robot manipulation</span><span>future imagination</span><span>Mixture-of-Transformers</span><span>knowledge distillation</span><span>flow matching</span><span>asymmetric denoising</span><span>推理加速</span><span>RoboTwin</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation · 动机</h2>
+    <p class="lead">最强的 WAM 依赖巨大的 video generator，背后是"未来越清晰、动作越好"的信念——代价是沉重算力、高延迟与苛刻硬件，直接堵死实时部署。作者观察到：<b>高质量控制并不需要 photorealistic 视频</b>。策略真正需要的，是保留 task-relevant 几何、运动趋势与接触线索的未来表征。VPP 表明动作生成即使把去噪压到单步仍然有效，Fast-WAM 表明推理时甚至可以跳过显式未来生成——由此作者把"效率"重新定义成一个建模问题。</p>
+    <blockquote>"Instead of optimizing the future branch for visual fidelity, Efficient-WAM treats future video prediction as a compact guidance signal for action generation."</blockquote>
+    <figure>
+      <img src="img/x1.webp" alt="Efficient-WAM overview">
+      <figcaption>Figure 1 · 总览。相比传统 WAM 的重模型 / 密集 token / 多去噪步 / 慢推理，Efficient-WAM 走向 lightweight / sparse / fewer / fast，用"low-cost future imagination"捕捉与任务相关的物体和机器人动态，同时在仿真与真机上都保持高成功率、低延迟。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>1B</b><small>参数量（video 0.8B + action 0.2B）</small></div>
+      <div><b>86.7%</b><small>RoboTwin 2.0 clean 成功率</small></div>
+      <div><b>~98 ms</b><small>真机单块延迟 (RTX 4090)</small></div>
+      <div><b>30×</b><small>相对现有 WAM 的推理加速</small></div>
+    </div>
+    <p>作者把 WAM 的推理成本拆解为三个可控因子——<b>模型大小 M<sub>v</sub></b>、<b>未来预测分辨率 r<sub>v</sub>（决定 token 数）</b>、<b>视频去噪步数 K<sub>v</sub></b>，并系统性地同时压缩这三者。三个杠杆互相强化：剪枝把表征集中到控制关键内容上，于是"降低 token 密度"成了安全的自然结果，而剪枝后更可靠的视频预测器又让"非对称去噪"进一步削减采样步数。</p>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method · 方法</h2>
+    <p class="lead">WAM 显式建模"未来场景演化 + 控制动作"的联合分布 p(z<sup>v</sup>, a<sub>1:H</sub> | o, l, s)，并分解为 <b>future-imagination</b>（p<sub>φ</sub> 预测未来动态上下文）与 <b>future-conditioned action generation</b>（p<sub>θ</sub> 从想象中抽取可执行控制信号）。Efficient-WAM 保留这一联合形式，但从根本上质疑 z<sup>v</sup> 是否必须 photorealistic，并沿三个成本因子分别下手。</p>
+    <figure>
+      <img src="img/x2.webp" alt="Efficient-WAM architecture">
+      <figcaption>Figure 2 · 架构。采用 multiscale video-latent layout：高分辨率的当前观测与低分辨率的未来 latent 拼接。紧凑 video expert 与 action expert 通过逐层 MoT (Mixture-of-Transformers) 交互——task instruction 经 cross-attention 注入，robot state 与 noisy action 作为 action token；每层里 action token 关注 video token 抽取未来上下文，再映射回动作流。student 由 WAN-2.2-5B 经 layer slicing 剪成 12 层。</figcaption>
+    </figure>
+    <h3>① 紧凑架构 + world-knowledge transfer</h3>
+    <p>作者对 WAN-2.2-5B 做<b>结构化剪枝</b>：深度上沿层切片抽取教师第 [1,2,4,6,8,11,14,17,20,23,26,30] 层构成 12 层 student，宽度上直接抽取对应的 attention heads / FFN 通道 / embedding / modulation / output head，配置为 2048 hidden、8192 FFN、16 heads。与随机初始化不同，"layer slicing 复制教师权重"让 student 继承 task-relevant 几何、运动趋势与接触先验；再叠加一个 <b>teacher-guided distillation loss</b>（对齐中间 hidden state 与帧间时序变化）稳定这次知识迁移。主动作训练阶段冻结该 video expert，只优化轻量 action expert。</p>
+    <h3>② 粗糙未来预测 · multiscale video-latent layout</h3>
+    <p>标准 WAM 以输入观测的统一分辨率预测未来视频，把算力浪费在与动作无关的视觉细节上。Efficient-WAM 把当前观测 VAE 编码成高分辨率条件 token（如 384×320），而未来帧先<b>空间下采样</b>到较小尺寸（如 192×160）再编码，得到 token 稀疏的低分辨率未来 latent。两者拼成统一视觉上下文供 action 分支联合注意——保留当前状态的高保真空间细节，同时把低分辨率未来 latent 仅当作"粗糙动态引导"。</p>
+    <h3>③ 非对称视频-动作去噪（training-free，仅推理）</h3>
+    <p>视觉结构与精确控制坐标的收敛速率不同：物体几何、接触边界等全局结构线索在最初几步去噪就已浮现，动作却需要多步精细采样才能给出安全可执行轨迹。于是给<b>动作分支分配更大预算（如 5–10 步）</b>，<b>视频分支只用极少步刷新（如仅前 2 步）</b>，两次视频刷新之间复用 cached video feature 继续条件化动作细化。训练用 conditional flow matching，分三阶段：Stage 1 蒸馏 video expert（GT flow matching + 蒸馏损失，λ 从 0.2→0.1→0 衰减），Stage 2 冻结视频训练 action expert，Stage 3 端到端联合微调。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments · 实验</h2>
+    <p class="lead">在 RoboTwin 2.0（50 个双臂任务，clean 与 randomized 两种设定，每任务 100 trial；2,500 clean + 25,000 randomized 示范联合训练）与真机 Astribot S1 上评测。两个变体：<b>Efficient-WAM</b>（结构基线，保留高分辨率未来 + 对称去噪，衡量 1B 架构上限）与 <b>Efficient-WAM-RT</b>（实时部署版，叠加低分辨率未来 latent + 非对称去噪）。仿真/消融延迟在单块 A800 上测，真机在本地 RTX 4090 上测，动作 chunk 长度 H=16。</p>
+
+    <h3>RoboTwin 2.0（Table 1）</h3>
+    <table>
+      <tr><th>Method</th><th>Clean (%)</th><th>Random (%)</th><th>Params</th></tr>
+      <tr><td>π<sub>0</sub></td><td>65.9</td><td>58.4</td><td>3.3B</td></tr>
+      <tr><td>StarVLA-α</td><td>76.8</td><td>79.1</td><td>2B</td></tr>
+      <tr><td>π<sub>0.5</sub></td><td>82.7</td><td>76.8</td><td>3.3B</td></tr>
+      <tr><td>ABot-M0</td><td>86.1</td><td>85.1</td><td>4.2B</td></tr>
+      <tr><td>LingBot-VLA</td><td>86.5</td><td>85.3</td><td>4B</td></tr>
+      <tr><td>UWM (WAM)</td><td>81.7</td><td>78.6</td><td>5B</td></tr>
+      <tr><td>GigaWorld-Policy (WAM)</td><td>86.4</td><td>85.0</td><td>5B</td></tr>
+      <tr><td>Motus (WAM)</td><td class="good">88.7</td><td class="good">87.0</td><td>8B</td></tr>
+      <tr><td>Efficient-WAM</td><td>86.7</td><td>85.7</td><td>1B</td></tr>
+      <tr><td>Efficient-WAM-RT</td><td>83.1</td><td>82.0</td><td>1B</td></tr>
+    </table>
+    <p>仅 1B 参数的 Efficient-WAM 拿到 <b>86.7% clean / 85.7% random</b>，超过 4B 的 LingBot-VLA 与 5B 的 GigaWorld-Policy，clean 上只落后 8B 的 Motus 2.0%。实时版 Efficient-WAM-RT 主动把 trade-off 推得更远（83.1% / 82.0%），仍胜过 π<sub>0</sub>、StarVLA-α 等重量级基线——用可控的精度让步换取真机所需的巨大延迟下降。<b>不回避</b>：Motus (8B) 在仿真两项指标上均为最高。</p>
+
+    <h3>真机 Astribot S1（Table 2）</h3>
+    <p>四个任务各用相同的 100 条人类示范、每任务独立策略、20 trial 评测。</p>
+    <table>
+      <tr><th>Real-World Task</th><th>π<sub>0.5</sub></th><th>Motus</th><th>Ours (RT)</th></tr>
+      <tr><td>pipette-tray grasping</td><td class="good">100.0</td><td>85.0</td><td>95.0</td></tr>
+      <tr><td>reagent-bottle transfer</td><td>75.0</td><td class="good">80.0</td><td>75.0</td></tr>
+      <tr><td>LEGO color sorting</td><td>30.0</td><td>65.0</td><td>65.0</td></tr>
+      <tr><td>pen uncapping</td><td>10.0</td><td>25.0</td><td class="good">30.0</td></tr>
+      <tr><td>Avg. Success Rate (%)</td><td>53.75</td><td>63.75</td><td class="good">66.25</td></tr>
+      <tr><td>Avg. Lat. / Chunk (ms)</td><td>113.0</td><td>3215.0</td><td class="good">98.0</td></tr>
+      <tr><td>Avg. Lat. / Step (ms)</td><td>7.1</td><td>200.9</td><td class="good">6.1</td></tr>
+    </table>
+    <p>Efficient-WAM-RT 平均成功率 66.25% 略高于重量级 WAM 基线 Motus，而单块延迟仅 <b>98 ms</b>——相对 Motus 达 <b>32× 加速</b>。π<sub>0.5</sub> 在简单抓取上很强，但在 LEGO 分拣、开笔盖这类 long-horizon / fine-grained 任务上明显吃力；两个 WAM 都在复杂任务上更稳。作者还报告：成功试次 RT 约 30 秒完成，而 Motus 因走走停停约需两分钟。</p>
+    <figure>
+      <img src="img/result_real.webp" alt="Real-world manipulation tasks">
+      <figcaption>Figure 3 · 真机任务序列。Astribot S1 上覆盖精准抓取 (pipette-tray)、物体转移 (reagent-bottle)、语义分拣 (LEGO color sorting) 与双臂协同 (pen uncapping)。</figcaption>
+    </figure>
+
+    <h3>Ablations · 三个效率杠杆逐一验证</h3>
+    <p>在 RoboTwin 2.0 上（消融用 20 rollout/任务，故绝对数略有波动）：</p>
+    <ul>
+      <li><b>Compact video expert（Table 3a）：</b>直接随机初始化缩小视频专家会严重掉点（Compact-random 69/68）；layer slicing 继承结构先验很关键（Compact-sliced 82/81），teacher-guided distillation 进一步补齐到 5B 教师水平（87/86），同时把延迟从 <b>2013 ms 降到 430 ms</b>。</li>
+      <li><b>Future resolution（Table 3b）：</b>预测低分辨率 latent 把 token 数从 240 降到 60、延迟 430→377 ms，而成功率基本保持——说明 action expert 主要依赖粗结构线索而非清晰视觉细节。</li>
+      <li><b>Asymmetric denoising（Figure 4）：</b>把视频预算从 [10,10] 降到 [2,10]，延迟 430→139 ms（<b>3.1× 加速</b>），成功率仅从 87.1% 微降到 86.3%。但极端压缩（如视频仅 1 步或过度压缩动作侧）会掉点，存在安全解耦阈值。</li>
+    </ul>
+    <figure>
+      <img src="img/x3.webp" alt="Latency-success trade-off of asymmetric denoising">
+      <figcaption>Figure 4 · 非对称去噪的延迟-成功率权衡。柱状为延迟，折线为成功率，阴影区为最终选定配置 [2,10]。视频更新集中在早期高噪声阶段即可快速提取动作相关结构，避免把算力浪费在后期视觉精修上。</figcaption>
+    </figure>
+    <p>系统级看，蒸馏把 5B 教师压到 1B video expert 使延迟从 2000+ ms 降到约 430 ms；低分辨率降到 377 ms、单独用非对称去噪降到 139 ms；三者在 RTX 4090 上联合部署并消除仿真侧同步物理步进与进程间网络开销后，最终突破 100 ms，降到 <b>98 ms/chunk</b>。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations · 局限性</h2>
+    <div class="note"><b>Note:</b> 以下两点为论文 §6 明确 <i>stated</i> 的局限。</div>
+    <details class="lim" open><summary>精细任务上的权衡（Trade-off in Fine-Grained Tasks）</summary><p>预测粗糙、低分辨率的未来 latent 是用视觉保真度换推理速度。对抓取、转移、分拣等宏观操作有效，但需要极致像素级精度或微操作的任务（如 thread insertion 穿线）可能仍需更高分辨率的视觉引导。</p></details>
+    <details class="lim"><summary>静态的推理调度（Static Inference Schedules）</summary><p>Efficient-WAM-RT 真机部署时使用固定的非对称去噪调度（如 [2,10]）。未来可探索动态算力分配——仅在任务动态不确定或物理复杂时才增加视频去噪预算。</p></details>
+    <details class="lim"><summary>真机失败模式（附录，<i>stated</i>）</summary><p>作者在附录识别出三类反复出现的失败：细微空间对齐误差（fine spatial misalignment）导致接触不稳；long-horizon 中的场景覆盖不全（incomplete scene coverage，遗漏被遮挡物体）；以及精细操作时的接触/碰撞失败（contact and collision failure）。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Efficient-WAM: A 1B-Parameter World-Action Model with Low-Cost Future Imagination · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2606.10040">https://arxiv.org/abs/2606.10040</a>
+  </div>
+</footer>
+
+</body>
+</html>
