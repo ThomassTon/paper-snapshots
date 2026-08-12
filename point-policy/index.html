@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Point Policy: Unifying Observations and Actions with Key Points for Robot Manipulation</title>
+<meta name="keywords" content="robot manipulation, learning from human video, key points, hand pose, point tracking, morphology-agnostic, imitation learning, DIFT, Co-Tracker, BAKU">
+<meta name="description" content="Point Policy 仅用离线人类示范视频、无任何遥操作数据，通过关键点统一表征观测与动作来学习机器人操作策略。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robot Manipulation</span>
+    <h1>Point Policy</h1>
+    <div class="sub">用关键点统一「观测」与「动作」，仅从人类示范视频学习机器人操作</div>
+    <div class="authors">Siddhant Haldar, Lerrel Pinto · New York University · arXiv 2025</div>
+    <p class="lead">Point Policy 提出一种<strong>完全不使用遥操作数据</strong>、只从离线人类示范视频学习机器人操作策略的方法。它用现成视觉模型把<strong>人手位姿</strong>翻译成<strong>机器人位姿</strong>，用语义关键点（key points）刻画物体状态，得到一种<strong>与形态无关（morphology-agnostic）</strong>的稀疏表征。在 8 个真实任务上，相比此前最好方法取得 <strong>75% 的绝对成功率提升</strong>。</p>
+    <div class="meta">
+      <span>8 real-world tasks</span><span>human video only · no teleop</span><span>+75% over MT-π</span>
+      <span><a href="https://arxiv.org/abs/2502.20391">📄 arXiv:2502.20391</a></span>
+      <span><a href="https://point-policy.github.io/">🌐 Project page</a></span>
+    </div>
+    <div class="kw"><span>robot manipulation</span><span>learning from human video</span><span>key points</span><span>hand pose</span><span>point tracking</span><span>morphology-agnostic</span><span>imitation learning</span><span>DIFT</span><span>Co-Tracker</span><span>BAKU</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">机器人学习的核心瓶颈是数据：与视觉、语言不同，机器人的每个数据点都必须在真实世界中<strong>物理执行</strong>一次，遥操作采集昂贵且难以规模化。因此亟需<strong>替代性数据来源</strong>以及能从这类数据中学习的框架。人类操作视频在互联网上海量存在，但人手与机器人夹爪的<strong>形态差异（embodiment gap）</strong>使其难以直接用于策略学习。</p>
+    <blockquote>"we present Point Policy, a new method for learning robot policies exclusively from offline human demonstration videos and without any teleoperation data."</blockquote>
+    <p>Point Policy 的核心思路是：把观测和动作都归约到一组<strong>3D 关键点</strong>上——物体状态用语义关键点表示，机器人（及人手）动作也表示为若干刚体关键点的运动轨迹。关键点这种稀疏、几何化的表征天然跨越了人手与机器人夹爪的形态鸿沟，使得<strong>不含机器人本体外观</strong>的人类视频也能直接驱动策略学习。</p>
+    <div class="kpi">
+      <div><b>88%</b><small>in-domain 平均成功率</small></div>
+      <div><b>+75%</b><small>相比 MT-π 绝对提升</small></div>
+      <div><b>74%</b><small>新物体实例平均成功率</small></div>
+      <div><b>0 条</b><small>遥操作 / 机器人数据</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">Point Policy 由三部分组成：(1) 把<strong>人手位姿翻译为机器人位姿</strong>；(2) 用<strong>语义关键点</strong>捕捉物体状态；(3) 用基于 Transformer 的策略 <strong>BAKU</strong> 预测未来的关键点轨迹并转回 6-DOF 动作。所有点都被<strong>三角化到 3D 世界坐标</strong>，这一步对性能至关重要。</p>
+    <figure>
+      <img src="img/method.webp" alt="Point Policy framework overview">
+      <figcaption>Figure 2 · Point Policy 框架总览：利用先进视觉模型与策略架构，把人手位姿翻译为机器人位姿，同时通过单帧稀疏人工标注捕捉物体状态。人手关键点与物体关键点被三角化为 3D 坐标，作为独立 token 送入 Transformer 策略。</figcaption>
+    </figure>
+    <h3>人手位姿 → 机器人位姿</h3>
+    <p>每一帧用 <strong>MediaPipe</strong> 提取人手关键点，并从两个相机视角把 2D 坐标<strong>三角化为 3D 世界坐标</strong>。机器人的<strong>位置</strong>取为「食指指尖与拇指指尖的中点」（"the midpoint between the tips of the index finger and thumb"），<strong>朝向</strong>由初始手部位姿到当前手部位姿的刚体变换给出。夹爪状态则由指尖距离阈值判定——"a gripper is considered closed when the distance is less than 7cm, otherwise open."</p>
+    <h3>物体关键点：DIFT + Co-Tracker</h3>
+    <p>物体状态由一组语义关键点表示。仅需在<strong>单帧</strong>上手动标注若干物体点，<strong>DIFT</strong> 就能把这些点通过语义对应传播到其他示范；随后 <strong>Co-Tracker</strong> 在整条轨迹上"automatically track these initialized key points throughout the entire trajectory"。这些物体关键点同样被三角化到 3D。</p>
+    <figure>
+      <img src="img/correspondence.webp" alt="Correspondence model results">
+      <figcaption>Figure 3 · 对应模型在 put bottle on rack 与 sweep broom 两个任务上的结果。最左为带人工标注物体点的一帧，DIFT 将这些语义点对应到其他示范帧。</figcaption>
+    </figure>
+    <h3>策略：BAKU 预测关键点轨迹</h3>
+    <p>机器人关键点历史与物体关键点历史被展平、经 MLP 编码后作为<strong>独立 token</strong> 送入 Transformer（BAKU）。策略"predicts the future tracks for each robot point"并用确定性 action head 预测夹爪状态。预测出的关键点轨迹再通过刚体几何约束转回 6-DOF 位姿，以 <strong>6 Hz</strong> 执行。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 <strong>8 个真实任务</strong>上评测：close drawer、put bread on plate、fold towel、close oven、sweep broom、put bottle on rack、put bowl in oven、make bottle upright，每个任务仅用 15–30 条人类示范并带空间变化。对比基线包括 BC (RGB)、BC (RGB-D)、Motion Track Policy (MT-π) 与 P3-PO。</p>
+    <table>
+      <tr><th>设置</th><th>指标</th><th>Point Policy</th><th>对比</th></tr>
+      <tr><td>In-domain（Table I）</td><td>平均成功率</td><td class="good">88%</td><td>相比 MT-π +75%</td></tr>
+      <tr><td>新物体实例（Table II）</td><td>平均成功率</td><td class="good">74%</td><td>相比基线 +73%</td></tr>
+      <tr><td>背景干扰物（Table III）</td><td>成功率</td><td class="good">稳定 / 仅轻微下降</td><td>"only minimal degradation"</td></tr>
+    </table>
+    <p>In-domain 逐任务成功率：close drawer 10/10、put bread 19/20、fold towel 9/10、close oven 9/10、sweep broom 9/10、put bottle 26/30、put bowl 8/10、make bottle upright 16/20（平均 88%）。新物体泛化（6 个任务）平均 74%：put bread 18/20、fold towel 15/20、sweep broom 4/10、put bottle 27/30、put bowl 9/10、make bottle upright 9/20。</p>
+    <figure><img src="img/rollouts.webp" alt="Real-world rollouts across 8 tasks"><figcaption>Figure 5 · Point Policy 在 8 个真实任务上对 in-domain 物体的真实世界 rollout 展示。</figcaption></figure>
+    <h3>Ablations：三角化深度是关键</h3>
+    <p>深度分析（Table V）表明<strong>三角化深度不可或缺</strong>：给 P3-PO 加上三角化后成功率"from 0% to 72%"；而从 Point Policy 中移除三角化深度则从"90% to 0%"直接崩溃。此外协同训练分析（Table IV）显示，仅用机器人数据训练的策略表现"poorly...compared to those trained exclusively on human data"——即<strong>仅用人类视频反而更强</strong>。</p>
+    <figure><img src="img/depth_discrepancy.webp" alt="Depth discrepancy"><figcaption>Figure 9 · put bottle on rack 任务中，来自传感器深度与三角化深度所得动作之间的差异示意。传感器深度噪声导致动作偏移，三角化深度更可靠。</figcaption></figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下三点均为论文作者<strong>明确陈述</strong>（stated by the authors）的局限，摘自原文 Limitations。</div>
+    <details class="lim" open><summary>依赖现成视觉模型，继承其失败</summary><p>"Point Policy's reliance on existing vision models makes it susceptible to their failures." 例如遮挡下的手部位姿检测或点跟踪失败会直接损害性能；作者认为随视觉技术进步该框架会逐步增强。</p></details>
+    <details class="lim"><summary>点抽象牺牲场景上下文</summary><p>"Point-based abstractions enhance generalization capabilities, but sacrifice valuable scene context information, which is crucial for navigating through cluttered or obstacle-rich environments." 在杂乱或多障碍环境中导航时缺失上下文；未来可研究在点抽象之外保留稀疏上下文线索。</p></details>
+    <details class="lim"><summary>仅限第三人称固定视角</summary><p>"While all our experiments are from a fixed third-person camera view, a large portion of human task videos on the internet are from an egocentric view." 扩展到第一人称（egocentric）视角有望利用互联网上海量的人类视频资源。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Point Policy: Unifying Observations and Actions with Key Points for Robot Manipulation · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2502.20391">https://arxiv.org/abs/2502.20391</a>
+  </div>
+</footer>
+
+</body>
+</html>

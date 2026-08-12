@@ -1,0 +1,11 @@
+{
+  "slug": "point-policy",
+  "title": "Point Policy: Unifying Observations and Actions with Key Points for Robot Manipulation",
+  "arxiv_id": "2502.20391",
+  "url": "https://arxiv.org/abs/2502.20391",
+  "category": "机器人 · Robotics",
+  "keywords": ["robot manipulation", "learning from human video", "key points", "hand pose", "point tracking", "morphology-agnostic", "imitation learning", "DIFT", "Co-Tracker", "BAKU"],
+  "summary_zh": "Point Policy 仅用离线人类示范视频、无任何遥操作数据，通过把人手位姿翻译为机器人位姿并用语义关键点刻画物体状态，得到与形态无关的稀疏表征；在 8 个真实任务上相比此前最好方法取得 75% 的绝对成功率提升。",
+  "date": "2026-08-12",
+  "source": "arxiv-html"
+}
