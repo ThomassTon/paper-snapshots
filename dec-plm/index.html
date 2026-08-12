@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Quadruped Cooperative Object Transport: Learning Decentralized Pinch-Lift-Move</title>
+<meta name="keywords" content="multi-robot cooperation, quadruped, decentralized control, MAPPO, constellation reward, hierarchical policy, sim2real, cooperative transport, 强化学习, 接触协调">
+<meta name="description" content="多足机器人仅靠接触力实现去中心化协作搬运：constellation reward 让机器人"仿佛刚性连接"物体，2 台训练即可零样本泛化到 2–10 台。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics · cs.RO</span>
+    <h1>Multi-Quadruped Cooperative Object Transport</h1>
+    <div class="sub">Learning Decentralized Pinch-Lift-Move —— 多足机器人仅凭接触力协作搬运不可抓取物体</div>
+    <div class="authors">Bikram Pandit, Aayam Kumar Shrestha, Alan Fern · Oregon State University</div>
+    <p class="lead">N 台带机械臂的四足机器人（Unitree Go2 + D1 arm），在<strong>无通信、无中心化控制、无刚性机械连接</strong>的条件下，仅靠接触力（pinch）协同把不可抓取的箱子/家具"夹—抬—搬"（pinch-lift-move）。核心是一个 <strong>constellation reward</strong>：通过奖励设计让机器人表现得"仿佛与物体刚性相连"。仅用 <strong>N=2</strong> 训练一次，即可零样本泛化到 <strong>2–10 台</strong>与多种几何/质量的物体。</p>
+    <div class="meta">
+      <span>Simulation: IsaacLab · 2048 envs</span>
+      <span>Algorithm: MAPPO (CTDE)</span>
+      <span>Sim2Real: Go2 + D1 arm</span>
+      <span><a href="https://arxiv.org/abs/2509.14342">📄 arXiv:2509.14342</a></span>
+      <span><a href="https://arxiv.org/pdf/2509.14342">PDF</a></span>
+    </div>
+    <div class="kw"><span>multi-robot cooperation</span><span>quadruped</span><span>decentralized control</span><span>MAPPO</span><span>constellation reward</span><span>hierarchical policy</span><span>sim2real</span><span>cooperative transport</span><span>强化学习</span><span>接触协调</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 Motivation</h2>
+    <p class="lead">多机器人协作搬运的既有工作，大多依赖机器人与负载之间的<strong>刚性机械耦合</strong>（螺栓、夹具、抓手锁死）。本文关注更难的设定：机械上彼此独立的机器人，<strong>只通过接触力</strong>协调，既不通信、也无中心化控制，去搬运本身<strong>无法被抓握（ungraspable）</strong>的大物体。难点在于——没有机械约束时，接触极易滑脱，团队如何"步调一致"地维持接触？</p>
+    <blockquote>核心洞见（paraphrase from paper）："coordination can still emerge if reward shaping encourages robots to behave <em>as if rigidly attached</em> to the payload, even though they are only connected through pinching forces." —— 用奖励塑形让机器人"仿佛刚性连接"，而非施加真实机械约束。</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="decPLM 系统总览">
+      <figcaption><b>Figure 1（teaser）：</b>decPLM 系统总览。左：高层策略的输入/输出结构；中：仅用 <b>N=2</b> 机器人训练；右：无需重训即可泛化到 2–10 台、以及不同几何/质量的负载（box / log / barrel / couch），并给出 sim-to-real 演示。全部机器人<strong>共享同一套策略参数</strong>，各自仅用本地信息以 50 Hz 独立执行。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>2→10</b><small>训练 N=2，泛化到 2–10 台无需重训</small></div>
+      <div><b>80%</b><small>2→10 台时线速度误差下降（0.1→0.02 m/s）</small></div>
+      <div><b>&lt;1%</b><small>10 台时箱子掉落率（2 台时为 5%）</small></div>
+      <div><b>~15 kg</b><small>负载质量临界阈值，超过后普遍失效</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 Method</h2>
+    <p class="lead">方法名 <strong>decPLM</strong>（decentralized Pinch-Lift-Move）。两大支柱：<strong>分层策略</strong>把"腿部行走"与"手臂/协调"解耦；<strong>constellation reward</strong> 借鉴计算机视觉中的 point-set registration，用两组 landmark 点的对齐误差，把"维持刚性接触 + 跟踪目标位姿"统一成一个奖励。训练用 MAPPO（Centralized Training / Decentralized Execution，CTDE），仅 N=2、IsaacLab 2048 并行环境。</p>
+
+    <h3>分层策略 Hierarchical policy</h3>
+    <p>低层策略 <strong>π<sup>b</sup></strong>：四足底盘的速度跟踪 locomotion，<strong>预训练并冻结</strong>。高层策略 <strong>π<sup>h</sup></strong>：接收本体感受 s<sup>(r)</sup>、（可选的）contact-frame 位姿 T<sup>b</sup><sub>cf</sub>、contact-frame 指令 𝒞<sub>cf</sub>、以及时间同步信号 t<sub>sync</sub>∈[0,5]；输出<strong>手臂关节目标 + 底盘速度指令</strong>（后者喂给低层）。每台机器人独立以 50 Hz 运行两层策略，仅用<strong>本地信息</strong>，全队共享 θ<sup>h</sup>，训练时用带特权信息的 asymmetric critic。策略网络为 2 层 128×128 MLP，拼接观测与历史动作。</p>
+
+    <figure>
+      <img src="img/constellation.webp" alt="constellation reward 示意">
+      <figcaption><b>Figure 3：</b>constellation reward 示意——蓝色 source 点（贴在接触 pad 与底盘上）匹配到绿色 target 点（物体上的接触帧 / 刚体假设下的目标位置）。<b>End-effector contact constellation</b>：沿臂端接触 pad 法向均匀取 5 个共线点（跨约 50 cm），对齐物体接触帧法向，R<sub>contact</sub> = −d<sub>con</sub>(P<sub>pad</sub>, P<sub>cf</sub>)；<b>Base tracking constellation</b>：底盘上 3 个非共线点（形如 10×10×10 cm 立方体角），在刚体运动学假设下匹配目标位置，R<sub>track</sub> = −d<sub>con</sub>(P<sub>base</sub>, P<sub>rigid</sub>)。总奖励 R<sub>constellation</sub> = R<sub>contact</sub> + R<sub>track</sub>。距离度量 d<sub>con</sub>(P,P*) = (1/K)Σ‖p<sub>i</sub>−p<sub>i</sub>*‖²。同时匹配位置与朝向，逼出"刚性接触"行为。</figcaption>
+    </figure>
+
+    <h3>训练课程 Curriculum（14 秒/回合，3 阶段）</h3>
+    <ul>
+      <li><strong>Pinch（接触成形，0–7 s）：</strong>箱子质量固定 100 kg，指令池仅 (0,0,0,0)，只练手臂接触，<strong>重罚腿部移动</strong>。</li>
+      <li><strong>Pinch+Lift（协同抬升）：</strong>加入高度指令，箱子质量随机化 0.1–2 kg，机器人协调同步竖直抬升。</li>
+      <li><strong>Pinch+Lift+Move（完整搬运）：</strong>启用完整指令池（平面速度 + 旋转），移除腿部惩罚。</li>
+    </ul>
+    <p>其它：域随机化（动力学、接触参数、负载质量 0.1–2 kg、外力、初始位姿、传感/动作噪声）。当 contact-frame 位姿被 mask 时，采用<strong>渐进退火更新率</strong>：50 Hz → 25 Hz → 5 Hz → 0.25 Hz → 0 Hz。仿真器 IsaacLab，框架 RSL-RL。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 Experiments</h2>
+    <p class="lead">在 IsaacLab 中广泛评测 2–10 台机器人、多种几何/质量物体，并给出 sim-to-real。变体记法：<code>const±</code> 表示是否用 constellation reward；<code>cf⁺</code> 表示持续提供接触帧位姿，<code>cf<sup>init</sup></code> 表示仅初始化时提供、之后 mask。指标：线/角速度误差、高度误差、Drop%（掉落率）、Fall%（倾覆率）。</p>
+
+    <h3>Out-of-Distribution 负载（Table I，每配置 500 回合）</h3>
+    <table>
+      <tr><th>Payload</th><th>N</th><th>Method</th><th>Lin.Vel.Err</th><th>Ang.Vel.Err</th><th>Height Err</th><th>Drop%</th><th>Fall%</th></tr>
+      <tr><td>Log (2kg)</td><td>2</td><td>const⁺, cf⁺</td><td class="good">0.103</td><td>0.290</td><td>0.017</td><td>0.3</td><td>0.0</td></tr>
+      <tr><td>Log (2kg)</td><td>2</td><td>const⁺, cf<sup>init</sup></td><td>0.117</td><td>0.278</td><td>0.049</td><td>2.6</td><td>0.0</td></tr>
+      <tr><td>Barrel (3kg)</td><td>3</td><td>const⁺, cf⁺</td><td>0.184</td><td>0.293</td><td>0.031</td><td class="good">0.1</td><td>0.0</td></tr>
+      <tr><td>Barrel (3kg)</td><td>3</td><td>const⁺, cf<sup>init</sup></td><td>0.135</td><td>0.310</td><td>0.080</td><td>6.0</td><td>0.2</td></tr>
+      <tr><td>Couch (10kg)</td><td>5</td><td>const⁺, cf⁺</td><td>0.145</td><td>0.229</td><td>0.098</td><td>15.0</td><td>0.4</td></tr>
+      <tr><td>Couch (10kg)</td><td>5</td><td>const⁺, cf<sup>init</sup></td><td>0.264</td><td>0.268</td><td>0.187</td><td>51.5</td><td>8.8</td></tr>
+    </table>
+    <p>越重/越不规则的物体（couch），<strong>持续接触帧位姿 cf⁺</strong> 越关键：从 cf<sup>init</sup> 的 51.5% 掉落率降到 cf⁺ 的 15.0%。</p>
+
+    <div class="grid2">
+      <figure><img src="img/couch-lifting.webp" alt="5 台抬沙发"><figcaption>5 台 Go2 协同抬 10 kg couch。</figcaption></figure>
+      <figure><img src="img/barrel-lifting.webp" alt="3 台抬圆桶"><figcaption>3 台 Go2 协同抬 3 kg barrel（圆柱几何、非共面接触）。</figcaption></figure>
+    </div>
+
+    <h3>团队规模扩展（1.0×1.5×0.7 m 箱、2 kg）</h3>
+    <figure>
+      <img src="img/n-robots.webp" alt="2-10 台机器人环绕排布">
+      <figcaption><b>Figure 4：</b>N∈{2,…,10} 台机器人环绕箱体的排布（自右上起顺时针索引）。同一套策略即可覆盖全部队规模。</figcaption>
+    </figure>
+    <blockquote>"linear velocity error … decrease from 0.1 to 0.02 m/s when scaling from 2 to 10 robots, which is an 80% drop"；同时箱子掉落率 "fall from 5% to less than 1%"。—— 队伍越大，负载分摊越均匀、跟踪越稳。</blockquote>
+
+    <h3>负载质量扩展（2–20 kg）</h3>
+    <p>存在约 <strong>15 kg 临界阈值</strong>，超过后即便加机器人也难以为继。在 15 kg 处：持续位姿 cf⁺ "maintains an 18% drop rate and 5% failure rate"；而 cf<sup>init</sup> "degrades sharply to 60% drop rate and 40% failure rate"。</p>
+
+    <h3>消融与力分布 Ablations</h3>
+    <ul>
+      <li><strong>constellation reward 是关键：</strong>在 2–10 台各规模上，<code>const⁺</code> 明显优于 <code>const⁻</code>。5 台时，即便接触位姿被 mask，<code>const⁺,cf<sup>init</sup></code> 在速度跟踪上仍 "approximately 50% better" 于 <code>const⁻,cf⁺</code> 基线。</li>
+      <li><strong>2 台训练已足够：</strong>用 3 台训练（decPLM<sub>3r</sub>）相比 2 台"minimal benefit … sometimes performs worse"。</li>
+      <li><strong>力分布（Figure 6）：</strong>在非对称 3 台配置中，"co-located robots together apply approximately the same total force as the single robot on the opposite side"；团队越大、负载分摊越均匀。</li>
+    </ul>
+
+    <h3>Sim-to-Real</h3>
+    <p>硬件为 Unitree Go2 + D1 arm，接触 pad 覆橡胶。测试 2、3、4 台，负载为 1–2 kg 轻箱。策略"executed coordinated pinch–lift–move sequences"，但存在明显 sim-to-real gap，源于未知臂动力学、关节编码器偏置、有限臂力矩、以及箱体形变扰乱接触线索。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 Limitations</h2>
+    <div class="note"><b>Note:</b> 以下各点均为作者在论文中<strong>明确陈述（stated）</strong>的局限，未作臆测。</div>
+    <details class="lim" open><summary>负载质量上限（~15 kg）</summary><p>即使增加机器人数量，系统在约 15 kg 以上也会可靠地失效。</p></details>
+    <details class="lim"><summary>硬件约束导致 sim-to-real gap</summary><p>"unknown arm dynamics requiring manual gain tuning, joint encoder offsets needing external calibration, limited arm torque restricting payload capacity, and box deformability disrupting contact cues."</p></details>
+    <details class="lim"><summary>依赖持续接触帧位姿</summary><p>对更重/更不规则的负载，"continuous knowledge of contact frame pose becomes crucial"，否则稳定性显著下降（见 couch 与 15 kg 结果）。</p></details>
+    <details class="lim"><summary>几何非对称的代价</summary><p>奇数/非对称队伍因力矩平衡不均，速度误差略高。</p></details>
+    <details class="lim"><summary>接触初始化假设</summary><p>方法假设回合开始时机器人已"positioned within a specified tolerance of their contact frames"，未涵盖自主接近与初始接触形成。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · Multi-Quadruped Cooperative Object Transport: Learning Decentralized Pinch-Lift-Move · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2509.14342">https://arxiv.org/abs/2509.14342</a>
+  </div>
+</footer>
+
+</body>
+</html>

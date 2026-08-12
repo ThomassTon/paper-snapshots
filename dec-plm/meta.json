@@ -1,0 +1,11 @@
+{
+  "slug": "dec-plm",
+  "title": "Multi-Quadruped Cooperative Object Transport: Learning Decentralized Pinch-Lift-Move",
+  "arxiv_id": "2509.14342",
+  "url": "https://arxiv.org/abs/2509.14342",
+  "category": "机器人 · Robotics",
+  "keywords": ["multi-robot cooperation", "quadruped", "decentralized control", "MAPPO", "constellation reward", "hierarchical policy", "sim2real", "cooperative transport", "强化学习", "接触协调"],
+  "summary_zh": "N 台带臂四足机器人在无通信、无中心化、无机械耦合下仅凭接触力协作搬运不可抓取物体；用 constellation reward 让机器人表现得“仿佛与物体刚性相连”，仅以 N=2 训练即可零样本泛化到 2–10 台与多种几何/质量的负载。",
+  "date": "2026-08-12",
+  "source": "arxiv-html"
+}
