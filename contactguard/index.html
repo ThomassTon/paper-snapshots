@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContactGuard: 接触前执行监控与动作条件潜空间世界模型</title>
+<meta name="keywords" content="execution monitoring, failure detection, latent world model, action-conditioned prediction, JEPA, visuomotor policy, 机器人操作, pre-contact, multi-view, 潜空间预测">
+<meta name="description" content="ContactGuard 用动作条件潜空间世界模型在接触发生前预测短时后果，判断分块视觉运动策略是否会失败并及时中止。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">机器人 · Robotics · 执行监控</span>
+    <h1>ContactGuard</h1>
+    <div class="sub">Pre-Contact Execution Monitoring with Action-Conditioned Latent World Models</div>
+    <div class="authors">Gehan Zheng · Matthew Johnson-Roberson · Weiming Zhi</div>
+    <p class="lead">在机器人「接触前」就判断一个动作块（action chunk）会不会失败。ContactGuard 用一个动作条件的潜空间世界模型（latent world model）预测短时视觉后果，如果预测的未来潜表示指示「很可能失败」，就在夹爪闭合、造成不可逆扰动之前中止——无需改动底层策略，也无需逐像素视频生成。</p>
+    <div class="meta">
+      <span>cs.RO / cs.AI / cs.CV</span>
+      <span>AgileX Piper · 14-DoF 双臂 · 3 路 RGB</span>
+      <span>底层策略：ACT</span>
+      <span><a href="https://arxiv.org/abs/2608.13438">📄 arXiv:2608.13438</a></span>
+      <span><a href="https://arxiv.org/pdf/2608.13438v1">PDF</a></span>
+    </div>
+    <div class="kw"><span>execution monitoring</span><span>failure detection</span><span>latent world model</span><span>action-conditioned prediction</span><span>JEPA</span><span>visuomotor policy</span><span>pre-contact</span><span>multi-view</span><span>机器人操作</span><span>潜空间预测</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · Motivation</a>
+  <a href="#method">2 · Method</a>
+  <a href="#exp">3 · Experiments</a>
+  <a href="#limit">4 · Limitations</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> Motivation</h2>
+    <p class="lead">接触密集（contact-rich）操作中的失败，往往到物理接触发生后才被察觉。尤其在腕部相机（wrist-camera）设置下，一个糟糕的接近轨迹可能已经把物体推走、错过、打滑或扰动，等常规检测器反应过来时，场景已被改变。ContactGuard 提出「接触前执行监控」（pre-contact execution monitoring）：在真正投入接触之前，评估「即将到来的动作是否很可能失败」。</p>
+    <blockquote>核心问题：机器人能否在接触发生之前评估一个 action chunk 的后果，并在造成改变场景的破坏之前，停止糟糕的交互？</blockquote>
+    <figure>
+      <img src="img/teaser.webp" alt="pre-contact monitoring timeline">
+      <figcaption>图 1：接触前在线监控示意。监控器在计划夹爪闭合 T<sub>g</sub> 之前的 k 步「锚定」（anchor），沿计划动作向前滚动 h 步，对预测出的未来潜表示（位于 T<sub>g</sub>−k+h）打分；若判为失败则在闭合前中止。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>接触前</b><small>在夹爪闭合、场景被扰动前决策</small></div>
+      <div><b>无标签</b><small>世界模型从未标注轨迹训练</small></div>
+      <div><b>无像素</b><small>只预测紧凑潜表示，不生成视频</small></div>
+      <div><b>零改动</b><small>不修改底层 visuomotor 策略</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> Method</h2>
+    <p class="lead">ContactGuard 遵循 JEPA（Joint-Embedding Predictive Architecture）思想：不生成逼真的未来帧，而是把多视角观测编码成紧凑的视觉 embedding，学习这些 embedding 在机器人动作驱动下如何演化。「在表示空间中直接预测，避免了像素级视频生成的代价与歧义。」流程分两阶段：先自监督训练潜空间世界模型，再冻结后训练一个轻量失败探针（failure probe）。</p>
+    <figure>
+      <img src="img/overview.webp" alt="ContactGuard architecture overview">
+      <figcaption>图 2：ContactGuard 总览。多视角编码器（shared ViT-Tiny）→ 动作条件预测器沿计划动作滚动 → 轻量探针对预测潜表示做二元失败分类。</figcaption>
+    </figure>
+    <h3>多视角潜空间世界模型（Multi-View Latent World Model）</h3>
+    <p>V 个固定相机提供同步观测，共享的 ViT-Tiny 编码器独立处理每个视角；逐视角 embedding 做 mean-pool 后经一层学习到的线性投影，得到单一潜向量 z<sub>t</sub> ∈ ℝ<sup>D</sup>。动作嵌入器（action embedder）把关节空间动作映射到同一 D 维空间。预测器由四个 AdaLN-zero 条件化的 Transformer block 加两层 MLP 组成，用「下一潜表示回归」（next-latent regression）训练，并以 SIGReg 抗坍缩正则化（anti-collapse）防止表示崩溃。</p>
+    <h3>失败探针（Failure Probe）</h3>
+    <p>冻结编码器与预测器后，用一个轻量 logistic regression 探针把 K 步预测潜表示 ẑ<sub>t+K</sub> 映射为失败概率，采用 ℓ₂ 惩罚、类别平衡的 logistic 损失训练。探针仅需一小批带标签的接触前片段（pre-contact clips），每个任务约 250 次抓取尝试。</p>
+    <h3>部署流程（四阶段，与策略并行运行）</h3>
+    <ul>
+      <li><b>Trigger 触发：</b>扫描即将到来的 chunk，找到第一个「开→合」夹爪转换，偏移 g 帧。</li>
+      <li><b>Anchor 锚定：</b>当计划闭合处于 ≤ k<sub>pre</sub> 帧之内时激活（与探针训练偏移对齐）。</li>
+      <li><b>Rollout &amp; Score：</b>编码观测历史，沿计划动作把预测器滚动 K 步，对 ẑ<sub>t+K</sub> 应用冻结探针打分。</li>
+      <li><b>Abort 决策：</b>若 P(fail) &gt; τ，则在夹爪闭合前中止；否则维持策略原样继续。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> Experiments</h2>
+    <p class="lead">在 14-DoF AgileX Piper 双臂机器人、3 路同步 RGB 相机上，以 ACT 作为底层策略，评估四种抓取设定：cup pick-and-place、box pick-and-place、pencil-and-notebook grasping、towel-fold grasping。每个任务在 N=50 次受监控 rollout 上做闭环真机评测，测试片段与训练/探针拟合/阈值选择互不重叠。</p>
+    <figure>
+      <img src="img/cup.webp" alt="evaluated tasks">
+      <figcaption>图 3：评测任务示例（中间相机视角），展示 pre-grasp / grasp / post-grasp 各阶段。</figcaption>
+    </figure>
+
+    <h3>表 1 · 闭环真机结果（每任务 N=50 监控 rollout）</h3>
+    <table>
+      <tr><th>任务 / 方法</th><th>Precision</th><th>Recall</th><th>FAR ↓</th><th>AUC</th><th>Bal. Acc.</th></tr>
+      <tr><td>Cup · Direct-linear</td><td>0.545</td><td>0.960</td><td>0.800</td><td>0.661</td><td>0.580</td></tr>
+      <tr><td>Cup · LeWM</td><td>0.706</td><td>0.960</td><td>0.400</td><td>0.928</td><td>0.780</td></tr>
+      <tr><td>Cup · <b>Ours</b></td><td class="good">0.893</td><td class="good">1.000</td><td class="good">0.120</td><td class="good">0.992</td><td class="good">0.940</td></tr>
+      <tr><td>Box · Direct-linear</td><td>0.647</td><td>0.500</td><td>0.214</td><td>0.619</td><td>0.643</td></tr>
+      <tr><td>Box · LeWM</td><td>0.857</td><td>0.818</td><td>0.107</td><td>0.933</td><td>0.856</td></tr>
+      <tr><td>Box · <b>Ours</b></td><td class="good">0.864</td><td class="good">0.864</td><td class="good">0.107</td><td class="good">0.946</td><td class="good">0.878</td></tr>
+      <tr><td>Pencil · Direct-linear</td><td>0.468</td><td>1.000</td><td>0.893</td><td>0.732</td><td>0.554</td></tr>
+      <tr><td>Pencil · LeWM</td><td>0.679</td><td>0.864</td><td>0.321</td><td>0.872</td><td>0.771</td></tr>
+      <tr><td>Pencil · <b>Ours</b></td><td class="good">0.889</td><td>0.727</td><td class="good">0.071</td><td class="good">0.898</td><td class="good">0.828</td></tr>
+      <tr><td>Towel · Direct-linear</td><td>0.759</td><td>0.880</td><td>0.280</td><td>0.841</td><td>0.800</td></tr>
+      <tr><td>Towel · LeWM</td><td>0.750</td><td>0.600</td><td>0.200</td><td>0.794</td><td>0.700</td></tr>
+      <tr><td>Towel · <b>Ours</b></td><td class="good">0.786</td><td class="good">0.880</td><td>0.240</td><td class="good">0.917</td><td class="good">0.820</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">诚实对照：在 Pencil 上，ContactGuard 的 recall（0.727）低于 LeWM（0.864）与 Direct-linear（1.000），但以更低的误报率 FAR（0.071）换取整体更高的 AUC 与平衡精度。</p>
+
+    <h3>表 2 · 与外部检测器离线对比（ROC AUC）</h3>
+    <table>
+      <tr><th>Detector</th><th>Cup</th><th>Box</th><th>Pencil</th><th>Towel</th></tr>
+      <tr><td>FAIL-Detect</td><td>.813</td><td>.219</td><td>.533</td><td>.448</td></tr>
+      <tr><td>RND</td><td>.840</td><td>.211</td><td>.671</td><td>.417</td></tr>
+      <tr><td>SAFE</td><td>.840±.009</td><td>.925±.006</td><td>.844±.016</td><td>.871±.017</td></tr>
+      <tr><td>Current latent</td><td>.840±.008</td><td>.893±.008</td><td>.923±.010</td><td>.871±.015</td></tr>
+      <tr><td><b>ContactGuard</b></td><td class="good">.982±.003</td><td class="good">.984±.005</td><td class="good">.992±.001</td><td class="good">.978±.004</td></tr>
+    </table>
+
+    <figure>
+      <img src="img/pp_cup.webp" alt="real robot qualitative">
+      <figcaption>图 4：真机定性示例（pick-and-place）。腕部与中间视角相机帧展示正确分类的接触前监控结果。</figcaption>
+    </figure>
+
+    <h3>Ablations — 动作条件的作用（表 3，AUC）</h3>
+    <p>把预测器的动作输入替换/破坏后，性能显著下降，验证「动作条件」是关键：Full（如 Box 0.956）远高于 Shuffled（0.493）、Zero（Box 0.494）、Mean（Box 0.631）与 Current latent（Box 0.844）。这说明模型确实在利用「计划动作」预测后果，而非仅凭当前状态。</p>
+    <table>
+      <tr><th>Task</th><th>Full</th><th>Current</th><th>Shuffled</th><th>Zero</th><th>Mean</th></tr>
+      <tr><td>Cup</td><td class="good">0.965</td><td>0.758</td><td>0.535</td><td>0.847</td><td>0.842</td></tr>
+      <tr><td>Box</td><td class="good">0.956</td><td>0.844</td><td>0.493</td><td>0.494</td><td>0.631</td></tr>
+      <tr><td>Pencil</td><td class="good">0.845</td><td>0.829</td><td>0.483</td><td>0.559</td><td>0.541</td></tr>
+      <tr><td>Towel</td><td class="good">0.959</td><td>0.801</td><td>0.493</td><td>0.659</td><td>0.417</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">运行时（表 4，RTX 5090，K=30，视界 1.00 s）：rollout 15.39 ms，完整一次监控 19.18 ms——满足在线运行。表 5 另显示单视角 LeWM 去掉本体感受状态、仅用图像反而更好（如 Pencil 0.878 vs 含 state 0.455）。</p>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> Limitations</h2>
+    <div class="note"><b>Note:</b> 以下均为作者在论文中<b>明确陈述</b>（stated）的局限。</div>
+    <details class="lim" open><summary>只中止、不恢复</summary><p>「ContactGuard prevents failures by abstaining, but does not recover from them or complete the task after an abort.」中止后要真正完成任务，需要一个外部恢复模块（recovery module），作者留作未来工作。</p></details>
+    <details class="lim"><summary>仅针对短时接触事件</summary><p>「ContactGuard targets imminent contact events whose outcome is determined within the next action chunk.」它监控的是「结果在下一个 action chunk 内即可确定」的即将接触事件。</p></details>
+    <details class="lim"><summary>长时技能需分层监控</summary><p>「extending it to longer-horizon skills would require hierarchical or repeated event-level monitoring.」扩展到更长时程的技能，需要分层的或在事件级别上重复的监控机制。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · ContactGuard: Pre-Contact Execution Monitoring with Action-Conditioned Latent World Models · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2608.13438">https://arxiv.org/abs/2608.13438</a>
+  </div>
+</footer>
+
+</body>
+</html>

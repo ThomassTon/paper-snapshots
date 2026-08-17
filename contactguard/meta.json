@@ -1,0 +1,11 @@
+{
+  "slug": "contactguard",
+  "title": "ContactGuard: Pre-Contact Execution Monitoring with Action-Conditioned Latent World Models",
+  "arxiv_id": "2608.13438",
+  "url": "https://arxiv.org/abs/2608.13438",
+  "category": "机器人 · Robotics",
+  "keywords": ["execution monitoring", "failure detection", "latent world model", "action-conditioned prediction", "JEPA", "visuomotor policy", "pre-contact", "multi-view", "机器人操作", "潜空间预测"],
+  "summary_zh": "ContactGuard 用动作条件的潜空间世界模型（JEPA 思想）在接触发生前预测短时视觉后果，若预测潜表示指示很可能失败就在夹爪闭合前中止；无需逐像素视频生成、不改动底层 visuomotor 策略，在四种真机抓取任务上 AUC 显著优于 LeWM、FAIL-Detect、RND、SAFE 等基线。",
+  "date": "2026-08-17",
+  "source": "arxiv-html"
+}
