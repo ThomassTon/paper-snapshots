@@ -1,0 +1,11 @@
+{
+  "slug": "dadp",
+  "title": "DADP: Domain Adaptive Diffusion Policy",
+  "arxiv_id": "2602.04037",
+  "url": "https://arxiv.org/abs/2602.04037",
+  "category": "机器人 · Robotics",
+  "keywords": ["domain adaptation", "diffusion policy", "offline meta-RL", "zero-shot adaptation", "domain representation learning", "静态信息解耦", "locomotion", "manipulation"],
+  "summary_zh": "DADP 用 Lagged Context Dynamical Prediction 无监督地把静态域信息与瞬时动态解耦，再把学到的域表征注入扩散过程（偏置先验分布 + 重构去噪目标），在 MuJoCo locomotion 与 Adroit manipulation 上实现零样本域自适应的 SOTA 性能。",
+  "date": "2026-08-18",
+  "source": "arxiv-html"
+}

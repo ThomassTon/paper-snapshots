@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DADP: Domain Adaptive Diffusion Policy</title>
+<meta name="keywords" content="domain adaptation, diffusion policy, offline meta-RL, zero-shot adaptation, domain representation learning, 静态信息解耦, locomotion, manipulation">
+<meta name="description" content="DADP 用 Lagged Context Dynamical Prediction 无监督解耦静态域信息，并把域表征注入扩散过程，实现零样本域自适应控制的 SOTA。">
+<style>
+  :root{ --bg:#f8f8f6; --panel:#ffffff; --panel2:#f1efea; --ink:#201f1c; --muted:#6b675f;
+    --acc:#5a5953; --acc2:#5a5953; --warn:#b45309; --line:#e8e4dc; --chip:#f1efea; }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:17px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 38px;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -120px,rgba(90,89,83,.06),transparent)}
+  .kw{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kw span{font-size:12.5px;color:var(--acc2);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+  .tag{display:inline-block;font-size:13px;letter-spacing:.12em;color:var(--acc);border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin-bottom:18px;background:var(--chip)}
+  h1{font-size:42px;line-height:1.15;margin:0 0 10px;font-weight:800;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:8px}
+  .authors{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  .lead{font-size:18.5px;color:#3a3833}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .meta span{font-size:13.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+  nav{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 22px}
+  nav a{font-size:14px;color:var(--muted);padding:7px 13px;border-radius:8px}
+  nav a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:27px;margin:0 0 8px;display:flex;align-items:center;gap:12px}
+  h2 .n{font-size:15px;color:var(--acc);border:1px solid var(--line);border-radius:8px;padding:2px 10px;background:var(--chip);font-weight:600}
+  h3{font-size:20px;margin:30px 0 8px;color:#3a3833}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  @media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
+  .kpi div{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px 14px;text-align:center}
+  .kpi b{display:block;font-size:30px;color:var(--acc);font-weight:800;line-height:1.1}
+  .kpi small{color:var(--muted);font-size:13px;display:block;margin-top:6px}
+  figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  figure img{max-width:100%;border-radius:8px;display:block;margin:0 auto;background:#fff}
+  figcaption{color:var(--muted);font-size:14px;margin-top:12px;text-align:left;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px} .card h3{margin-top:0}
+  ul{padding-left:22px}li{margin:7px 0}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;overflow:hidden;border-radius:12px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left} th{background:var(--panel2);color:#3a3833}
+  td:not(:first-child){text-align:center} .good{color:var(--acc2);font-weight:700}
+  blockquote{margin:18px 0;padding:12px 18px;border-left:4px solid var(--acc);background:var(--panel);border-radius:0 10px 10px 0;color:#3a3833;font-style:italic}
+  .note{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-left:4px solid var(--warn);border-radius:10px;padding:14px 18px;margin:18px 0;color:#7a4b16}
+  .note b{color:var(--warn)}
+  .lim{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 22px;margin:16px 0}
+  .lim summary{cursor:pointer;font-weight:600;color:#3a3833;padding:14px 0;font-size:17px;list-style:none}
+  .lim summary::-webkit-details-marker{display:none}
+  .lim summary:before{content:"▸";color:var(--acc);margin-right:10px} .lim[open] summary:before{content:"▾"}
+  .lim p{color:var(--muted);margin-top:0}
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tag">Robotics · Diffusion Policy · Domain Adaptation</span>
+    <h1>DADP: Domain Adaptive Diffusion Policy</h1>
+    <div class="sub">解耦静态域信息 + 把域表征注入扩散过程，实现零样本（zero-shot）域自适应控制</div>
+    <div class="authors">Pengcheng Wang · Qinghang Liu · Haotian Lin · Yiheng Li · Guojian Zhan · Masayoshi Tomizuka · Yixiao Wang</div>
+    <p class="lead">面对训练时未见过的 transition dynamics，如何让一个策略稳健泛化？DADP 指出：用 dynamical prediction 学域表征时，若取<b>相邻</b>上下文，会把 static domain 信息与瞬时 varying 动态<b>纠缠</b>在一起，干扰策略。DADP 通过<b>无监督解耦</b>提纯静态域表征，并将其<b>直接注入扩散生成过程</b>，在 locomotion 与 manipulation 上取得 SOTA 与更强泛化。</p>
+    <div class="meta">
+      <span>ICML 2026</span><span>Offline Meta-RL / Zero-shot</span><span>MuJoCo · Adroit</span>
+      <span><a href="https://arxiv.org/abs/2602.04037">📄 arXiv:2602.04037</a></span>
+      <span><a href="https://arxiv.org/pdf/2602.04037">PDF</a></span>
+    </div>
+    <div class="kw"><span>domain adaptation</span><span>diffusion policy</span><span>offline meta-RL</span><span>zero-shot adaptation</span><span>domain representation learning</span><span>静态信息解耦</span><span>locomotion</span><span>manipulation</span></div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#motivation">1 · 动机</a>
+  <a href="#method">2 · 方法</a>
+  <a href="#exp">3 · 实验</a>
+  <a href="#limit">4 · 局限性</a>
+</div></nav>
+
+<!-- ===== MOTIVATION ===== -->
+<section id="motivation">
+  <div class="wrap">
+    <h2><span class="n">01</span> 动机 · Motivation</h2>
+    <p class="lead">域（domain）指的是环境的 transition dynamics，通常由一个低维参数向量刻画（如 gravity、friction、joint torque、limb length），因此本质上是<b>静态</b>的。域自适应的核心是从交互轨迹里推断出一个稳定的域描述子（domain descriptor），再据此做域感知决策。</p>
+    <p>然而主流方法用 dynamical prediction 作为辅助任务来隐式学表征时，习惯性地取<b>最近的历史</b>作为 context。作者分析发现：由于 context 与当前步在时间上对齐，从中推断出的<b>瞬时 varying 信息</b>（如速度等高阶时间导数）会成为预测任务的"天然全局最优"，被一并编码进表征——于是表征里同时混入了 static domain 信息与 varying 动态。</p>
+    <blockquote>"selecting contexts adjacent to the current step causes the learned representations to entangle static domain information with varying dynamical properties. Such mixture can confuse the conditioned policy, thereby constraining zero-shot adaptation."</blockquote>
+    <p>这种"污染"会导致<b>同一域内表征漂移</b>（representation drift），降低跨域可分性，损害泛化。DADP 的目标就是把 varying 信息从表征里剥离出去，只保留稳定的静态域因子。</p>
+    <figure>
+      <img src="img/denoise-tsne.webp" alt="denoising t-SNE">
+      <figcaption>Figure 2：Standard Diffusion 与 DADP 去噪过程的 t-SNE 可视化。DADP 把学到的域表征注入先验分布，使其成为多峰的 mixed Gaussian（每个峰对应一种 domain-specific action modality），从而把不同域的去噪轨迹分离开，而非从同一个高斯噪声里强行重建所有域。</figcaption>
+    </figure>
+    <div class="kpi">
+      <div><b>3991</b><small>Walker2d IID 得分（Meta-DT 仅 1304）</small></div>
+      <div><b>3015</b><small>Walker2d OOD 得分（Meta-DT 仅 889）</small></div>
+      <div><b>25</b><small>locomotion 训练域数量</small></div>
+      <div><b>zero-shot</b><small>评测设定：context 在线收集</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section id="method">
+  <div class="wrap">
+    <h2><span class="n">02</span> 方法 · Method</h2>
+    <p class="lead">DADP = <b>无监督解耦</b>（学到纯净的静态域表征）+ <b>域感知扩散注入</b>（把表征用到生成过程里）。训练分两阶段：先在训练集上预训练 context encoder 提取域表征，再固定该 encoder、训练 diffusion policy。</p>
+
+    <h3>① Lagged Context Dynamical Prediction — 解耦静态信息</h3>
+    <p>关键洞察：既然"相邻 context"里的 varying 信息之所以会被编码，是因为它与当前步时间对齐、能帮助预测；那就<b>打破这种时间相关性</b>。作者引入一个较大的历史偏移 Δt，把预测的 context 从"最近历史"挪到"更远的历史"。随着 Δt 增大，offset context 关于瞬时 variation 的信息量下降（信息论视角），varying 信息无法再延展到当前步来降低预测损失，于是被排除出表征；而 static domain 因子是域内时不变的，仍然保留。</p>
+    <p>当 Δt → 极大（例如取自<b>同一域的另一个 episode</b>）时，表征退化为纯静态：静态域信息 + 一个使数据分布上预测损失最小的"平均 varying 属性"。附录 A 用竖直抛体运动的 toy case 说明：从另一 episode 取 context 后，速度无法延展到当前步，encoder 被迫去学静态的重力加速度 g。</p>
+    <blockquote>"by increasing this temporal gap, we unsupervisedly disentangle static domain representations by filtering out transient properties."</blockquote>
+
+    <h3>② Diffusion Modulation — 用表征偏置先验 + 重构去噪目标</h3>
+    <p>作者指出：若只是把域表征当作策略的<b>额外输入（conditioning）</b>，扩散策略就得从先验高斯里的每个采样点<b>平等地</b>重建各域的 action modality，导致 latent 噪声空间中去噪轨迹相互纠缠、无法利用噪声结构。DADP 换一种用法：</p>
+    <ul>
+      <li><b>偏置先验分布</b>：仿照 structured diffusion（Mixed DDIM）把学到的表征并入前向过程，使去噪的<b>起点</b>从纯高斯变成 mixed Gaussian——每个峰对应一种 domain-specific 模态，从而把域信息注入先验（见 Figure 2）。</li>
+      <li><b>重构去噪目标</b>：不再以标准噪声 ε 为预测目标，而是提出<b>联合预测目标</b>，让模型同时预测"噪声 + 表征位移"这一复合项，在每个去噪步引入额外监督，进一步引导并简化去噪过程。</li>
+    </ul>
+    <p>消融显示（见实验）这种"w/ Predict"用法带来最大的策略性能增益。附录 E 给出完整算法伪代码（Algorithm 1）。</p>
+  </div>
+</section>
+
+<!-- ===== EXPERIMENTS ===== -->
+<section id="exp">
+  <div class="wrap">
+    <h2><span class="n">03</span> 实验 · Experiments</h2>
+    <p class="lead"><b>设置：</b>把域自适应形式化为 offline meta-RL。locomotion 用 4 个 MuJoCo 环境（Ant / HalfCheetah / Walker2d / Hopper），沿用 CORRO 的数据流程、用 SAC 训练各域专家采集，含 25 个域，并额外<b>引入形态学（morphological）变化</b>使各域步态更多样；manipulation 用 Adroit（Door / Relocate，含 3 个域，数据取自 ODRL）。基线：<b>CORRO</b>（对比学习）、<b>Prompt-DT</b> / <b>Meta-DT</b>（Decision Transformer 系，Meta-DT 为 SOTA）、<b>End-to-End Diffusion</b>。全部在 <b>zero-shot</b> 下评测，跨 5 个随机种子取 mean ± std。</p>
+
+    <h3>主结果（Table 1，节选）</h3>
+    <p>IID = 在训练域上评测（多域掌握能力）；OOD = 在从参数空间新采样的 5 个未见域上评测（泛化能力）。数值为 5 seeds 的 mean（越高越好，Relocate 除外为负奖励）。</p>
+    <table>
+      <tr><th>环境 / 设定</th><th>CORRO</th><th>Prompt-DT</th><th>Meta-DT</th><th>DADP (Ours)</th></tr>
+      <tr><td>Walker2d · IID</td><td>614</td><td>590</td><td>1304</td><td class="good">3991</td></tr>
+      <tr><td>Walker2d · OOD</td><td>666</td><td>435</td><td>889</td><td class="good">3015</td></tr>
+      <tr><td>HalfCheetah · IID</td><td>-3014</td><td>1640</td><td>3857</td><td class="good">4100</td></tr>
+      <tr><td>HalfCheetah · OOD</td><td>-2463</td><td>250</td><td>3174</td><td class="good">3056</td></tr>
+      <tr><td>Ant · IID</td><td>-867</td><td>700</td><td>3045</td><td class="good">3117</td></tr>
+      <tr><td>Ant · OOD</td><td>-962</td><td>208</td><td>3187</td><td class="good">3495</td></tr>
+      <tr><td>Hopper · IID</td><td>801</td><td>935</td><td>1140</td><td class="good">1643</td></tr>
+      <tr><td>Door (Adroit) · IID</td><td>-501</td><td>2116</td><td>1283</td><td class="good">1483</td></tr>
+      <tr><td>Relocate (Adroit) · OOD</td><td>-12.0</td><td>-6.47</td><td>-5.77</td><td class="good">-5.63</td></tr>
+    </table>
+    <p>DADP 在几乎所有环境的 IID 与 OOD 下都<b>优于或持平最强基线</b>，且各 seed 间 <b>std 更小</b>（如 Walker2d IID std 仅 ±24），稳定性更好。在 Walker2d 上领先幅度最大（表征质量从大 Δt 中获益最多）。</p>
+
+    <h3>去噪过程可视化</h3>
+    <figure>
+      <img src="img/online-adaptation.webp" alt="online adaptation representation">
+      <figcaption>Figure 4：Walker 在线自适应表征可视化。把 rollout 轨迹切成 context、用学到的 encoder 编码后可视化——相比 Mixed DDIM 与 Conditional Policy，DADP 的表征能把运行中的策略<b>准确定位到目标域</b>，从而更好地发挥其 in-distribution 能力、获得更优控制性能。</figcaption>
+    </figure>
+
+    <h3>消融一：Δt 对表征质量的影响（Table 2 / Figure 3）</h3>
+    <p>用 <b>linear probe accuracy</b>（线性分类器预测 one-hot 域编号）与 <b>reconstruction loss</b>（MLP 回归真实动力学参数）评估表征质量，并以监督表征（用 ground-truth 标签训练）作为性能上界。随 Δt 增大两个指标一致改善：Walker2d 的 linear probe accuracy 从 <b>27.9% → 99.3%</b>（逼近监督的 99.8%），reconstruction loss 从 <b>476.1 → 3.2</b>。t-SNE 显示不同域的表征逐渐清晰聚类。</p>
+
+    <h3>消融二：表征利用方式（Table 4）</h3>
+    <p>对比四种用法：<b>Null.</b>（去掉表征，端到端）/ <b>Cond.</b>（当条件输入）/ <b>w/o Predict</b>（仅偏置先验为 mixed Gaussian）/ <b>w/ Predict</b>（DADP：再把表征作为预测目标的一部分）。新增 <b>mastery</b> 指标 = 达到专家 60% 性能的 IID 域比例。</p>
+    <table>
+      <tr><th>变体</th><th>Walker2d IID</th><th>Walker2d Mastery</th><th>HalfCheetah IID</th><th>HalfCheetah Mastery</th></tr>
+      <tr><td>End-to-End (Null.)</td><td>3722</td><td>40</td><td>3509</td><td>80</td></tr>
+      <tr><td>Conditional (Cond.)</td><td>2093</td><td>0</td><td>3740</td><td>80</td></tr>
+      <tr><td>Mixed DDIM (w/o Predict)</td><td>3356</td><td>36</td><td>3533</td><td>84</td></tr>
+      <tr><td>DADP (w/ Predict)</td><td class="good">3991</td><td class="good">44</td><td class="good">4100</td><td class="good">96</td></tr>
+      <tr><td>Supervised（上界）</td><td>4014</td><td>44</td><td>3846</td><td>88</td></tr>
+    </table>
+    <p>DADP 在所有变体里 mastery 最高，能真正"掌握"多样的域。一个有趣现象：简单的 <b>End-to-End Diffusion 反而胜过多个变体</b>，说明扩散策略天然适合域自适应问题，但在该场景仍被低估、尚待探索。</p>
+
+    <h3>更多域多样性</h3>
+    <figure>
+      <img src="img/gaits-walker.webp" alt="domain-specific gaits in walker">
+      <figcaption>Figure 8：Walker 中不同域的 domain-specific 步态。引入形态学变化后，各域步态差异明显增大（远超以往仅做 friction/gravity 轻微扰动的设定），对策略的域自适应能力提出更高要求。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===== LIMITATIONS ===== -->
+<section id="limit">
+  <div class="wrap">
+    <h2><span class="n">04</span> 局限性 · Limitations</h2>
+    <div class="note"><b>Note:</b> 第 1 条为作者在论文 "Limitations" 段落明确陈述（stated）；第 2、3 条为根据方法设计推断（inferred）。</div>
+    <details class="lim" open><summary>只处理 stationary（时不变）动力学，非平稳环境下会丢弃有用信号（stated）</summary><p>论文明言：DADP 聚焦 stationary dynamics，因此刻意把 static 信息从 context 的 time-varying 信息中解耦出来。但在 <b>non-stationary</b> 环境里，time-varying 信号可能反映不断演化的动力学、策略必须追踪它才能有效控制。作者将"如何联合解耦并保留 time-varying 信息、把 DADP 扩展到非平稳动力学设定"列为 future work。</p></details>
+    <details class="lim"><summary>依赖大 Δt / 同域跨 episode 采样的假设（inferred）</summary><p>解耦机制的核心是增大历史偏移 Δt（极端情形取自同一域的另一 episode）。这要求训练时能获得同一域内足够多、足够长的轨迹（如 Walker2d 每域 300 episodes）；数据覆盖不足或域内轨迹稀缺时，解耦效果可能受限。</p></details>
+    <details class="lim"><summary>评测集中于 MuJoCo / Adroit 仿真，缺少真实机器人验证（inferred）</summary><p>实验覆盖 locomotion（4 个 MuJoCo 环境）与 manipulation（Adroit Door/Relocate），均为仿真 benchmark；论文未报告真实硬件上的 sim-to-real 结果，实际部署下的表现有待进一步验证。</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Compiled from the paper's sources and figures · DADP: Domain Adaptive Diffusion Policy · for study reference only<br>
+    原文 / Paper: <a href="https://arxiv.org/abs/2602.04037">https://arxiv.org/abs/2602.04037</a>
+  </div>
+</footer>
+
+</body>
+</html>
